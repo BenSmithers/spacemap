@@ -1,0 +1,112 @@
+{
+
+    "temperature":{
+        "frozen":{
+            "min":-10,
+            "text":"frozen"
+        },
+        "cold":{
+            "min":3,
+            "text":"cold"
+        },
+        "temperate":{
+            "min":5,
+            "text":"temperate"
+        },
+        "hot":{
+            "min":10,
+            "text":"hot"
+        },
+        "boiling":{
+            "min":12,
+            "text":"boiling"
+        }
+    },
+    "biosphere":{
+        "remnant":{
+            "min":2,
+            "text":"biosphere"
+        },
+        "microbial":{
+            "min":3,
+            "text":"life forms exist"
+        },
+        "no":{
+            "min":4,
+            "text":"native biosphere"
+        },
+        "human-miscible":{
+            "min":6,
+            "text":"biosphere"
+        },
+        "immiscible":{
+            "min":9,
+            "text":"biosphere"
+        },
+        "hybrid":{
+            "min":11,
+            "text":"biosphere"
+        },
+        "engineered":{
+            "min":12,
+            "text":"biosphere"
+        }
+    },
+    "factions":{
+        "obscure":{
+            "min":2,
+            "text":"Obscure group - few have heard of them, no popular support"
+        },
+        "fringe":{
+            "min":4,
+            "text":"Fringe group - few supporters"
+        },
+        "minor":{
+            "min":6,
+            "text":"Minor group - some supporters"
+        },
+        "notable":{
+            "min":8,
+            "text":"Notable group - significant support, well known"
+        },
+        "significant":{
+            "min":10,
+            "text":"Significant - nearly as powerful as governmenty"
+        },
+        "overwhelming":{
+            "min":12,
+            "text":"Overwhelming popular support - more powerful than government"
+        }
+    },
+
+    "tech level":{
+        "0":{
+            "min":-5,
+            "text":"neolithic-level technology"
+        },
+        "1":{
+            "min":3,
+            "text":"medieval technology"
+        },
+        "2":{
+            "min":4,
+            "text":"early Industrial age tech"
+        },
+        "4":{
+            "min":6,
+            "text":"modern postech"
+        },
+        "3":{
+            "min":9,
+            "text":"tech like that of present-day Earth"
+        },
+        "4+":{
+            "min":11,
+            "text":"posttech with specialities"
+        },
+        "5":{
+            "min":12,
+            "text":"pretech with surviving infrastructure"
+        }
+    }
+}

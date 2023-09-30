@@ -1,0 +1,663 @@
+"""
+Define the World class 
+"""
+from random import choice
+import numpy as np
+import os
+
+from traveller_utils.tables import *
+from traveller_utils.enums import WorldTag, WorldCategory, TradeGood, Contraband
+from traveller_utils.utils import roll, d100
+from traveller_utils.trade_goods import ALL_GOODS
+from traveller_utils.name_gen import create_name
+from traveller_utils.person import Person
+
+WorldTag._value2member_map_.keys()
+
+star_hex = list(range(10))
+star_hex+=[
+    "A",
+    "B",
+    "C",
+    "E",
+    "F",
+    "G",
+    "H",
+    "I"
+]
+
+star_hex = [str(entry) for entry in star_hex]
+
+class Government:
+    def __init__(self, dict_entry:dict, is_faction=False):
+        self._gov_type = dict_entry["type"]
+        self._desc = dict_entry["description"]
+        self._what = choice(dict_entry["examples"])
+        self._contraband = []
+        for entry in dict_entry["contraband"]:
+            for good in Contraband:
+                if entry.lower() in good.name.lower():
+                    self._contraband.append(good)
+        self.notes = ""
+        self._strength = factions.access(roll() if is_faction else 12)
+        self._is_faction = is_faction
+
+    @property
+    def gov_type(self):
+        return self._gov_type
+    @property
+    def description(self):
+        return self._desc
+    @property
+    def title(self):
+        return self._what
+    @property
+    def contraband(self):
+        return self._contraband
+    
+    @property
+    def strength(self):
+        return self._strength
+    
+    @property
+    def is_faction(self):
+        return self._is_faction
+    
+    @classmethod
+    def unpack(cls, packed:dict):
+        new = cls(packed, is_faction=packed["is_faction"])
+        new.notes = packed["notes"]
+        new._strength = packed["strength"]
+        return new
+
+    def pack(self)->dict:
+        out = {
+            "type":self._gov_type,
+            "description":self._desc,
+            "examples":self._what,
+            "contraband":[entry.name for entry in self._contraband],
+            "notes":self.notes,
+            "strength":self._strength,
+            "is_faction":self._is_faction
+        }
+        return out
+
+class World:
+    def __init__(self, generate =True):
+        """
+            Initialize a minimal world, generate full world if `generate`
+        """
+        self.name = ""
+        self._fuel = False
+        self.title = ""
+        self._tags = []
+        self._size= 0
+        self._atmosphere= 0
+        self._pressure = -1
+        self._temperature=0
+        self._biosphere = 0
+        self._population_raw=0
+        self._population=0
+        self._hydro=0
+        self._tech_level=0
+        self._government_raw=0
+        self._government=Government(govs[0], False)
+        self._law_level=0
+        self._factions=[]
+        self._starport_raw=0
+        self._persistent_passengers={
+            "high":[],
+            "middle":[],
+            "basic":[],
+            "low":[],
+        }
+        self._generated = False
+        self._passengers ={
+            "high":[],
+            "middle":[],
+            "basic":[],
+            "low":[], 
+        }
+        self._category =[WorldCategory.Common,]
+
+        if generate:
+            self.populate()
+
+
+    def populate(self,name="",rng=None,
+                atmosphere=-1, temperature=-1,biosphere=-1,
+                population=-1, tech_level=-1,*world_tag, **kwargs) -> None:
+        
+        
+        if not isinstance(world_tag,(list,tuple)):
+            raise TypeError("World Tags should be type {}, not {}".format(list, type(world_tag)))
+
+        if name=="":
+            self.name=create_name("planet")
+        else:
+            self.name = name
+
+        self._fuel=False
+        self.title = ""
+    
+        if "seed" in kwargs.keys():
+            np.random.seed(kwargs["seed"])
+
+        self._tags = []
+
+        for entry in world_tag:
+            if isinstance(entry, str):
+                parsed = WorldTag.__getitem__(entry)
+            elif not isinstance(entry, WorldTag):
+                raise TypeError("Cannot index with type {}, try an {}".format(type(entry, int)))
+            else:
+                parsed = entry
+            self._tags.append(parsed)
+
+        if len(world_tag)==0:
+            self._tags=[ choice(list(WorldTag)) for i in range(2) ]
+        
+        self._size = roll(rng, mod=-2)
+
+        self._atmosphere = roll(rng, -7+self._size) if atmosphere==-1 else atmosphere
+        if self._atmosphere<0:
+            self._atmosphere =0
+        self._pressure = -1 
+
+        atmo_t_mods=[
+            0,0, -2,-2,-1,-1, 0,0,1,1,2,6,6,2,-1,2,2
+        ]
+
+        self._temperature = roll(rng, atmo_t_mods[self._atmosphere]) if temperature==-1 else temperature
+        self._biosphere = roll(rng) if biosphere==-1 else biosphere
+        self._population_raw = roll(rng, -2) if population==-1 else population
+    
+        if self._size<2 or self._atmosphere==0:
+            self._hydro = 0
+        else:
+            self._hydro = roll(rng) 
+            if self._atmosphere < 2 or (self._atmosphere>9 and self._atmosphere < 13):
+                self._hydro -= 4
+
+            if self._temperature>=12:
+                self._hydro -= 6
+            elif self._temperature>=10:
+                self._hydro -= 2
+
+            self._hydro= min([10, max([self._hydro, 0])])
+
+        if self._population_raw==0:
+            self._population=0
+            self._tech_level = 0
+            self._government = Government(govs[0], False)
+            self._government_raw = 0
+            self._law_level = 0
+            self._factions = []
+
+        else:
+            self._population = int(round(np.random.rand(),4)*(10**self._population_raw))
+            
+            self._government_raw = roll(rng, -7+self._population_raw)
+            if self._population_raw>3 and self._government_raw==0:
+                self._government_raw = np.random.randint(1,3)
+            self._government = Government(govs[self._government_raw], False)
+            self._law_level = roll(rng, -7+ self._government_raw)
+            
+            faction_mod = 0
+            if self._government_raw==7:
+                faction_mod = 1
+            elif self._government_raw>=10:
+                faction_mod = -1
+            if self._government_raw<2:
+                self._factions = []
+            else:
+                self._factions = [Government(govs[roll(rng, -7+self._population_raw)], True) for i in range(np.random.randint(1,4)+faction_mod)]
+
+        star_mod = 0
+        if self._population_raw>=8:
+            star_mod = 1
+        if self._population_raw>=10:
+            star_mod=2
+        if self._population_raw<=4:
+            star_mod=-1
+        if self._population_raw<=2:
+            star_mod=-2
+
+
+        self._starport_raw = roll(rng, star_mod)
+        if self._starport_raw>= len(starports_str):
+            self._starport_raw = len(starports_str)-1
+        if self._population_raw==0:
+            self._tech_level=0
+        else:
+            self._tech_level = np.random.randint(1,7)+ self._get_tl_mod()
+            self._tech_level = min([15, self._tech_level])
+        
+        self._tech_level = self._tech_level if tech_level==-1 else tech_level
+        
+        self._category =[WorldCategory.Common,]
+
+        self.update_category()
+
+    def pack(self)->dict:
+        packed = {
+            "name":self.name,
+            "title":self.title,
+            "tags":[entry.name for entry in self._tags],
+            "size":self._size,
+            "atmo":self._atmosphere,
+            "pressure":self._pressure,
+            "temperature":self._temperature,
+            "bio":self._biosphere,
+            "raw_population":self._population_raw,
+            "population":self._population,
+            "hydro":self._hydro,
+            "tech":self._tech_level,
+            "law":self._law_level,
+            "government":self._government.pack(),
+            "gov_raw":self._government_raw,
+            "factions":[fact.pack() for fact in self._factions],
+            "generated":self._generated,
+            "starport_raw":self._starport_raw,
+            "persistent_pass":{
+                key:[entry.pack() for entry in self._persistent_passengers[key]] for key in self._persistent_passengers.keys()
+            },
+            "passengers":{
+                key:[entry.pack() for entry in self._passengers[key]] for key in self._passengers.keys()
+            }
+        }
+
+        return packed
+    
+    @classmethod
+    def unpack(cls, packed:dict):
+        new = cls(
+            generate=False
+        )
+
+        new.name=packed["name"]
+        new.title=packed["title"]
+        new._tags=[WorldTag.__getitem__(entry) for entry in packed["tags"]]
+        new._size=packed["size"]
+        new._atmosphere=packed["atmo"]
+        new._pressure=packed["pressure"]
+        new._temperature=packed["temperature"]
+        new._biosphere=packed["bio"]
+        new._population_raw=packed["raw_population"]
+        new._population=packed["population"]
+        new._hydro=packed["hydro"]
+        new._tech_level=packed["tech"]
+        new._law_level=packed["law"]
+        new._government=Government.unpack(packed["government"])
+        new._government_raw=packed["gov_raw"]
+        new._generated=packed["generated"]
+        new._factions=[Government.unpack(entry) for entry in packed["factions"]]
+        new._starport_raw=packed["starport_raw"]
+        new._passengers={
+            key:[Person.unpack(entry) for entry in packed["passengers"][key]] for key in packed["passengers"].keys()
+        }
+        new._persistent_passengers={
+            key:[Person.unpack(entry) for entry in packed["persistent_pass"][key]] for key in packed["persistent_pass"].keys()
+        }
+        new.update_category()
+
+        return new
+
+    def generate_passengers(self, steward_mod:int)->'dict[Person]':
+        if self._generated:
+            return self._passengers        
+
+        for key in self._persistent_passengers:
+            self._generated = True
+            self._passengers[key] = []
+            mod = 0
+            mod += steward_mod
+            if key=="high":
+                mod -=4
+            elif key=="low":
+                mod +=1
+            
+            if self._population_raw<=1:
+                mod-=4
+            elif self._population_raw==6 or self._population_raw==7:
+                mod+=1
+            elif self._population_raw>8:
+                mod += self._population_raw-8 + 3
+
+            letter = starports_str[self._starport_raw]
+            if letter=="A":
+                mod +=2
+            elif letter=="B":
+                mod +=1
+            elif letter=="E":
+                mod -=1
+            elif letter=="X":
+                mod -=3
+            if WorldCategory.red_zone in self._category:
+                mod -=4
+            if WorldCategory.amber_zone in self._category:
+                mod -=1
+            
+            die_roll = roll(mod=mod)
+            if die_roll<0:
+                n_passengers = 0
+            if die_roll>len(passenger_table)-1:
+                n_passengers = sum(np.random.randint(1,7,10))
+            else:
+                n_passengers =  sum(np.random.randint(1,7,passenger_table[die_roll]))
+            if len(self._persistent_passengers[key])>0:
+                self._passengers[key] += self._persistent_passengers[key]
+            self._passengers[key] += [Person.generate() for i in range(n_passengers - len(self._persistent_passengers[key]))]
+        return self._passengers
+    
+    def world_profile(self, location):
+        profile = str(location)+" "
+        profile+=starports_str[self._starport_raw]
+        profile+=star_hex[self._size]
+        profile+=star_hex[self._atmosphere]
+        profile+=star_hex[self._hydro]
+        profile+=star_hex[self._population_raw]
+        profile+=star_hex[self._government_raw]
+        profile+=star_hex[self._law_level]
+        profile+=star_hex[self._tech_level]
+        return profile
+
+
+    def list_available_goods(self)->'set[TradeGood]':
+        """
+        Returns a set of available goods. We use a set here so that each entry is unique
+        """
+        avail = []
+
+        for category in self._category:
+            # take all the trade goods, and filter out only the ones that are available for this category 
+            avail += list(filter(lambda entry: ALL_GOODS[entry].is_available(category), list(TradeGood) ))
+
+        avail = set(avail)
+
+        return avail
+
+    def get_purchase_price(self, tg:TradeGood):
+        """
+            Returns the purchase price of the given trade good on this world 
+            Returns -1 if the good is not available here 
+        """
+        entry = ALL_GOODS[tg]
+
+        if any(entry.is_available(wc) for wc in self._category ):
+            return min([entry.get_purchase_price(wc) for wc in self._category])
+        return -1 
+
+    def get_sale_price(self, tg:TradeGood):
+        entry = ALL_GOODS[tg]
+
+        return max([entry.get_sale_price(wc) for wc in self._category])
+
+    def update_category(self):
+        self._category = []
+        if self._atmosphere==0 and self._size==0 and self._hydro==0:
+            self._category.append(WorldCategory.Asteroid)
+
+        if self._atmosphere>=4 and self._atmosphere<=9:
+            if self._hydro>3 and self._hydro<9:
+                if self._population_raw>4 and self._population_raw<8:
+                    self._category.append(WorldCategory.Agricultural)
+        
+        if self._population_raw==0:
+            self._category.append(WorldCategory.Barren)
+
+        if self._hydro==2 and self._atmosphere>2:
+            self._category.append(WorldCategory.Desert)
+        
+        if self._atmosphere>9 and self._hydro>0:
+            self._category.append(WorldCategory.Fluid_Oceans)
+
+        if self._atmosphere==5 or self._atmosphere==6 or self._atmosphere==8:
+            if self._size>=6 and self._size<=8:
+                    if self._hydro>4 and self._hydro<8:
+                        self._category.append(WorldCategory.Garden)
+        
+        if self._population_raw>=9:
+            self._category.append(WorldCategory.High_Pop)
+
+        if self._tech_level>11:
+            self._category.append(WorldCategory.High_Tech)
+
+        if self._hydro>1 and self._atmosphere<2:
+            self._category.append(WorldCategory.Ice_Capped)
+
+        if self._population_raw>8:
+            if self._atmosphere<3 or self._atmosphere==4 or self._atmosphere==7 or self._atmosphere==9:
+                self._category.append(WorldCategory.Industrial)
+        
+        if self._population_raw<4:
+            self._category.append(WorldCategory.Low_Pop)
+
+        if self._tech_level<6:
+            self._category.append(WorldCategory.Low_Tech)
+
+        if self._population_raw>=6:
+            if self._hydro<4:
+                if self._atmosphere<4:
+                    self._category.append(WorldCategory.Non_Agricultural)
+
+            if self._government_raw>3 and self._government_raw<10:
+                if self._atmosphere==6 or self._atmosphere==8:
+                    if self._population_raw<9:
+                        self._category.append(WorldCategory.Rich)
+        else:
+            self._category.append(WorldCategory.Non_Industrial)
+        
+        if self._hydro<4:
+            if self._atmosphere<6 and self._atmosphere>1:
+                self._category.append(WorldCategory.Poor)
+
+        if self._hydro>9:
+            self._category.append(WorldCategory.Water_World)
+        
+        if len(self._category)==0:
+            self._category=[WorldCategory.Common]
+    
+    @property
+    def gravity(self)->float:
+        """
+            Returns the approximate acceleration at the surface 
+        """
+        sizes = [
+            0, 0.05,0.15,0.25,0.35,0.45,0.7,0.9,1.0,1.25,1.4
+        ]
+        assert len(sizes)==11
+        
+        return sizes[self._size]
+
+    @property
+    def pressure(self)->float:
+
+        pressures = [
+            0.00, 0.05, 0.1,0.3, 0.43, 0.65, 1.0, 1.0, 1.5, 2.5, -1, -1, -1, 8.2, 0.3, -1
+        ]
+        self._pressure = pressures[self._atmosphere]
+
+        if self._pressure==-1:
+            self._pressure = np.random.rand()*2
+            self._pressure = float(str(self._pressure)[:4])
+        return self._pressure
+
+    @property
+    def category(self)->'list[WorldCategory]':
+        return self._category
+
+    @property 
+    def atmosphere(self):
+        return self._atmosphere
+
+    @property
+    def temperature(self):
+        return self._temperature
+
+    @property
+    def biosphere(self):
+        return self._biosphere
+    
+    @property
+    def tech_level(self):
+        return self._tech_level
+
+    @property
+    def tags(self):
+        return self._tags
+    
+    @property
+    def weapons_banned(self):
+        if self._law_level>10:
+            return law_levels[-1]
+        else:
+            return law_levels[self._law_level]
+    def approach_check(self):
+        die_roll = roll()
+        if die_roll<self._law_level:
+            return True
+        else:
+            return False
+
+    @property
+    def government(self):
+        return self._government
+    
+    @property
+    def factions(self):
+        return self._factions
+
+    @property
+    def atmosphere_str(self)->str:
+        return "The atmophere is " + atmo.access(self._atmosphere).lower()
+
+    @property
+    def hydro_str(self)->str:
+        return "The planet " + hydro.access(self._hydro).lower()
+
+    @property
+    def temperature_str(self)->str:
+        return "The planet is " + temp.access(self._temperature)
+    
+    @property
+    def population_str(self)->str:
+        return "It has a population of approximately {}".format(self._population)
+    
+    @property
+    def tech_level_str(self)->str:
+        return "{}".format(tl.access(self._tech_level))
+
+    @property
+    def biosphere_str(self)->str:
+        return "The biosphere is " + bio.access(self._biosphere)
+
+    @property
+    def starports_str(self)->str:
+        return "{} - {}".format(starports_str[self._starport_raw], starports_quality[self._starport_raw])
+
+    def description(self)->str:
+        """
+        Returns a string describing this world! 
+        """
+        x= ", ".join([self.atmosphere_str, self.temperature_str, self.population, self.tech_level_str, self.biosphere_str])+". \n\n"
+        return x
+
+    def _pretty_fmt(self, what):
+        return what[0].upper() + what[1:].lower() + ". \n\n"
+
+    def _make_nice(self, what:str):
+        return what.replace("_", " ")
+
+    def full_line(self)->str:
+        output = "# The Planet {}\n\n".format(self.name)
+        sentence = "\n    ".join(["Characteristics: ", self.atmosphere_str, self.temperature_str, self.population_str, self.tech_level_str, self.biosphere_str]) 
+        sentence += "\n\n"
+        output += sentence
+
+        tags = "\n    ".join(["World Tags: "] + [tag.name for tag in self.tags]) 
+        output += tags + "\n\n"
+
+        cats = "\n    ".join(["World Categories: "] + [tag.name for tag in self.category]) 
+        output += cats+ "\n\n"
+
+        goods = "\n    ".join(["Available goods: "] + [self._make_nice(good.name) for good in self.list_available_goods()])
+        goods += "\n\n"
+        output+= goods
+
+        return output
+    
+    def get_image_name(self)->str:
+        if self._size<2 or self._atmosphere<2:
+            return "RClassC" + str(choice(range(3)) +1)
+        
+        if self._temperature>12:
+            return "RClassA1"
+        elif self._temperature>11:
+            return "RClassB1"
+        elif self._temperature<3:
+            return "RClassP"+str(choice([1,2]))
+        
+        
+        if self._hydro<2:
+            return "RClassH1"
+        elif self._hydro<3:
+            return "RClassH3"
+        elif self._hydro<4:
+            return "RClassH2"
+        elif self._hydro<9:
+            if self._temperature<5:
+                return "RClassL"+str(choice([1,2]))
+            return "RClassM"+str(choice(range(5))+1)
+        else:
+            return "RClassO" + str(choice([1,2]))
+
+
+    def _get_tl_mod(self):
+        mod = 0
+        if self._starport_raw<3:
+            mod-=4
+        elif self._starport_raw==10:
+            mod+=6
+        elif  self._starport_raw==11:
+            mod+=4
+        elif self._starport_raw==12:
+            mod+=2
+
+        if self._size==0 or self._size==1:
+            mod+=2
+        elif self._size>1 and self._size<5:
+            mod+=1
+
+        if self._atmosphere <4 or self._atmosphere>9:
+            mod+=1 
+        
+        if self._hydro==0:
+            mod+=1
+        elif self._hydro==9:
+            mod+=1
+        elif self._hydro==10:
+            mod+=2
+
+        if self._population_raw>0 and self._population_raw<6:
+            mod +=1
+        elif self._population_raw==8:
+            mod +=1
+        elif self._population==9:
+            mod+=2
+        elif self._population_raw==10:
+            mod += 4
+
+        if self._government_raw==0:
+            mod +=1
+        elif self._government_raw==5:
+            mod +=1
+        elif self._government_raw==7:
+            mod +=2 
+        elif self._government_raw==13 or self._government_raw==14:
+            mod -=2
+
+        return mod
+        
+
+         
