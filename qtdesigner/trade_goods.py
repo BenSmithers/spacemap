@@ -22,6 +22,23 @@ class Ui_Form(object):
         self.trade_good_lbl.setFont(font)
         self.trade_good_lbl.setObjectName("trade_good_lbl")
         self.verticalLayout.addWidget(self.trade_good_lbl)
+
+        self.generate_retailer_button = QtWidgets.QPushButton()
+        self.generate_retailer_button.setText("Generate Retailer")
+        self.verticalLayout.addWidget(self.generate_retailer_button)
+
+        self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
+        self.horizontalLayout_2.setObjectName("horizontalLayout_2")
+        self.retailer_lbl = QtWidgets.QLabel(Form)
+        self.retailer_lbl.setObjectName("retailer_lbl")
+        self.horizontalLayout_2.addWidget(self.retailer_lbl)
+        self.retailer_combo = QtWidgets.QComboBox(Form)
+        self.retailer_combo.setObjectName("retailer_combo")
+        
+        self.horizontalLayout_2.addWidget(self.retailer_combo)
+        self.verticalLayout.addLayout(self.horizontalLayout_2)
+
+
         self.horizontalLayout = QtWidgets.QHBoxLayout()
         self.horizontalLayout.setObjectName("horizontalLayout")
         self.type_lbl = QtWidgets.QLabel(Form)
@@ -32,6 +49,8 @@ class Ui_Form(object):
         self.type_combo.addItem("")
         self.horizontalLayout.addWidget(self.type_combo)
         self.verticalLayout.addLayout(self.horizontalLayout)
+
+
         self.trade_good_table = QtWidgets.QTableView(Form)
         self.trade_good_table.setObjectName("trade_good_table")
         self.verticalLayout.addWidget(self.trade_good_table)
@@ -55,3 +74,4 @@ class Ui_Form(object):
         self.type_lbl.setText(_translate("Form", "Type"))
         self.type_combo.setItemText(0, _translate("Form", "Any"))
         self.buyer_lbl.setText(_translate("Form", "Buyers"))
+        self.retailer_lbl.setText(_translate("Form", "Retailer"))

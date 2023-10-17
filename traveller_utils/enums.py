@@ -14,7 +14,11 @@ class Atmosphere(Enum):
     Low = 5
     Unusual = 6
 
-
+class Bases(Enum):
+    Naval = 0
+    Scout = 1
+    TAS = 2
+    Research = 3
 
 class Contraband(Enum):
     Weapons = 0
@@ -31,12 +35,13 @@ def get_entry_by_name(name:str, what:Enum)->Enum:
     raise ValueError("Could not find {} in {}".format(name, what))
 
 class TradeGood(Enum):
-    Basic_Electronics = 1
-    Basic_Machine_Parts = 2 
-    Basic_Manufactured_Goods = 3
-    Basic_Raw_Materials = 4
-    Basic_Consumables = 5
-    Basic_Ore = 6
+    Common_Electronics = 1
+    Common_Machine_Parts = 2 
+    Common_Manufactured_Goods = 3
+    Common_Raw_Materials = 4
+    Common_Industrial_Goods = 37
+    Common_Consumables = 5
+    Common_Ore = 6
     Advanced_Electronics = 7
     Advanced_Machine_Parts = 8
     Advanced_Manufactured_Goods = 9
@@ -61,11 +66,11 @@ class TradeGood(Enum):
     Uncommon_Raw_Materials = 28
     Wood = 29
     Vehicles = 30
-    Dangerous_Biochemicals = 31
-    Dangerous_Cybernetics = 32
-    Dangerous_Drugs = 33
-    Dangerous_Luxuries = 34
-    Very_Dangerous_Weapons = 35
+    Illegal_Biochemicals = 31
+    Illegal_Cybernetics = 32
+    Illegal_Drugs = 33
+    Illegal_Luxuries = 34
+    Illegal_Weapons = 35
     Travellers = 36
 
 class WorldCategory(Enum):

@@ -125,6 +125,16 @@ class TradeWidget(QtWidgets.QWidget):
         QtWidgets.QWidget.__init__(self, parent)
         self.ui=trade_goods_widget_gui()
         self.ui.setupUi(self)
+        
+        self.ui.generate_retailer_button.clicked.connect(self.generate_retailer)
+
+    def update_ui(self, world:World):
+        return 
+
+    def generate_retailer(self):
+        new_person = Person.generate()
+
+
                 
 class PlanetWidget(QtWidgets.QWidget):
     def __init__(self, parent):
@@ -142,6 +152,10 @@ class PlanetWidget(QtWidgets.QWidget):
         self.ui.code_lbl.setText(world.name)
         self.ui.code_lbl_2.setText(world.world_profile(loc))
         self.ui.pop_desc.setText(utils.number_add_comma(world._population))
+        self.ui.tech_desc.setText(world.tech_level_str)
+        self.ui.services_desc.setText(", ".join([entry.name for entry in world.services]))
+        self.ui.trade_code_desc.setText(", ".join([entry.name for entry in world.category]).replace("_"," "))
+
     def clear_ui(self):
         self.ui.size_desc.setText("")
         self.ui.pressure_desc.setText("")
@@ -152,6 +166,9 @@ class PlanetWidget(QtWidgets.QWidget):
         self.ui.code_lbl.setText("")
         self.ui.code_lbl_2.setText("")
         self.ui.pop_desc.setText("")
+        self.ui.services_desc.setText("")
+        self.ui.tech_desc.setText("")
+        self.ui.trade_code_desc.setText("")
 
 class main_window(QMainWindow):
     def __init__(self,parent=None):
@@ -196,7 +213,7 @@ class main_window(QMainWindow):
 
         for i, entry in enumerate(self.govs):
             self._planet_widget.ui.formLayout_2.setWidget(
-                i+7, QtWidgets.QFormLayout.SpanningRole, entry
+                i+10, QtWidgets.QFormLayout.SpanningRole, entry
             )
         
 

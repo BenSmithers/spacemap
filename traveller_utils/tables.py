@@ -96,7 +96,26 @@ _obj.close()
 
 govs= govs["all"]
 
-
+tech_levels=[
+    "(primitive) stone age primitives",
+    "(primitive) bronze or Iron Age",
+    "(primitive) renaissance-era technology",
+    "(primitive) primitive firearms, inklings of science and industry",
+    "(industrial) industrial, plastics, radio, airplanes",
+    "(industrial) widespread electricity, automobiles and telephones",
+    "(industrial) early fission and rocketry. Start of the space age",
+    "(pre-stellar) satellites, common computers, reliably reaching orbit",
+    "(pre-stellar) possible to reach other worlds, permanent spacehabitats, fusion viable",
+    "(pre-stellar) gravity manipulation, possible jump drive technology",
+    "(early-stellar) common jump drives, common orbital infrastructure, intersetellar trade",
+    "(early-stellar) True AI possible, grav-supported super structures, jump 2",
+    "(stellar) weather control, terraforming, plasma weapons, jump 3",
+    "(stellar) battle dress, convenient cloning, underwater space ships, jump 4",
+    "(stellar) fusion weapons, flying cities, jump 5",
+    "(high stellar) vast improvement to human life, black globe generators, jump 6",
+    "(high stellar) vast improvement to human life, black globe generators, jump 6",
+    "(high stellar) vast improvement to human life, black globe generators, jump 6"
+]
 
 
 atmo = Table()
@@ -122,5 +141,5 @@ for key in _data["biosphere"]:
     bio.add_entry(_data["biosphere"][key]["min"], "{} - {}".format(key, _data["biosphere"][key]["text"]))
 
 tl = Table()
-for key in _data["tech level"]:
-    tl.add_entry(_data["tech level"][key]["min"], "TL{} - {}".format(key, _data["tech level"][key]["text"]))
+for ik, key in enumerate(tech_levels):
+    tl.add_entry(ik-0.5, "TL{} - {}".format(ik, key))

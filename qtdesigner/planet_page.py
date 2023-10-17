@@ -74,6 +74,7 @@ class Ui_Form(object):
         self.formLayout_2.setWidget(5, QtWidgets.QFormLayout.LabelRole, self.hydro_lbl)
         self.hydro_desc = QtWidgets.QLabel(self.overview_page)
         self.hydro_desc.setObjectName("hydro_desc")
+        self.hydro_desc.setWordWrap(True)
         self.formLayout_2.setWidget(5, QtWidgets.QFormLayout.FieldRole, self.hydro_desc)
 
         self.temp_lbl = QtWidgets.QLabel(self.overview_page)
@@ -89,6 +90,31 @@ class Ui_Form(object):
         self.pop_desc = QtWidgets.QLabel(self.overview_page)
         self.pop_desc.setObjectName("pop_desc")
         self.formLayout_2.setWidget(6, QtWidgets.QFormLayout.FieldRole, self.pop_desc)
+
+        self.tech_lbl = QtWidgets.QLabel(self.overview_page)
+        self.tech_lbl.setObjectName("tech_lbl")
+        self.formLayout_2.setWidget(7, QtWidgets.QFormLayout.LabelRole, self.tech_lbl)
+        self.tech_desc = QtWidgets.QLabel(self.overview_page)
+        self.tech_desc.setObjectName("tech_desc")
+        self.tech_desc.setWordWrap(True)
+        self.formLayout_2.setWidget(7, QtWidgets.QFormLayout.FieldRole, self.tech_desc)
+
+        self.trade_code_lbl = QtWidgets.QLabel(self.overview_page)
+        self.trade_code_lbl.setObjectName("trade_code_lbl")
+        self.formLayout_2.setWidget(8, QtWidgets.QFormLayout.LabelRole, self.trade_code_lbl)
+        self.trade_code_desc = QtWidgets.QLabel(self.overview_page)
+        self.trade_code_desc.setObjectName("trade_code_desc")
+        self.trade_code_desc.setWordWrap(True)
+        self.formLayout_2.setWidget(8, QtWidgets.QFormLayout.FieldRole, self.trade_code_desc)
+
+        self.services_lbl = QtWidgets.QLabel(self.overview_page)
+        self.services_lbl.setObjectName("services_lbl")
+        self.formLayout_2.setWidget(9, QtWidgets.QFormLayout.LabelRole, self.services_lbl)
+        self.services_desc = QtWidgets.QLabel(self.overview_page)
+        self.services_desc.setObjectName("services_desc")
+        self.formLayout_2.setWidget(9, QtWidgets.QFormLayout.FieldRole, self.services_desc)
+
+        
 
 
         self.toolBox.addItem(self.overview_page, "")
@@ -112,5 +138,8 @@ class Ui_Form(object):
         self.pop_lbl.setText(_translate("Form", "Population"))
         self.temp_lbl.setText(_translate("Form", "Temperature"))
         self.starport_desc.setText(_translate("Form", "C - Routine"))
+        self.services_lbl.setText(_translate("Form", "Starport Services"))
+        self.tech_lbl.setText(_translate("Form", "Tech Level"))
+        self.trade_code_lbl.setText(_translate("Form", "Trade Codes"))
 
         self.toolBox.setItemText(self.toolBox.indexOf(self.overview_page), _translate("Form", "Overview"))

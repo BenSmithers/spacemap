@@ -69,8 +69,8 @@ class Clicker(QGraphicsScene,ActionManager):
     
     def unpack(self, packed:dict):
         print("unpacking")
-        for i in range(15):
-            for j in range(10):
+        for i in range(25):
+            for j in range(20):
                 shift = int(i/2)
                 loc = HexID(i ,j-shift)
                 if loc.pack() in packed:
@@ -92,10 +92,10 @@ class Clicker(QGraphicsScene,ActionManager):
         self._selected_sid.setZValue(100)
 
     def initialize(self):
-        sample = utils.perlin(100) + 0.5
+        sample = utils.perlin(150) + 0.5
 
-        for i in range(15):
-            for j in range(10):
+        for i in range(25):
+            for j in range(20):
                 this_val = sample[i*5][j*5]
                 shift = int(i/2)
                 loc = HexID(i ,j-shift)

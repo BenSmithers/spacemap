@@ -1,5 +1,6 @@
 from traveller_utils.enums import WorldCategory, TradeGood, get_entry_by_name
 import json, os
+import numpy as np
 
 # total supply mod scales base price like so when purchasing
 purchase_scale = [ 
@@ -33,7 +34,7 @@ class TradeGoods:
         self.name = name
 
         self._price = float(json_entry["price"])
-
+        self._amount_string = json_entry["tons"]
         self._common = False
         self._availble = []
         if len(json_entry["available"])==1:
@@ -50,6 +51,12 @@ class TradeGoods:
             get_entry_by_name(entry, WorldCategory):json_entry["supply"][entry] for entry in json_entry["supply"]
         }
 
+    def sample_amount(self):
+        split= self._amount_string.split("*")
+
+        factor = int(split[0])
+        die_roll = np.random.randint(1,7,int(split[1].split("d")[0]))
+        return factor*np.sum(die_roll)
 
     def is_available(self, wc:WorldCategory)->bool:
         """
@@ -60,29 +67,29 @@ class TradeGoods:
         else:
             return wc in self._availble
 
-    def get_mod(self, wc:WorldCategory)->int:
+    def get_mod(self, wc_list:'list[WorldCategory]')->int:
         """
         The bigger the number, the more supply there is relative to the demand 
         """
-        if wc in self._demand_mod:
-            demand = self._demand_mod[wc]
-        else:
-            demand = 0
+        demand = 0
+        supply = 0
+        for wc in wc_list:
+            if wc in self._demand_mod:
+                demand += self._demand_mod[wc]
 
-        if wc in self._supply_mod:
-            supply = self._supply_mod[wc]
-        else:
-            supply = 0
+
+            if wc in self._supply_mod:
+                supply += self._supply_mod[wc]
 
         return supply - demand
 
-    def get_purchase_price(self, wc:WorldCategory)->float:
+    def sample_purchase_price(self, wc_list:'list[WorldCategory]', broker=0)->float:
         """
             Returns the expected price to purchase this good on a planet 
 
             Uses the "supply" and purchase
         """
-        base = 10 + self.get_mod(wc)
+        base = np.sum(np.random.randint(1,7,3)) + self.get_mod(wc_list) +broker
         if base < 0:
             scale = 4.0
         elif base < 21:
@@ -92,14 +99,14 @@ class TradeGoods:
         return self._price*scale
 
 
-    def get_sale_price(self, wc:WorldCategory)->float:
+    def sample_sale_price(self, wc_list:'list[WorldCategory]', broker=0)->float:
         """
             Returns the expected amount to get by selling this good on a given planet 
 
             Uses the "demand" and sale
         """
 
-        base = 10 - self.get_mod(wc)
+        base = np.sum(np.random.randint(1,7,3)) - self.get_mod(wc_list) +broker
 
         if base < 0:
             scale = 0.25

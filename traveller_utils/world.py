@@ -6,7 +6,7 @@ import numpy as np
 import os
 
 from traveller_utils.tables import *
-from traveller_utils.enums import WorldTag, WorldCategory, TradeGood, Contraband
+from traveller_utils.enums import WorldTag, WorldCategory, TradeGood, Contraband, Bases
 from traveller_utils.utils import roll, d100
 from traveller_utils.trade_goods import ALL_GOODS
 from traveller_utils.name_gen import create_name
@@ -66,6 +66,7 @@ class Government:
     @classmethod
     def unpack(cls, packed:dict):
         new = cls(packed, is_faction=packed["is_faction"])
+        new._what= packed["examples"]
         new.notes = packed["notes"]
         new._strength = packed["strength"]
         return new
@@ -105,6 +106,8 @@ class World:
         self._law_level=0
         self._factions=[]
         self._starport_raw=0
+        self._services = []
+        self._retailers = []
         self._persistent_passengers={
             "high":[],
             "middle":[],
@@ -239,6 +242,45 @@ class World:
 
         self.update_category()
 
+        naval_roll = roll()
+        scout_roll = roll()
+        research_roll = roll()
+        tas_roll = roll()
+
+        tas_lim = 14
+        naval_lim = 14
+        scout_lim = 14
+        res_lim = 14
+        if starports_str[self._starport_raw]=="A":
+            tas_lim = 0
+            naval_lim = 7
+            scout_lim = 9
+            res_lim = 7
+        elif starports_str[self._starport_raw]=="B":
+            tas_lim = 0
+            naval_lim = 7
+            scout_lim = 7
+            res_lim = 9
+        elif starports_str[self._starport_raw]=="C":
+            tas_lim = 9
+            scout_lim = 7
+            res_lim = 9
+        elif starports_str[self._starport_raw]=="D":
+            scout_lim = 6
+
+        if scout_roll>scout_lim:
+            self._services.append(Bases.Scout)
+        if naval_roll>naval_lim:
+            self._services.append(Bases.Naval)
+        if tas_roll>tas_lim:
+            self._services.append(Bases.TAS)
+        if research_roll>res_lim:
+            self._services.append(Bases.Research)
+
+    @property
+    def services(self):
+        return self._services
+
     def pack(self)->dict:
         packed = {
             "name":self.name,
@@ -259,6 +301,7 @@ class World:
             "factions":[fact.pack() for fact in self._factions],
             "generated":self._generated,
             "starport_raw":self._starport_raw,
+            "services":[entry.name for entry in self._services],
             "persistent_pass":{
                 key:[entry.pack() for entry in self._persistent_passengers[key]] for key in self._persistent_passengers.keys()
             },
@@ -291,6 +334,7 @@ class World:
         new._government=Government.unpack(packed["government"])
         new._government_raw=packed["gov_raw"]
         new._generated=packed["generated"]
+        new._services=[Bases.__getitem__(entry) for entry in packed["services"]]
         new._factions=[Government.unpack(entry) for entry in packed["factions"]]
         new._starport_raw=packed["starport_raw"]
         new._passengers={
