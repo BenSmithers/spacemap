@@ -1,6 +1,28 @@
 
 from enum import Enum
 
+class Title(Enum):
+    """
+        0 - fewer than 500
+        1 - up to one hundred thousand 
+        2 - up to one hundred million
+        3 - up to one hundred billion 
+        4 - up to one hundred trillion??
+    """
+    Lord = 0
+    Count = 1
+    Duke = 2
+    King = 3
+    Emperor = 4
+
+class LandTitle(Enum):
+    Holding = 0
+    County = 1
+    Duchy = 2
+    Kingdom = 3
+    Empire = 4
+
+
 class TravelCode(Enum):
     Amber = 0
     Red = 1

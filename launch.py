@@ -1,4 +1,4 @@
-
+#!/usr/bin/python3.8
 import typing
 from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QDialog, QGraphicsScene
 from PyQt5 import QtGui
@@ -101,6 +101,9 @@ class PassWidget(QtWidgets.QWidget):
         dialog.update_gui(passenger, pix)
         dialog.exec_()
 
+    def clear_pass(self):
+        self.pass_list_entry.clear()
+
     def log_passengers(self, world:World):
         if type(world)==int:
             all_passengers = self._cache_world.generate_passengers(0)
@@ -156,6 +159,11 @@ class PlanetWidget(QtWidgets.QWidget):
         self.ui.services_desc.setText(", ".join([entry.name for entry in world.services]))
         self.ui.trade_code_desc.setText(", ".join([entry.name for entry in world.category]).replace("_"," "))
 
+        if world.liege_world is not None:
+            self.ui.liege_desc.setText(world.liege_world.name)
+        else:
+            self.ui.liege_desc.setText("")
+
     def clear_ui(self):
         self.ui.size_desc.setText("")
         self.ui.pressure_desc.setText("")
@@ -169,6 +177,7 @@ class PlanetWidget(QtWidgets.QWidget):
         self.ui.services_desc.setText("")
         self.ui.tech_desc.setText("")
         self.ui.trade_code_desc.setText("")
+        self.ui.liege_desc.setText("")
 
 class main_window(QMainWindow):
     def __init__(self,parent=None):
@@ -196,12 +205,14 @@ class main_window(QMainWindow):
 
         
     def planet_selected(self, world:World, loc:HexID):
+        while len(self.govs)>0:
+            first = self.govs.pop()
+            first.deleteLater()
+            self._planet_widget.ui.formLayout_2.removeWidget(first)
+        
         self._planet_widget.update_ui(world, loc)
         self._pass_widget.log_passengers(world)
 
-        while len(self.govs)>0:
-            first = self.govs.pop()
-            self._planet_widget.ui.formLayout_2.removeWidget(first)
 
         self.govs.append(GovWidget(self._planet_widget.ui.overview_page))
         self.govs[0].configure(world.government)
@@ -213,17 +224,15 @@ class main_window(QMainWindow):
 
         for i, entry in enumerate(self.govs):
             self._planet_widget.ui.formLayout_2.setWidget(
-                i+10, QtWidgets.QFormLayout.SpanningRole, entry
+                i+12, QtWidgets.QFormLayout.SpanningRole, entry
             )
-        
-
-
-        
 
     def select_none(self):
         self._planet_widget.clear_ui()
+        self._pass_widget.clear_pass()
         while len(self.govs)>0:
             first = self.govs.pop()
+            first.deleteLater()
             self._planet_widget.ui.formLayout_2.removeWidget(first)
 
 

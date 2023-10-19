@@ -71,6 +71,17 @@ class HexID:
         return "{}_{}_{}".format(self._xid, self._yid, self._zid)
 
         # -30 degrees, increment by 60 with each
+    
+    def __sub__(self, other:'HexID')->int:
+        """
+            returns the distance between this and another HexID
+        """
+        inter_id = HexID(self.xid - other.xid, self.yid - other.yid)
+
+        return int((abs(inter_id.xid) + abs(inter_id.yid) + abs(inter_id.zid))/2)
+
+        # -30 degrees, increment by 60 with each
+
 
 M = (3.0 / 2.0, 0.0, RTHREE/2.0, RTHREE, # F0-F3
                2.0 / 3.0, 0.0, -1.0 / 3.0, RTHREE / 3.0) #b0-b3

@@ -43,6 +43,8 @@ class Ui_Form(object):
         self.starport_desc.setObjectName("starport_desc")
         self.formLayout_2.setWidget(0, QtWidgets.QFormLayout.FieldRole, self.starport_desc)
 
+
+
         # size, atmosphere, hydrodynamics, temperature
         # population, 
 
@@ -114,7 +116,20 @@ class Ui_Form(object):
         self.services_desc.setObjectName("services_desc")
         self.formLayout_2.setWidget(9, QtWidgets.QFormLayout.FieldRole, self.services_desc)
 
-        
+
+        self.liege_lbl = QtWidgets.QLabel(self.overview_page)
+        self.liege_lbl.setObjectName("liege_lbl")
+        self.formLayout_2.setWidget(10, QtWidgets.QFormLayout.LabelRole, self.liege_lbl)
+        self.liege_desc = QtWidgets.QLabel(self.overview_page)
+        self.liege_desc.setObjectName("liege_desc")
+        self.formLayout_2.setWidget(10, QtWidgets.QFormLayout.FieldRole, self.liege_desc)
+
+        self.vassal_lbl = QtWidgets.QLabel(self.overview_page)
+        self.vassal_lbl.setObjectName("vassal_lbl")
+        self.formLayout_2.setWidget(11, QtWidgets.QFormLayout.LabelRole, self.vassal_lbl)
+        self.vassal_desc = QtWidgets.QLabel(self.overview_page)
+        self.vassal_desc.setObjectName("vassal_desc")
+        self.formLayout_2.setWidget(11, QtWidgets.QFormLayout.FieldRole, self.vassal_desc)        
 
 
         self.toolBox.addItem(self.overview_page, "")
@@ -141,5 +156,7 @@ class Ui_Form(object):
         self.services_lbl.setText(_translate("Form", "Starport Services"))
         self.tech_lbl.setText(_translate("Form", "Tech Level"))
         self.trade_code_lbl.setText(_translate("Form", "Trade Codes"))
+        self.liege_lbl.setText(_translate("Form", "Liege"))
+        self.vassal_lbl.setText(_translate("Form", "Vassals"))
 
         self.toolBox.setItemText(self.toolBox.indexOf(self.overview_page), _translate("Form", "Overview"))

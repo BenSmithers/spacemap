@@ -6,11 +6,12 @@ import numpy as np
 import os
 
 from traveller_utils.tables import *
-from traveller_utils.enums import WorldTag, WorldCategory, TradeGood, Contraband, Bases
+from traveller_utils.enums import WorldTag, WorldCategory, TradeGood, Contraband, Bases, Title, LandTitle
 from traveller_utils.utils import roll, d100
 from traveller_utils.trade_goods import ALL_GOODS
 from traveller_utils.name_gen import create_name
 from traveller_utils.person import Person
+from traveller_utils.coordinates import HexID
 
 WorldTag._value2member_map_.keys()
 
@@ -88,9 +89,8 @@ class World:
         """
             Initialize a minimal world, generate full world if `generate`
         """
-        self.name = ""
+        self._name = ""
         self._fuel = False
-        self.title = ""
         self._tags = []
         self._size= 0
         self._atmosphere= 0
@@ -106,6 +106,10 @@ class World:
         self._law_level=0
         self._factions=[]
         self._starport_raw=0
+        self._liege = None
+        self._liege_name = None
+        self._vassals = []
+        self._vassal_names = []
         self._services = []
         self._retailers = []
         self._persistent_passengers={
@@ -122,10 +126,36 @@ class World:
             "low":[], 
         }
         self._category =[WorldCategory.Common,]
+        self._title = Title.Lord
 
         if generate:
             self.populate()
 
+    @property 
+    def liege(self)->HexID:
+        return self._liege
+    @property
+    def liege_world(self)->'World':
+        return self._liege_name
+    
+    def set_liege(self, hid:HexID, which:'World'):
+        self._liege = hid
+        self._liege_name = which
+
+    @property
+    def title(self):
+        return self._title
+
+    @property 
+    def vassals(self)->'list[HexID]':
+        return self._vassals
+    @property
+    def vassals_worlds(self)->'list[World]':
+        return self._vassal_names
+    
+    def add_vassal(self, hid:HexID, which:'World'):
+        self._vassals.append(hid)
+        self._vassal_names.append(which)
 
     def populate(self,name="",rng=None,
                 atmosphere=-1, temperature=-1,biosphere=-1,
@@ -136,12 +166,11 @@ class World:
             raise TypeError("World Tags should be type {}, not {}".format(list, type(world_tag)))
 
         if name=="":
-            self.name=create_name("planet")
+            self._name=create_name("planet")
         else:
-            self.name = name
+            self._name = name
 
         self._fuel=False
-        self.title = ""
     
         if "seed" in kwargs.keys():
             np.random.seed(kwargs["seed"])
@@ -205,7 +234,7 @@ class World:
                 self._government_raw = np.random.randint(1,3)
             self._government = Government(govs[self._government_raw], False)
             self._law_level = roll(rng, -7+ self._government_raw)
-            
+
             faction_mod = 0
             if self._government_raw==7:
                 faction_mod = 1
@@ -282,9 +311,11 @@ class World:
         return self._services
 
     def pack(self)->dict:
+        liege_packed = "" if self._liege is None else self.liege.pack()
         packed = {
-            "name":self.name,
-            "title":self.title,
+            "liege":liege_packed,
+            "name":self._name,
+            "title":self._title.value,
             "tags":[entry.name for entry in self._tags],
             "size":self._size,
             "atmo":self._atmosphere,
@@ -317,9 +348,9 @@ class World:
         new = cls(
             generate=False
         )
-
-        new.name=packed["name"]
-        new.title=packed["title"]
+        new._liege = None if packed["liege"]=="" else HexID.unpack(packed["liege"])
+        new._name=packed["name"]
+        new._title=Title(packed["title"])
         new._tags=[WorldTag.__getitem__(entry) for entry in packed["tags"]]
         new._size=packed["size"]
         new._atmosphere=packed["atmo"]
@@ -402,7 +433,7 @@ class World:
         profile+=star_hex[self._hydro]
         profile+=star_hex[self._population_raw]
         profile+=star_hex[self._government_raw]
-        profile+=star_hex[self._law_level]
+        profile+=star_hex[min([self._law_level, len(star_hex)-1])]
         profile+=star_hex[self._tech_level]
         return profile
 
@@ -438,6 +469,17 @@ class World:
         return max([entry.get_sale_price(wc) for wc in self._category])
 
     def update_category(self):
+        if self._population<1000:
+            self._title = Title.Lord
+        elif self._population<1e5:
+            self._title = Title.Count
+        elif self._population<1e8:
+            self._title = Title.Duke
+        elif self._population<1e11:
+            self._title = Title.King
+        else:
+            self._title = Title.Emperor
+
         self._category = []
         if self._atmosphere==0 and self._size==0 and self._hydro==0:
             self._category.append(WorldCategory.Asteroid)
@@ -599,6 +641,10 @@ class World:
     @property
     def starports_str(self)->str:
         return "{} - {}".format(starports_str[self._starport_raw], starports_quality[self._starport_raw])
+
+    @property
+    def name(self):
+        return "The {} of {}".format(LandTitle(self._title.value).name, self._name)
 
     def description(self)->str:
         """

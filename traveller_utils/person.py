@@ -94,7 +94,7 @@ class Person:
         self._persistent = True
 
     @property
-    def wants(self)->list[TradeGoods]:
+    def wants(self)->'list[TradeGoods]':
         return self._wants
 
     @property

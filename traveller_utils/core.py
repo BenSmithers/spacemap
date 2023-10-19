@@ -118,3 +118,91 @@ class Hex(QPolygonF):
         new_hx.geography=obj["geo"]
         new_hx.wind = np.array(obj["wind"])
         return new_hx
+
+
+
+class Region(QPolygonF):
+    """
+    Regions are just two polygons, merged together
+    """
+    def __init__(self, origin:QPolygonF, *hexIDs:HexID):
+        super().__init__(origin)
+        self._name = "New Region"
+        self._hexIDs = list(hexIDs)
+        self._fill = QColor(randint(1,255),randint(1,255),randint(1,255),100)
+
+    def average_location(self):
+        mean_x = 0.0
+        mean_y = 0.0
+        n = len(self._hexIDs)
+        for hid in self.hexIDs:
+            pt = hex_to_screen(hid)
+            mean_x += pt.x()/n
+            mean_y += pt.y()/n
+        return QPointF(mean_x, mean_y)
+
+    @property
+    def hexIDs(self)->list:
+        return self._hexIDs
+    @property
+    def name(self)->str:
+        return self._name
+    @property
+    def fill(self)->QColor:
+        return self._fill
+
+    def pack(self)->dict:
+        """
+            Converts the Region into a dictionary that can later be unpacked with the 'unpack' function 
+        """
+        hids = {
+            "xids":[hid.xid for hid in self._hexIDs],
+            "yids":[hid.yid for hid in self._hexIDs]
+        }
+        points = []
+        for pt in range(len(self)):
+            points.append([ self[pt].x(), self[pt].y()])
+        return {
+            "vertices":points,
+            "hIDs":hids,
+            "name":self._name,
+            "red":self.fill.red(),
+            "green":self.fill.green(),
+            "blue":self.fill.blue()
+        }
+    @classmethod
+    def unpack(cls, packed:dict)->'Region':
+        verts = [QPointF(item[0], item[1]) for item in packed["vertices"]]
+        hIDs = [HexID(packed["hIDs"]["xids"][i], packed["hIDs"]["yids"][i]) for i in range(len(packed["hIDs"]["yids"]))]
+        new_reg = cls(QPolygonF(verts), *hIDs)
+        new_reg._name = packed["name"]
+        new_reg._fill=QColor(packed["red"], packed["green"], packed["blue"], 100)
+        return new_reg
+
+    def set_name(self, name:str):
+        self._name = name
+    def set_fill(self,fill:QColor):
+        self._fill = fill
+
+    def merge(self, other:'Region')->'Region':
+        """
+        Combines the regions together, returns Region
+        """
+        combined = self.united(other)
+        new = Region(combined, *self._hexIDs)
+        new._hexIDs += other.hexIDs
+        new._name = self._name
+        new._fill = self._fill
+        return new
+
+    def subtract(self, other:'Region')->'Region':
+        combined = self.subtracted(other)
+        new = Region(combined,*self._hexIDs)
+        #new._hexIDs += other.hexIDs
+        for id in other.hexIDs:
+            if id in self._hexIDs:
+                new._hexIDs.remove(id)
+
+        new._name = self._name
+        new._fill = self._fill
+        return new
