@@ -9,6 +9,7 @@ from qtdesigner.main_window import Ui_MainWindow as main_gui
 
 from traveller_utils.world import World, Government
 from traveller_utils.person import Person
+from traveller_utils.retailer import Retailer
 from traveller_utils.click_interface import Clicker
 from traveller_utils.coordinates import HexID
 from traveller_utils import utils 
@@ -54,6 +55,15 @@ class PassengerItem(QtGui.QStandardItem):
     @property
     def passenger(self):
         return(self._this_path)
+    
+class SellerItem(QtGui.QStandardItem):
+    def __init__(self, item:str, price:float, qty:int):
+        combined = "{} : ${:.2f} per unit | {} units".format(item, price, qty)
+        super(SellerItem, self).__init__(combined)
+        self._item = item
+        self._price = price
+        self._qty = qty
+
     
 class GovWidget(QtWidgets.QWidget):
     def __init__(self, parent: QWidget):
@@ -130,12 +140,88 @@ class TradeWidget(QtWidgets.QWidget):
         self.ui.setupUi(self)
         
         self.ui.generate_retailer_button.clicked.connect(self.generate_retailer)
+        self.seller_list_entry = QtGui.QStandardItemModel()
+        self.buyer_table_entry = QtGui.QStandardItemModel()
+        self.ui.trade_good_table.setModel(self.seller_list_entry)
+        self.ui.trade_good_table.clicked[QtCore.QModelIndex].connect(self.trade_good_clicked)
 
-    def update_ui(self, world:World):
-        return 
+        self.ui.buyer_table.setModel(self.buyer_table_entry)
+        self.ui.buyer_table.clicked[QtCore.QModelIndex].connect(self.buyer_clicked)
+        self.ui.retailer_combo.currentIndexChanged.connect(self.retail_combo_updated)
+
+        self._world= None
+
+
+    def clear(self):
+        self._world = None
+        self.seller_list_entry.clear()
+        self.buyer_table_entry.clear()
+        self.ui.retailer_combo.clear()
+
+    def update_ui(self, world:World):        
+        self._world = world
+        if world is not None:
+            all_retails = world.retailers
+
+        self.seller_list_entry.clear()
+        self.buyer_table_entry.clear()
+        self.ui.retailer_combo.clear()
+
+        mod = 0
+        if world.starport_cat=="A":
+            mod = -6
+        elif world.starport_cat=="B":
+            mod = -4
+        elif world.starport_cat=="C":
+            mod = -2
+
+        add_string = "Finding a Retailer: CR {}+, 1D days (hours online)\n".format(8+mod)
+        add_string += "+1 per attempt each month "
+        self.ui.difficulty_lbl.setText(add_string)
+
+        if len(all_retails)==0:
+            return
+        for retailer in world.retailers:
+            self.ui.retailer_combo.addItem(retailer.name)
+
+        #chosen_retailer = all_retails[self.ui.retailer_combo.currentIndex()]
+
+        self.retail_combo_updated()
+
+    def retail_combo_updated(self):
+        index = self.ui.retailer_combo.currentIndex()
+        self.seller_list_entry.clear()
+        self.buyer_table_entry.clear()
+
+        if self._world is None:
+            return
+
+        if len(self._world.retailers)==0:
+            return
+
+        this_retail = self._world.retailers[index]
+        for entry in this_retail._sale_prices.keys():
+            new_item = SellerItem(entry.name, this_retail._sale_prices[entry]["price"],this_retail._sale_prices[entry]["amount"] )
+            self.seller_list_entry.appendRow(new_item)
+        
 
     def generate_retailer(self):
-        new_person = Person.generate()
+        if self._world is None:
+            raise ValueError("This should be unreachable")
+
+        print("generating retailer")
+
+        new_retailer = Retailer()
+        self._world._retailers.append(new_retailer)
+        new_retailer.regenerate(self._world, self.ui.skill_spin.value())
+
+        self.update_ui(self._world)
+
+    def trade_good_clicked(self, what):
+        item = self.seller_list_entry.itemFromIndex(what)
+
+    def buyer_clicked(self, what):
+        item = self.buyer_table_entry.itemFromIndex(what)
 
 
                 
@@ -164,6 +250,14 @@ class PlanetWidget(QtWidgets.QWidget):
         else:
             self.ui.liege_desc.setText("")
 
+        self.ui.vassal_desc.setWordWrap(True)
+        if len(world.vassals_worlds)!=0:
+            text= ", ".join([entry.name for entry in world.vassals_worlds])
+
+            self.ui.vassal_desc.setText(text)
+        else:
+            self.ui.vassal_desc.setText("")
+
     def clear_ui(self):
         self.ui.size_desc.setText("")
         self.ui.pressure_desc.setText("")
@@ -178,6 +272,7 @@ class PlanetWidget(QtWidgets.QWidget):
         self.ui.tech_desc.setText("")
         self.ui.trade_code_desc.setText("")
         self.ui.liege_desc.setText("")
+        self.ui.vassal_desc.setText("")
 
 class main_window(QMainWindow):
     def __init__(self,parent=None):
@@ -211,6 +306,7 @@ class main_window(QMainWindow):
             self._planet_widget.ui.formLayout_2.removeWidget(first)
         
         self._planet_widget.update_ui(world, loc)
+        self._trade_widget.update_ui(world)
         self._pass_widget.log_passengers(world)
 
 
@@ -230,6 +326,8 @@ class main_window(QMainWindow):
     def select_none(self):
         self._planet_widget.clear_ui()
         self._pass_widget.clear_pass()
+        self._trade_widget.clear()
+
         while len(self.govs)>0:
             first = self.govs.pop()
             first.deleteLater()

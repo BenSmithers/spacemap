@@ -51,6 +51,9 @@ class TradeGoods:
             get_entry_by_name(entry, WorldCategory):json_entry["supply"][entry] for entry in json_entry["supply"]
         }
 
+    def __hash__(self) -> int:
+        return self.name.__hash__()
+
     def sample_amount(self):
         split= self._amount_string.split("*")
 
@@ -117,7 +120,7 @@ class TradeGoods:
         
         return self._price*scale
 
-
+# map a tradegood enum entryto a constructed TradeGoods object
 ALL_GOODS = {
     get_entry_by_name(entry, TradeGood):TradeGoods(entry, tg_data[entry]) for entry in tg_data
 }

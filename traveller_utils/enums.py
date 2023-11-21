@@ -47,7 +47,6 @@ class Contraband(Enum):
     Drugs = 1
     Information = 2
     Technology = 3
-    Travellers = 4
     Psionics = 5
 
 def get_entry_by_name(name:str, what:Enum)->Enum:
@@ -93,7 +92,6 @@ class TradeGood(Enum):
     Illegal_Drugs = 33
     Illegal_Luxuries = 34
     Illegal_Weapons = 35
-    Travellers = 36
 
 class WorldCategory(Enum):
     Common=0

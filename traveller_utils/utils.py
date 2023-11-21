@@ -79,7 +79,11 @@ class IconLib:
         else:
             return self._pixmaps[name].scaledToWidth(int(width))
 
-
+def roll1d(rng=None, mod=0):
+    if rng is None:
+        return np.random.randint(1,7) + mod
+    else:
+        return rng.randint(1,7) + mod 
 
 def roll(rng=None, mod=0):
     if rng is None:
@@ -236,7 +240,7 @@ def perlin(granularity,octave=5)->np.ndarray:
     evals = interp2d(xs,xs,_lerp(x1,x2,v))
     values = evals(range(granularity),range(granularity))
 
-    return values # FIX2: I also had to reverse x1 and x2 her
+    return values # FIX2: I also had to reverse x1 and x2 here
 
 def _lerp(a,b,x):
     "linear interpolation"

@@ -44,6 +44,10 @@ class Clicker(QGraphicsScene,ActionManager):
         self._brush = QtGui.QBrush() 
         self._brush.setStyle(0)
 
+        self.font=QtGui.QFont()
+        self.font.setBold(True)
+
+
         self._selected_sid = None
 
         if os.path.exists(WORLD_PATH):
@@ -54,9 +58,7 @@ class Clicker(QGraphicsScene,ActionManager):
         else:
             self.initialize()
 
-        self.update()
-
-        
+        self.update()        
 
     def closeEvent(self, event):
         packed= self.pack()
@@ -81,9 +83,7 @@ class Clicker(QGraphicsScene,ActionManager):
                 loc = HexID(i ,j-shift)
                 if loc.pack() in packed["systems"]:
                     self._systems[loc] = World.unpack(packed["systems"][loc.pack()])
-                    self.draw_system(loc)
-                else:
-                    self.draw_hex(loc)
+          
         for key in packed["regions"]:
             id_unpacked = HexID.unpack(key)
             self._regions[id_unpacked] = Region.unpack(packed["regions"][key])
@@ -91,7 +91,24 @@ class Clicker(QGraphicsScene,ActionManager):
             
         for key in self._systems.keys():
             world = self.get_system(key)
-            world.set_liege(key, self.get_system(world.liege))
+            if world._liege is not None:
+                world.set_liege(key, self.get_system(world.liege))
+
+            # we gotta be bad
+            vassal_ids = world.vassals
+            world._vassals = []
+
+            for entry in vassal_ids:
+                world.add_vassal(entry, self.get_system(entry))
+
+        for i in range(25):
+            for j in range(20):
+                shift = int(i/2)
+                loc = HexID(i ,j-shift)
+                if loc.pack() in packed["systems"]:
+                    self.draw_system(loc)
+                else:
+                    self.draw_hex(loc)
 
     def draw_selection(self, hex_id):
         if self._selected_sid is not None:
@@ -122,13 +139,9 @@ class Clicker(QGraphicsScene,ActionManager):
                 this_val = sample[i*5][j*5]
                 shift = int(i/2)
                 loc = HexID(i ,j-shift)
-                if np.random.rand()>this_val:
-                    self.draw_hex(loc)
-                else:
-                    
+                if np.random.rand()<this_val:         
                     self._systems[loc] = World()
                     by_title[self._systems[loc].title].append(loc)
-                    self.draw_system(loc)
         
         """
             For each title, we assign each lower ranking house to an upper one. There are chances for each level that a given house has no liege 
@@ -190,8 +203,19 @@ class Clicker(QGraphicsScene,ActionManager):
             else:
                 self._regions[ultimate_liege] = new
 
+        for i in range(25):
+            for j in range(20):
+                shift = int(i/2)
+                loc = HexID(i ,j-shift)
+                if loc in self._systems:
+                    self.draw_system(loc)
+                else:
+                    self.draw_hex(loc)
+
         for rid in self._regions.keys():
             self.draw_region(rid)
+
+        
 
     def get_ultimate_liege(self, hexID:HexID):
         world = self.get_system(hexID)
@@ -284,10 +308,17 @@ class Clicker(QGraphicsScene,ActionManager):
         self._pen.setStyle(0)
         self._brush.setColor(QtGui.QColor(*color))
 
-        sid_4 = self.addText(this_world._name)
+        if (this_world.liege is None):
+            self.font.setBold(True)
+        else:
+            self.font.setBold(False)
+
+        sid_4 = self.addText(this_world._name, self.font)
         sid_4.setX(center.x()-0.25*DRAWSIZE)
         sid_4.setY(center.y()-DRAWSIZE*0.75)
         sid_4.setZValue(10)
+
+        
 
         sid_3 = self.addText(this_world.world_profile(hex_id) )# , location=QtCore.QPointF(center.x(), center.y()+DRAWSIZE*0.25))
         sid_3.setX(center.x()-0.5*DRAWSIZE)

@@ -8,7 +8,7 @@ import os
 from traveller_utils.tables import *
 from traveller_utils.enums import WorldTag, WorldCategory, TradeGood, Contraband, Bases, Title, LandTitle
 from traveller_utils.utils import roll, d100
-from traveller_utils.trade_goods import ALL_GOODS
+from traveller_utils.trade_goods import ALL_GOODS, TradeGoods
 from traveller_utils.name_gen import create_name
 from traveller_utils.person import Person
 from traveller_utils.coordinates import HexID
@@ -130,6 +130,10 @@ class World:
 
         if generate:
             self.populate()
+
+    @property
+    def retailers(self):
+        return self._retailers
 
     @property 
     def liege(self)->HexID:
@@ -314,6 +318,7 @@ class World:
         liege_packed = "" if self._liege is None else self.liege.pack()
         packed = {
             "liege":liege_packed,
+            "vassals":[ entry.pack() for entry in self._vassals ],
             "name":self._name,
             "title":self._title.value,
             "tags":[entry.name for entry in self._tags],
@@ -349,6 +354,7 @@ class World:
             generate=False
         )
         new._liege = None if packed["liege"]=="" else HexID.unpack(packed["liege"])
+        new._vassals = [HexID.unpack(entry) for entry in packed["vassals"]]
         new._name=packed["name"]
         new._title=Title(packed["title"])
         new._tags=[WorldTag.__getitem__(entry) for entry in packed["tags"]]
@@ -438,35 +444,41 @@ class World:
         return profile
 
 
-    def list_available_goods(self)->'set[TradeGood]':
+    def list_available_goods(self)->'set[TradeGoods]':
         """
         Returns a set of available goods. We use a set here so that each entry is unique
         """
         avail = []
+        present_names = []
 
         for category in self._category:
             # take all the trade goods, and filter out only the ones that are available for this category 
-            avail += list(filter(lambda entry: ALL_GOODS[entry].is_available(category), list(TradeGood) ))
+            extra = list(filter(lambda entry: entry.is_available(category), list(ALL_GOODS.values())))
 
-        avail = set(avail)
+            for entry in extra:
+                if entry.name not in present_names:
+                    present_names.append(entry.name)
+                    avail.append(entry)            
+        
 
         return avail
 
-    def get_purchase_price(self, tg:TradeGood):
+    def get_purchase_price(self, entry:TradeGoods, modifier=0):
         """
             Returns the purchase price of the given trade good on this world 
             Returns -1 if the good is not available here 
         """
-        entry = ALL_GOODS[tg]
+
+        return entry.sample_purchase_price(self.category, modifier)
 
         if any(entry.is_available(wc) for wc in self._category ):
-            return min([entry.get_purchase_price(wc) for wc in self._category])
+            return entry.sample_purchase_price(self.category, modifier)
+            #return min([entry.sample_purchase_price(wc, modifier) for wc in self.category])
         return -1 
 
-    def get_sale_price(self, tg:TradeGood):
-        entry = ALL_GOODS[tg]
+    def get_sale_price(self, entry:TradeGoods, modifier=0):
 
-        return max([entry.get_sale_price(wc) for wc in self._category])
+        return entry.sample_sale_price(self._category, modifier) 
 
     def update_category(self):
         if self._population<1000:
@@ -637,6 +649,10 @@ class World:
     @property
     def biosphere_str(self)->str:
         return "The biosphere is " + bio.access(self._biosphere)
+
+    @property
+    def starport_cat(self):
+        return starports_str[self._starport_raw]
 
     @property
     def starports_str(self)->str:
