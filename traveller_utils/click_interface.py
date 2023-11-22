@@ -10,10 +10,12 @@ from traveller_utils.core import Hex, Region
 from traveller_utils.world import World
 from traveller_utils import utils
 
+from collections import deque
+from math import inf
 import numpy as np
 import os 
 import json
-
+from random import choice
 water_color = (92, 157, 214)
 no_water = (38, 38, 38)
 
@@ -39,6 +41,9 @@ class Clicker(QGraphicsScene,ActionManager):
         self._regions = {}
         self._drawn_regions = {}
 
+        self._routes = {}
+        self._drawn_routes = {}
+
         self._pen = QtGui.QPen() # STROKE EFFECTS
         self._pen.setColor(QtGui.QColor(240,240,240))
         self._pen.setStyle(Qt.PenStyle.SolidLine )
@@ -59,8 +64,9 @@ class Clicker(QGraphicsScene,ActionManager):
             self.unpack(data)
         else:
             self.initialize()
-
+            
         self.update()        
+        self.initialize_routes()
 
     def closeEvent(self, event):
         packed= self.pack()
@@ -125,8 +131,81 @@ class Clicker(QGraphicsScene,ActionManager):
         self._selected_sid = self.addPolygon(this_hex, self._pen, self._brush)
         self._selected_sid.setZValue(100)
 
+    def _route_present(self, start:HexID, end:HexID):
+        if start not in self._routes and end not in self._routes:
+            return False
+        # a route exists with either start or end as the start point
+        elif start in self._routes:
+            if end in self._routes[start]:
+                return True #start->end
+        else: #end is the actual start in some route 
+            if start in self._routes[end]:
+                return True #end->start
+            
+        return False 
+
+
+    def initialize_routes(self):
+        by_grade = {
+            "A":[],
+            "B":[],
+        }
+        for system_key in self.systems.keys():
+            system = self.get_system(system_key)
+            if system is None:
+                continue
+            if system.starport_cat=="A":
+                by_grade["A"].append(system_key)
+            elif system.starport_cat=="B":
+                by_grade["B"].append(system_key)
+        for system_key in by_grade["A"]:
+            # choose another at random
+            costs = []
+            routes = []
+            for each in by_grade["A"]:
+                if each==system_key:
+                    cost = inf
+                    routes.append([0,])
+                elif self._route_present(system_key,each):
+                    cost = inf
+                    routes.append([0,])
+                else:
+                    route = self.get_route_a_star(system_key, each)
+                    routes.append(route)
+                    cost = self.get_route_cost(route)
+
+                costs.append(cost)
+            
+            if min(costs)==inf:
+                continue
+            min_index = costs.index(min(costs))
+            if system_key not in self._routes:
+                self._routes[system_key]={}
+
+            self._routes[system_key][by_grade["A"][min_index]] = routes[min_index]
+
+        for route in self._routes.keys():
+            if route not in self._drawn_routes:
+                self._drawn_routes[route]={}
+            for destination in self._routes[route].keys():
+                full_path = self._routes[route][destination]
+                vertices = [hex_to_screen(hid) for hid in full_path]
+                path = QtGui.QPainterPath()
+                path.addPolygon(QtGui.QPolygonF(vertices))
+                self._pen.setStyle(1)
+                self._pen.setWidth(5)
+                self._pen.setColor(QtGui.QColor(250,250,250))
+                self._brush.setStyle(0)
+                sid = self.addPath(path, self._pen, self._brush)
+                sid.setZValue(2)
+                self._drawn_routes[route][destination]=sid
+
+                
+
+
+
     def initialize(self):
-        sample = utils.perlin(150)*0.9 + 0.5
+        sample = utils.perlin(150,octave=10)*0.9+0.45
         by_title={
             Title.Emperor:[],
             Title.King:[],
@@ -369,3 +448,86 @@ class Clicker(QGraphicsScene,ActionManager):
 
         if event.key() == QtCore.Qt.Key_Minus or event.key()==QtCore.Qt.Key_PageDown or event.key()==QtCore.Qt.Key_BracketLeft:
             self.parent().scale( 0.95, 0.95 )
+
+    def _get_heuristic(self, start:HexID, end:HexID)->float:
+        val =  abs(end - start)*1.5
+        return val
+    
+    def _get_cost_between(self, start_id:HexID, end_id:HexID):
+        cost = 1.0
+        if end_id not in self._systems:
+            cost*=5
+        else:
+            if self.get_system(end_id).starport_cat=="X" or self.get_system(end_id).starport_cat=="E":
+                cost *= 5
+            elif self.get_system(end_id).starport_cat=="C" or self.get_system(end_id).starport_cat=="D":
+                cost *= 1.25
+        return cost
+    
+    def get_route_cost(self, hexIDs:'list[HexID]'):
+        cost = 0
+        for i in range(len(hexIDs)-1):
+            cost += self._get_cost_between(hexIDs[i], hexIDs[i+1])
+        return cost
+    
+    def get_route_a_star(self, start_id:HexID, end_id:HexID)->'list[HexID]':
+        """
+        Finds quickest route between two given HexIDs. Both IDs must be on the Hexmap.
+        Always steps closer to the target
+
+        Returns ordered list of HexIDs representing shortest found path between start and end (includes start and end)
+        """
+        openSet = deque([start_id,])
+        cameFrom = {}
+
+        gScore = {}
+        gScore[start_id] = 0.
+
+        fScore = {}
+        fScore[start_id] = self._get_heuristic(start_id,end_id)
+
+
+        def reconstruct_path(cameFrom:HexID, current:HexID)->'list[HexID]':
+            total_path = [current]
+            while current in cameFrom.keys():
+                current = cameFrom[current]
+                total_path.append(current)
+            
+            return(total_path[::-1])
+
+        while len(openSet)!=0:
+            # find minimum fScore thing in openSet
+            current = openSet.popleft()
+
+            if current==end_id:
+                return reconstruct_path(cameFrom, current)
+
+            for neighbor in current.neighbors:
+                if current in gScore:
+                    tentative_gScore = gScore[current] + self._get_cost_between(current, neighbor)
+                else:
+                    tentative_gScore = inf
+
+                if neighbor in gScore:
+                    neigh = gScore[neighbor]
+                else:
+                    neigh = inf
+
+
+                if tentative_gScore < neigh:
+                    cameFrom[neighbor] = current
+                    gScore[neighbor] = tentative_gScore
+                    fScore[neighbor] = gScore[neighbor] + self._get_heuristic(neighbor,end_id)
+                    if neighbor not in openSet:
+
+                        if len(openSet)==0:
+                            openSet.append(neighbor)
+                        else:
+                            iter = 0
+                            while fScore[neighbor]>fScore[openSet[iter]]:
+                                iter += 1
+                                if iter==len(openSet):
+                                    break
+
+                            openSet.insert(iter,neighbor)
+        return([])
