@@ -40,6 +40,27 @@ class Retailer:
         self._sale_prices = {}
 
     @property
+    def purchase_prices(self):
+        return self._purchase_prices
+    @property
+    def sale_prices(self):
+        return self._sale_prices
+
+    def pack(self)->dict:
+        return {
+            "person":self._person.pack(),
+            "name":self._name,
+            "purchase":{good.name:self._purchase_prices[good] for good in self._purchase_prices.keys()},
+            "sale":{good.name:self._sale_prices[good] for good in self._sale_prices.keys()},
+        }
+    @classmethod
+    def unpack(cls, packed:dict):
+        
+        newp = Retailer()
+        newp._person = Person.unpack(packed["person"])
+        newp._name = packed["name"]
+
+    @property
     def person(self)->Person:
         return self._person
     
@@ -87,3 +108,7 @@ class Retailer:
             self._purchase_prices[good]={
                 "price":home.get_sale_price(good, modifier)
             }
+
+            if good in self._sale_prices and (self._purchase_prices[good]["price"]>self._sale_prices[good]["price"]):
+                self._purchase_prices[good]["price"] = self._sale_prices[good]["price"]*0.6
+                

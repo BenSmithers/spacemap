@@ -38,8 +38,8 @@ class IconLib:
 
         Modules can provide a folder of icons which can overwrite (and add to) the default set of icons
     """
-    def __init__(self, folder = ""):
-        self._pictures = glob(os.path.join(folder,"*.png"))
+    def __init__(self, folder = "", ext="png"):
+        self._pictures = glob(os.path.join(folder,"*."+ext))
         self._module_folder = ""
         
         self.reload()

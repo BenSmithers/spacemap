@@ -7,7 +7,7 @@ import os
 
 from traveller_utils.tables import *
 from traveller_utils.enums import WorldTag, WorldCategory, TradeGood, Contraband, Bases, Title, LandTitle
-from traveller_utils.utils import roll, d100
+from traveller_utils.utils import roll, d100, roll1d
 from traveller_utils.trade_goods import ALL_GOODS, TradeGoods
 from traveller_utils.name_gen import create_name
 from traveller_utils.person import Person
@@ -26,6 +26,60 @@ star_hex+=[
     "H",
     "I"
 ]
+
+def services(world:'World'):
+    serv = ""
+
+    if world.starport_cat=="A":
+        fuel = "Refined"
+        berth_scale = 1000
+        fuel_cost = "at Cr500 per ton."
+        facility = "Fully functioning capital-class shipyard. \n Repair"
+    elif world.starport_cat=="B":
+        fuel = "Refined"
+        berth_scale = 500
+        fuel_cost = "at Cr500 per ton."
+        facility = "Shipyard capable of building all craft up to 5,000 tons. \n Repair"
+    elif world.starport_cat=="C":
+        fuel = "Unrefined"
+        fuel_cost = "at Cr100 per ton."
+        berth_scale = 100
+        facility = "Shipyard capable of building all craft below 100 tons. \n Repair"
+    elif world.starport_cat=="D":
+        fuel = "Unrefined"
+        berth_scale = 10
+        fuel_cost = "at Cr100 per ton."
+        facility = "Limited Repair. Can only fix hull damage."
+    else:
+        fuel = "No"
+        berth_scale = 0
+        facility = "No repair facilities."
+        fuel_cost=0
+
+    serv += "{} fuel available {}\n".format(fuel, fuel_cost)
+    serv+=facility+"\n"
+    serv+="Berthing costs Cr{}.".format(roll1d()*berth_scale)
+    serv+="\n\n"
+    if Bases.Naval in world.services:
+        serv+="Has naval base. Ex-Naval Travellers may meet Contacts or Allies here, and mercenary Travellers can try to pick up work. "
+        serv+="Naval bases also have an advanced hospital, though it is normally available only to naval personnel. "
+        serv+="Travellers may also be able to purchase navy-surplus weapons here.\n\n"
+    if Bases.Scout in world.services:
+        serv+="The scout base here offers refined fuel and supplies to scout ships (including retired scout ships obtained by retired scouts). "
+        serv+="They are also an excellent place to pickup rumors and news. "
+        serv+="\n\n"
+    if Bases.TAS in world.services:
+        serv+="Has a Traveller's Aid Society Hostel, where Travellers with TAS memberships and their guests can stay. "
+        serv+="In the Third Imperium TAS Hostels offer medical facilities for members, as well as supplies and luxuries notnormally available on most worlds. TAS Hostels are a good source of rumors and passengers. "
+        serv+="\n\n"
+    if Bases.Research in world.services:
+        serv+="A Research base is here. It might be a weapons testing facility, or a solar observatory, or part of a secret Imperial project. "
+        serv+="A research base may have Contacts or Allies of Travellers who followed a Scholar career. "
+        serv+="Such bases may have advanced medical facilities. "
+        serv+="\n\n"
+        
+    return serv
+
 
 star_hex = [str(entry) for entry in star_hex]
 

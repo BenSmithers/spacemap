@@ -63,6 +63,11 @@ class Ui_Form(object):
         self.type_combo = QtWidgets.QComboBox(Form)
         self.type_combo.setObjectName("type_combo")
         self.type_combo.addItem("")
+        self.type_combo.addItem("Common")
+        self.type_combo.addItem("Advanced")
+        self.type_combo.addItem("Uncommon")
+        self.type_combo.addItem("Illegal")
+
         self.horizontalLayout.addWidget(self.type_combo)
         self.verticalLayout.addLayout(self.horizontalLayout)
 
@@ -89,6 +94,6 @@ class Ui_Form(object):
         self.trade_good_lbl.setText(_translate("Form", "Trade Goods"))
         self.type_lbl.setText(_translate("Form", "Type"))
         self.type_combo.setItemText(0, _translate("Form", "Any"))
-        self.buyer_lbl.setText(_translate("Form", "Buyers"))
+        self.buyer_lbl.setText(_translate("Form", "Purchase Offers"))
         self.retailer_lbl.setText(_translate("Form", "Retailer"))
         self.skill_lbl.setText(_translate("Form", "Broker Skill"))

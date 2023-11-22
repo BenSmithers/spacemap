@@ -4,7 +4,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QGraphicsScene, QGraphicsSceneMouseEvent, QMainWindow
 from traveller_utils.actions import ActionManager
 
-from traveller_utils.enums import Title, LandTitle
+from traveller_utils.enums import Title, LandTitle, Bases
 from traveller_utils.coordinates import HexID, DRAWSIZE, screen_to_hex, hex_to_screen
 from traveller_utils.core import Hex, Region
 from traveller_utils.world import World
@@ -30,6 +30,8 @@ class Clicker(QGraphicsScene,ActionManager):
         #self.parent().scale( 0.8, 0.8 )
 
         self.pmap = utils.IconLib(os.path.join(os.path.dirname(__file__), "..","images","planets"))
+        self.icon_map = utils.IconLib(os.path.join(os.path.dirname(__file__),"..","images","icons"), ext="svg")
+
 
         self._systems = {}
         self._drawn_systems = {}
@@ -308,8 +310,15 @@ class Clicker(QGraphicsScene,ActionManager):
         self._pen.setStyle(0)
         self._brush.setColor(QtGui.QColor(*color))
 
+        all_sids = [sid,]
+
         if (this_world.liege is None):
             self.font.setBold(True)
+            sid_5 = self.addPixmap(self.icon_map.access("crown", 0.4*DRAWSIZE))
+            sid_5.setX(center.x()-0.22*DRAWSIZE)
+            sid_5.setY(center.y()-0.55*DRAWSIZE)
+            sid_5.setZValue(11)
+            all_sids.append(sid_5)
         else:
             self.font.setBold(False)
 
@@ -317,13 +326,14 @@ class Clicker(QGraphicsScene,ActionManager):
         sid_4.setX(center.x()-0.25*DRAWSIZE)
         sid_4.setY(center.y()-DRAWSIZE*0.75)
         sid_4.setZValue(10)
-
+        all_sids.append(sid_4)
         
 
         sid_3 = self.addText(this_world.world_profile(hex_id) )# , location=QtCore.QPointF(center.x(), center.y()+DRAWSIZE*0.25))
         sid_3.setX(center.x()-0.5*DRAWSIZE)
         sid_3.setY(center.y()+DRAWSIZE*0.4)
         sid_3.setZValue(10)
+        all_sids.append(sid_3)
 
         #sid_2 = self.addEllipse(center.x()-DRAWSIZE*0.25, center.y()-DRAWSIZE*0.25, DRAWSIZE*0.5, DRAWSIZE*0.5, self._pen, self._brush)
 
@@ -331,8 +341,23 @@ class Clicker(QGraphicsScene,ActionManager):
         sid_2.setX(center.x()-DRAWSIZE*0.4)
         sid_2.setY(center.y()-DRAWSIZE*0.4)
         sid_2.setZValue(10) 
+        all_sids.append(sid_2)
 
-        self._drawn_systems[hex_id] = (sid, sid_2, sid_3, sid_4)
+        if Bases.Naval in this_world.services or Bases.Scout in this_world.services:
+            sid_base = self.addPixmap(self.icon_map.access("anchor", 0.3*DRAWSIZE))
+            sid_base.setX(center.x()-DRAWSIZE*0.75)
+            sid_base.setY(center.y()-DRAWSIZE*0.15)
+            sid_base.setZValue(12)
+            all_sids.append(sid_base)
+        if Bases.TAS in this_world.services:
+            sid_plus = self.addPixmap(self.icon_map.access("plus", 0.3*DRAWSIZE))
+            sid_plus.setX(center.x()+DRAWSIZE*0.5)
+            sid_plus.setY(center.y()-DRAWSIZE*0.15)
+            sid_plus.setZValue(12)
+            all_sids.append(sid_plus)
+        
+       
+        self._drawn_systems[hex_id] = tuple(all_sids)
 
     def keyReleaseEvent(self, event: QtGui.QKeyEvent) -> None:
         """

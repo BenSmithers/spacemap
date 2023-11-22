@@ -57,8 +57,11 @@ class PassengerItem(QtGui.QStandardItem):
         return(self._this_path)
     
 class SellerItem(QtGui.QStandardItem):
-    def __init__(self, item:str, price:float, qty:int):
-        combined = "{} : ${:.2f} per unit | {} units".format(item, price, qty)
+    def __init__(self, item:str, price:float, qty):
+        if qty=="":
+            combined = "{} : ${:.2f} per unit".format(item, price)
+        else:
+            combined = "{} : ${:.2f} per unit | {} units".format(item, price, qty)
         super(SellerItem, self).__init__(combined)
         self._item = item
         self._price = price
@@ -148,6 +151,7 @@ class TradeWidget(QtWidgets.QWidget):
         self.ui.buyer_table.setModel(self.buyer_table_entry)
         self.ui.buyer_table.clicked[QtCore.QModelIndex].connect(self.buyer_clicked)
         self.ui.retailer_combo.currentIndexChanged.connect(self.retail_combo_updated)
+        self.ui.type_combo.currentIndexChanged.connect(self.retail_combo_updated)
 
         self._world= None
 
@@ -174,6 +178,8 @@ class TradeWidget(QtWidgets.QWidget):
             mod = -4
         elif world.starport_cat=="C":
             mod = -2
+        elif world.starport_cat=="E":
+            mod +=4
 
         add_string = "Finding a Retailer: CR {}+, 1D days (hours online)\n".format(8+mod)
         add_string += "+1 per attempt each month "
@@ -200,9 +206,25 @@ class TradeWidget(QtWidgets.QWidget):
             return
 
         this_retail = self._world.retailers[index]
-        for entry in this_retail._sale_prices.keys():
-            new_item = SellerItem(entry.name, this_retail._sale_prices[entry]["price"],this_retail._sale_prices[entry]["amount"] )
+        for entry in this_retail.sale_prices.keys():
+            if self.ui.type_combo.currentText()!="Any":
+                if self.ui.type_combo.currentText()=="Uncommon":
+                    if ("advanced" in entry.name.lower() or "Common" in entry.name or "illegal" in entry.name.lower()):
+                        continue
+                elif self.ui.type_combo.currentText() not in entry.name:
+                    continue
+            new_item = SellerItem(entry.name, this_retail.sale_prices[entry]["price"],this_retail.sale_prices[entry]["amount"] )
             self.seller_list_entry.appendRow(new_item)
+
+        for entry in this_retail.purchase_prices.keys():
+            if self.ui.type_combo.currentText()!="Any":
+                if self.ui.type_combo.currentText()=="Uncommon":
+                    if ("advanced" in entry.name.lower() or "Common" in entry.name or "illegal" in entry.name.lower()):
+                        continue
+                elif self.ui.type_combo.currentText() not in entry.name:
+                    continue
+            new_item = SellerItem(entry.name, this_retail.purchase_prices[entry]["price"], "")
+            self.buyer_table_entry.appendRow(new_item)
         
 
     def generate_retailer(self):
