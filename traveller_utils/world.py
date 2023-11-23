@@ -139,7 +139,7 @@ class Government:
         return out
 
 class World:
-    def __init__(self, generate =True):
+    def __init__(self, generate =True, modifier = 0):
         """
             Initialize a minimal world, generate full world if `generate`
         """
@@ -183,7 +183,7 @@ class World:
         self._title = Title.Lord
 
         if generate:
-            self.populate()
+            self.populate(modifier=modifier)
 
     @property
     def retailers(self):
@@ -217,7 +217,7 @@ class World:
 
     def populate(self,name="",rng=None,
                 atmosphere=-1, temperature=-1,biosphere=-1,
-                population=-1, tech_level=-1,*world_tag, **kwargs) -> None:
+                population=-1, tech_level=-1,*world_tag,modifier=0, **kwargs) -> None:
         
         
         if not isinstance(world_tag,(list,tuple)):
@@ -261,7 +261,7 @@ class World:
         self._temperature = roll(rng, atmo_t_mods[self._atmosphere]) if temperature==-1 else temperature
         self._biosphere = roll(rng) if biosphere==-1 else biosphere
         self._population_raw = roll(rng, -2) if population==-1 else population
-    
+        self._population_raw += modifier    
         if self._size<2 or self._atmosphere==0:
             self._hydro = 0
         else:
@@ -287,9 +287,10 @@ class World:
         else:
             self._population = int(round(np.random.rand(),4)*(10**self._population_raw))
             
-            self._government_raw = roll(rng, -7+self._population_raw)
+            self._government_raw = roll(rng, -7+self._population_raw) + modifier
             if self._population_raw>3 and self._government_raw==0:
                 self._government_raw = np.random.randint(1,3)
+            self._government_raw = min([len(govs)-1, self._government_raw])
             self._government = Government(govs[self._government_raw], False)
             self._law_level = roll(rng, -7+ self._government_raw)
 
@@ -301,7 +302,7 @@ class World:
             if self._government_raw<2:
                 self._factions = []
             else:
-                self._factions = [Government(govs[roll(rng, -7+self._population_raw)], True) for i in range(np.random.randint(1,4)+faction_mod)]
+                self._factions = [Government(govs[min([roll(rng, -7+self._population_raw), len(govs)-1])], True) for i in range(np.random.randint(1,4)+faction_mod)]
 
         star_mod = 0
         if self._population_raw>=8:
@@ -314,7 +315,7 @@ class World:
             star_mod=-2
 
 
-        self._starport_raw = roll(rng, star_mod)
+        self._starport_raw = roll(rng, star_mod) + modifier
         if self._starport_raw>= len(starports_str):
             self._starport_raw = len(starports_str)-1
         if self._population_raw==0:

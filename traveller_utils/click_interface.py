@@ -9,7 +9,6 @@ from traveller_utils.coordinates import HexID, DRAWSIZE, screen_to_hex, hex_to_s
 from traveller_utils.core import Hex, Region
 from traveller_utils.world import World
 from traveller_utils import utils
-
 from collections import deque
 from math import inf
 import numpy as np
@@ -66,7 +65,6 @@ class Clicker(QGraphicsScene,ActionManager):
             self.initialize()
             
         self.update()        
-        self.initialize_routes()
 
     def closeEvent(self, event):
         packed= self.pack()
@@ -81,7 +79,14 @@ class Clicker(QGraphicsScene,ActionManager):
     def pack(self)->dict:
         return {
             "systems":{key.pack():self.systems[key].pack() for key in self.systems.keys()},
-            "regions":{rkey.pack():self._regions[rkey].pack() for rkey in self._regions.keys()}
+            "regions":{rkey.pack():self._regions[rkey].pack() for rkey in self._regions.keys()},
+            "routes":{
+                key.pack():{
+                    subkey.pack():[
+                        entry.pack() for entry in self._routes[key][subkey]
+                    ] for subkey in self._routes[key]
+                } for key in self._routes
+            }
         }
     
     def unpack(self, packed:dict):
@@ -117,6 +122,16 @@ class Clicker(QGraphicsScene,ActionManager):
                     self.draw_system(loc)
                 else:
                     self.draw_hex(loc)
+        
+        for key in packed["routes"]:
+            keyunpack = HexID.unpack(key)
+            self._routes[keyunpack] = {}
+            for subkey in packed["routes"][key]:
+                subkey_unpack = HexID.unpack(subkey)
+                self._routes[keyunpack][subkey_unpack] = [
+                    HexID.unpack(entry) for entry in packed["routes"][key][subkey]
+                ]
+        self.draw_routes()
 
     def draw_selection(self, hex_id):
         if self._selected_sid is not None:
@@ -146,6 +161,7 @@ class Clicker(QGraphicsScene,ActionManager):
 
 
     def initialize_routes(self):
+        print("Initilizing routes...")
         by_grade = {
             "A":[],
             "B":[],
@@ -184,6 +200,23 @@ class Clicker(QGraphicsScene,ActionManager):
 
             self._routes[system_key][by_grade["A"][min_index]] = routes[min_index]
 
+        for system_key in by_grade["B"]:
+            costs = []
+            routes = []
+            for each in by_grade["A"]:
+                route = self.get_route_a_star(system_key, each)
+                routes.append(route)
+
+                cost = self.get_route_cost(route)
+                costs.append(cost)
+            
+            min_index=costs.index(min(costs))
+            if system_key not in self._routes:
+                self._routes[system_key] = {}
+            self._routes[system_key][by_grade["A"][min_index]] = routes[min_index]
+        self.draw_routes()
+
+    def draw_routes(self):
         for route in self._routes.keys():
             if route not in self._drawn_routes:
                 self._drawn_routes[route]={}
@@ -200,19 +233,16 @@ class Clicker(QGraphicsScene,ActionManager):
                 sid.setZValue(2)
                 self._drawn_routes[route][destination]=sid
 
-                
-
-
-
     def initialize(self):
         sample = utils.perlin(150,octave=10)*0.9+0.45
+        extra_thresh = 0.9*np.max(sample)
+        
         by_title={
             Title.Emperor:[],
             Title.King:[],
             Title.Duke:[],
             Title.Count:[],
-            Title.Lord:[],
-            
+            Title.Lord:[]
         }
 
         for i in range(25):
@@ -220,8 +250,10 @@ class Clicker(QGraphicsScene,ActionManager):
                 this_val = sample[i*5][j*5]
                 shift = int(i/2)
                 loc = HexID(i ,j-shift)
-                if np.random.rand()<this_val:         
-                    self._systems[loc] = World()
+                if np.random.rand()<this_val:       
+                    mod = 0 if this_val<extra_thresh else 2
+
+                    self._systems[loc] = World(modifier = mod)
                     by_title[self._systems[loc].title].append(loc)
         
         """
@@ -450,18 +482,23 @@ class Clicker(QGraphicsScene,ActionManager):
             self.parent().scale( 0.95, 0.95 )
 
     def _get_heuristic(self, start:HexID, end:HexID)->float:
-        val =  abs(end - start)*1.5
+        val =  abs(end - start)
         return val
     
     def _get_cost_between(self, start_id:HexID, end_id:HexID):
-        cost = 1.0
+        # only called on neighboring hexes 
+        cost = abs(end_id - start_id)
+
+        # if that one is unknown, it has no starport. Avoid! 
         if end_id not in self._systems:
-            cost*=5
+            cost*= 7 # no starport
         else:
+            # avoid ones with no starport
             if self.get_system(end_id).starport_cat=="X" or self.get_system(end_id).starport_cat=="E":
-                cost *= 5
+                cost *= 4 # no starport
+            # and also ones with bad fuel 
             elif self.get_system(end_id).starport_cat=="C" or self.get_system(end_id).starport_cat=="D":
-                cost *= 1.25
+                cost *= 1.2
         return cost
     
     def get_route_cost(self, hexIDs:'list[HexID]'):
@@ -477,57 +514,62 @@ class Clicker(QGraphicsScene,ActionManager):
 
         Returns ordered list of HexIDs representing shortest found path between start and end (includes start and end)
         """
+        # list of hexIDs, sorted by the heuristic calcualted from the destination
         openSet = deque([start_id,])
+        sorted_costs = deque([])
         cameFrom = {}
 
-        gScore = {}
-        gScore[start_id] = 0.
+        min_cost_to_hex = {}
+        min_cost_to_hex[start_id] = 0.
 
-        fScore = {}
-        fScore[start_id] = self._get_heuristic(start_id,end_id)
+        pred_cost_from_hex = {}
+        pred_cost_from_hex[start_id] = self._get_heuristic(start_id,end_id)
 
 
-        def reconstruct_path(cameFrom:HexID, current:HexID)->'list[HexID]':
-            total_path = [current]
+        def reconstruct_path(cameFrom:'dict[HexID]', current:HexID)->'list[HexID]':
+            total_path = [current,]
             while current in cameFrom.keys():
                 current = cameFrom[current]
                 total_path.append(current)
             
-            return(total_path[::-1])
+            return total_path[::-1]
+        
+        def add_to_openSet(which_id):
+            if len(openSet)==0:
+                openSet.append(which_id)
+            else:
+                # this could be a little faster with a binary search
+                iter = 0
+                
+                # openSet is ordered based off of which one we think is closest 
+                while pred_cost_from_hex[which_id] < pred_cost_from_hex[openSet[iter]]:
+                    iter += 1
+                    if iter==len(openSet):
+                        break
+
+                #sorted_costs.insert(iter, pred_cost_from_hex[neighbor])
+                openSet.insert(iter,which_id)
 
         while len(openSet)!=0:
-            # find minimum fScore thing in openSet
-            current = openSet.popleft()
+            from_hid = openSet.pop()
+            if from_hid == end_id:
+                return reconstruct_path(cameFrom, from_hid)
 
-            if current==end_id:
-                return reconstruct_path(cameFrom, current)
+            for next_step in from_hid.neighbors:
+                # true cost to here plus the cost to the neighbor 
+                next_step_cost = min_cost_to_hex[from_hid] + self._get_cost_between(from_hid, next_step)
 
-            for neighbor in current.neighbors:
-                if current in gScore:
-                    tentative_gScore = gScore[current] + self._get_cost_between(current, neighbor)
-                else:
-                    tentative_gScore = inf
+                use_this_step = False
+                if next_step not in min_cost_to_hex:
+                    use_this_step = True
+                elif next_step_cost < min_cost_to_hex[next_step]:
+                    use_this_step = True
+                if use_this_step:
+                    min_cost_to_hex[next_step] = next_step_cost
+                    cameFrom[next_step] = from_hid
+                    pred_cost_from_hex[next_step] = min_cost_to_hex[next_step] + self._get_heuristic(next_step, end_id)
+                    add_to_openSet(next_step)
 
-                if neighbor in gScore:
-                    neigh = gScore[neighbor]
-                else:
-                    neigh = inf
 
 
-                if tentative_gScore < neigh:
-                    cameFrom[neighbor] = current
-                    gScore[neighbor] = tentative_gScore
-                    fScore[neighbor] = gScore[neighbor] + self._get_heuristic(neighbor,end_id)
-                    if neighbor not in openSet:
-
-                        if len(openSet)==0:
-                            openSet.append(neighbor)
-                        else:
-                            iter = 0
-                            while fScore[neighbor]>fScore[openSet[iter]]:
-                                iter += 1
-                                if iter==len(openSet):
-                                    break
-
-                            openSet.insert(iter,neighbor)
         return([])
