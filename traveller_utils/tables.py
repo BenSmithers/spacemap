@@ -12,14 +12,14 @@ fares={
 }
 
 atmospheres=[
-    "None",
+    "No",
     "Trace",
     "Very Thin, Tainted",
     "Very Thin",
     "Thin, Tainted",
     "Thin",
     "Standard",
-    "Standard, Tainted",
+    "Standard",
     "Dense",
     "Dense, Tainted",
     "Exotic",

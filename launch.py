@@ -13,15 +13,19 @@ from traveller_utils.retailer import Retailer
 from traveller_utils.click_interface import Clicker
 from traveller_utils.coordinates import HexID
 from traveller_utils import utils 
+from traveller_utils.tables import fares
 
 from qtdesigner.passengers import Ui_Form as passenger_widget_gui
 from qtdesigner.trade_goods import Ui_Form as trade_goods_widget_gui
 from qtdesigner.planet_page import Ui_Form as planet_widget_gui
 from qtdesigner.person import Ui_Form as passenger_desc_dialog_gui
 from qtdesigner.government import Ui_Form as gov_widget_gui
+from qtdesigner.notes_ui import Ui_Form as notes_widget
 
 import os 
 import sys
+
+
 
 class PassengerDialog(QDialog):
     def __init__(self, parent):
@@ -48,13 +52,19 @@ class PassengerItem(QtGui.QStandardItem):
     Each carries an attribute ("this_path"), that specifies which json file correlates with this entry
     """
 
-    def __init__(self, value, passenger):
-        super(PassengerItem,self).__init__(value)
+    def __init__(self, passenger:Person, berth, world_name, fare):
+        combined = "{} - {} - {} for ${} FC".format(berth, passenger.name, world_name, fare)
+        super(PassengerItem,self).__init__(combined)
         self._this_path = passenger
+        self._berth = berth
+        self._dest = world_name
 
     @property
     def passenger(self):
         return(self._this_path)
+    
+    def destination(self):
+        return self._this_path.destination
     
 class SellerItem(QtGui.QStandardItem):
     def __init__(self, item:str, price:float, qty):
@@ -85,9 +95,21 @@ class GovWidget(QtWidgets.QWidget):
         else:
             self.ui.strength_desc.setText("The Government")
 
+class NotesTab(QtWidgets.QWidget):
+    def __init__(self, parent):
+        QtWidgets.QWidget.__init__(self, parent)
+        self.ui = notes_widget()
+        self.ui.setupUi(self)
+
+    def set_text(self, text):
+        self.ui.textBrowser.setPlainText(text)
+    def clear(self):
+        self.ui.textBrowser.setPlainText("")
+
 class PassWidget(QtWidgets.QWidget):
     def __init__(self, parent):
         QtWidgets.QWidget.__init__(self, parent)
+        self.parent = parent
         self.ui=passenger_widget_gui()
         self.ui.setupUi(self)
 
@@ -98,7 +120,9 @@ class PassWidget(QtWidgets.QWidget):
         self.ui.berth_combo.currentIndexChanged.connect(self.log_passengers)
         self.ui.comboBox.currentIndexChanged.connect(self.log_passengers)
 
-        self._cache_world = None
+        self._cache_pass = None
+        self._hid = None
+
 
         self.people_pixes = utils.IconLib(os.path.join(os.path.dirname(__file__),"images","chars"))
 
@@ -108,6 +132,8 @@ class PassWidget(QtWidgets.QWidget):
 
         pixname = passenger.image_name
         pix = self.people_pixes.access(pixname, 100)
+        
+        self.parent.scene.draw_route_to(self._hid, passenger.destination)
 
         dialog = PassengerDialog(self)
         dialog.setAttribute(QtCore.Qt.WA_DeleteOnClose)
@@ -117,12 +143,15 @@ class PassWidget(QtWidgets.QWidget):
     def clear_pass(self):
         self.pass_list_entry.clear()
 
-    def log_passengers(self, world:World):
-        if type(world)==int:
-            all_passengers = self._cache_world.generate_passengers(0)
+    def log_passengers(self, loc):
+
+        if type(loc)==int:
+            # the call is coming  from inside the house!
+            all_passengers = self._cache_pass
         else:
-            self._cache_world = world
-            all_passengers = world.generate_passengers(0)
+            all_passengers = self.parent.scene.generate_passengers(loc)
+            self._cache_pass = all_passengers
+            self._hid = loc
 
         self.pass_list_entry.clear()
         for berth_key in all_passengers.keys():
@@ -130,11 +159,11 @@ class PassWidget(QtWidgets.QWidget):
                 if self.ui.berth_combo.currentText()!="Any":
                     if self.ui.berth_combo.currentText().lower() != berth_key.lower():
                         continue
-
-                entry = [PassengerItem(berth_key, passenger), PassengerItem(passenger.name, passenger)]
-                self.pass_list_entry.appendRow(entry)
-        
-
+                world = self.parent.scene.get_system(passenger.destination)
+                dist = int(passenger.destination - self._hid) - 1
+                fare = fares[berth_key][dist]
+                #entry = [PassengerItem(berth_key, passenger), PassengerItem(passenger.name, passenger)]
+                self.pass_list_entry.appendRow(PassengerItem(passenger, berth_key, world.name, fare))
 
 class TradeWidget(QtWidgets.QWidget):
     def __init__(self, parent):
@@ -296,6 +325,7 @@ class PlanetWidget(QtWidgets.QWidget):
         self.ui.liege_desc.setText("")
         self.ui.vassal_desc.setText("")
 
+# self.parent.scene.get_system(hid)
 class main_window(QMainWindow):
     def __init__(self,parent=None):
         QWidget.__init__(self, parent)
@@ -305,9 +335,11 @@ class main_window(QMainWindow):
         self._pass_widget =PassWidget(self)
         self._trade_widget = TradeWidget(self)
         self._planet_widget = PlanetWidget(self)
+        self._notes_widget = NotesTab(self)
         self.ui.tabWidget.addTab(self._planet_widget, "Planet")
         self.ui.tabWidget.addTab(self._pass_widget, "Passengers")
         self.ui.tabWidget.addTab(self._trade_widget, "Trade")
+        self.ui.tabWidget.addTab(self._notes_widget, "Notes")
 
         self.scene = Clicker( self.ui.map_view, self )
         # Allow the graphics view to follow the mouse when it isn't being clicked, and associate the clicker control with the ui 
@@ -329,7 +361,9 @@ class main_window(QMainWindow):
         
         self._planet_widget.update_ui(world, loc)
         self._trade_widget.update_ui(world)
-        self._pass_widget.log_passengers(world)
+
+        self._pass_widget.log_passengers(loc)
+        self._notes_widget.set_text(world.notes())
 
 
         self.govs.append(GovWidget(self._planet_widget.ui.overview_page))
@@ -349,6 +383,8 @@ class main_window(QMainWindow):
         self._planet_widget.clear_ui()
         self._pass_widget.clear_pass()
         self._trade_widget.clear()
+        self._notes_widget.clear()
+        self.scene.clear_drawn_route()
 
         while len(self.govs)>0:
             first = self.govs.pop()

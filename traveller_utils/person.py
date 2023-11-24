@@ -5,6 +5,7 @@ import random
 import numpy as np
 
 from traveller_utils.trade_goods import TradeGoods
+from traveller_utils.coordinates import HexID
 
 names_fn = os.path.join(os.path.dirname(__file__), "..","resources", "names.json")
 _obj = open(names_fn,'rt')
@@ -50,9 +51,17 @@ class Person:
         self._pronouns = ""
 
         self._wants = ""
+
+        self._destination = None
         self._persistent = False
 
         self._image_name = ""
+
+    @property
+    def destination(self):
+        return self._destination
+    def set_destination(self, dest):
+        self._destination = dest
 
     @classmethod
     def unpack(cls, packed:dict):
@@ -68,6 +77,7 @@ class Person:
         new._wants = packed["wants"]
         new._persistent = packed["persistent"]
         new._image_name = packed["image"]
+        new._destination = HexID.unpack(packed["dest"]) if packed["dest"]!="" else None
         return new
     
     def pack(self)->dict:
@@ -82,7 +92,8 @@ class Person:
             "pronoun":self._pronouns,
             "wants":self._wants,
             "persistent":self._persistent,
-            "image":self._image_name
+            "image":self._image_name,
+            "dest":self._destination.pack() if self._destination is not None else ""
         }
         return packed
 
@@ -133,7 +144,28 @@ class Person:
         formatted_pn = pronoun[0].upper() + pronoun[1:]
 
         newp._name = get_name(key, newp._sex)
+        short_name = newp._name.split(" ")[0]
         newp._appearance=newp._name + " is {} and {}. ".format(random.choice(data["heights"]).lower(), random.choice(data["ages"]).lower())
+
+        bald = False
+        if "old" in newp._appearance.lower() or "middle" in newp._appearance.lower():
+            if newp._sex=="male":
+                if random.randint(1,3)==1:
+                    bald = True
+            else:
+                if random.randint(1,20)==1:
+                    bald = True
+        if bald:
+            hair = "{} is bald. ".format(short_name)
+        else:
+            hair = "{} has {} {} hair. ".format(
+                short_name,
+                random.choice(data["hair"]),
+                random.choice(data["hair_color"])
+            )
+
+        newp._appearance = newp._appearance + hair
+            
         desc = formatted_pn + " was formally a {}.\n\n".format(random.choice(data["role"]).lower())
         desc += formatted_pn + " is {} and known for {} {}.\n\n".format(
             random.choice(data["background"]).lower(),

@@ -43,6 +43,9 @@ class Clicker(QGraphicsScene,ActionManager):
         self._routes = {}
         self._drawn_routes = {}
 
+        self._alt_select = None
+        self._alt_route_sid = None
+
         self._pen = QtGui.QPen() # STROKE EFFECTS
         self._pen.setColor(QtGui.QColor(240,240,240))
         self._pen.setStyle(Qt.PenStyle.SolidLine )
@@ -63,7 +66,8 @@ class Clicker(QGraphicsScene,ActionManager):
             self.unpack(data)
         else:
             self.initialize()
-            
+            self.initialize_routes()
+
         self.update()        
 
     def closeEvent(self, event):
@@ -133,6 +137,18 @@ class Clicker(QGraphicsScene,ActionManager):
                 ]
         self.draw_routes()
 
+    def draw_alt(self, hexID:HexID):
+        if self._alt_select is not None:
+            self.removeItem(self._alt_select)
+        center = hex_to_screen(hexID)
+
+        this_hex = Hex(center)
+        self._pen.setColor(QtGui.QColor( 118, 219, 216 ))
+        self._pen.setStyle(1)
+        self._brush.setStyle(0)
+        self._alt_select = self.addPolygon(this_hex, self._pen, self._brush)
+        self._alt_select.setZValue(99)
+
     def draw_selection(self, hex_id):
         if self._selected_sid is not None:
             self.removeItem(self._selected_sid)
@@ -158,7 +174,52 @@ class Clicker(QGraphicsScene,ActionManager):
                 return True #end->start
             
         return False 
+    
+    def generate_passengers(self, hexID, mod=0):
+        world = self.get_system(hexID)
+        skip = world.generated
 
+        all_passengers = world.generate_passengers(mod)
+        if skip:
+            return all_passengers
+
+        n_gen = 0
+        for berth_key in all_passengers.keys():
+            n_gen+= len(all_passengers[berth_key])
+        destinations = self.choose_dest(hexID, n_gen)
+
+        item = 0
+        for berth_key in all_passengers.keys():
+            for passenger in all_passengers[berth_key]:
+                passenger.set_destination(destinations[item])
+                #passenger.set_destination(self.get_system(destinations[item]))
+                item += 1
+
+        return all_passengers
+
+    def choose_dest(self, source:HexID, samples=1)->HexID:
+        """
+        Uses desireability of worlds around a given HexID to sample `samples` destinations 
+        Punishes distant destinations
+        """
+
+        max_dist = 6
+        all_possible = source.in_range(6)
+        all_possible = list(filter(lambda x:x in self._systems, all_possible))
+        all_possible = list(filter(lambda entry:entry!=source, all_possible))
+
+        distance_weight = np.array([(source - entry)**2 for entry in all_possible])
+        desireability = np.array([self.get_system(hid).desireability for hid in all_possible])
+        desireability += min(desireability)
+
+        total_weights = desireability.astype(float)**2 / distance_weight
+ 
+        total_weights+=np.min(total_weights)
+        total_weights /= np.sum(total_weights)
+
+        dests = [np.random.choice(all_possible,size=1, p = total_weights)[0] for i in range(samples)]
+
+        return dests
 
     def initialize_routes(self):
         print("Initilizing routes...")
@@ -216,25 +277,55 @@ class Clicker(QGraphicsScene,ActionManager):
             self._routes[system_key][by_grade["A"][min_index]] = routes[min_index]
         self.draw_routes()
 
+    def draw_route_to(self, start:HexID, to:HexID):
+        self.clear_drawn_route()
+
+        this_route = self.get_route_a_star(start, to)
+        vertices = [hex_to_screen(hid) for hid in this_route]
+
+        path = QtGui.QPainterPath()
+        path.addPolygon(QtGui.QPolygonF(vertices))
+        self._pen.setStyle(1)                
+        self._pen.setWidth(5)
+        self._pen.setColor(QtGui.QColor(150,150,255))
+        self._brush.setStyle(0)
+        self._alt_route_sid = self.addPath(path, self._pen, self._brush)
+        self._alt_route_sid.setZValue(20)
+        
+
+    def clear_drawn_route(self):
+        if self._alt_route_sid is not None:
+            self.removeItem(self._alt_route_sid)
+            self._alt_route_sid= None
+
     def draw_routes(self):
         for route in self._routes.keys():
+            
             if route not in self._drawn_routes:
                 self._drawn_routes[route]={}
             for destination in self._routes[route].keys():
                 full_path = self._routes[route][destination]
+                level = self.get_route_level(full_path)
+                
+                shift = level-1
+
                 vertices = [hex_to_screen(hid) for hid in full_path]
                 path = QtGui.QPainterPath()
                 path.addPolygon(QtGui.QPolygonF(vertices))
-                self._pen.setStyle(1)
+                self._pen.setStyle(level)                
                 self._pen.setWidth(5)
-                self._pen.setColor(QtGui.QColor(250,250,250))
+                if level==1:
+                    self._pen.setColor(QtGui.QColor(150,255,150))
+                else:
+                    
+                    self._pen.setColor(QtGui.QColor(255,250-40*shift,250-40*shift))
                 self._brush.setStyle(0)
                 sid = self.addPath(path, self._pen, self._brush)
                 sid.setZValue(2)
                 self._drawn_routes[route][destination]=sid
 
     def initialize(self):
-        sample = utils.perlin(150,octave=10)*0.9+0.45
+        sample = utils.perlin(150,octave=5)*0.9+0.45
         extra_thresh = 0.9*np.max(sample)
         
         by_title={
@@ -481,6 +572,42 @@ class Clicker(QGraphicsScene,ActionManager):
         if event.key() == QtCore.Qt.Key_Minus or event.key()==QtCore.Qt.Key_PageDown or event.key()==QtCore.Qt.Key_BracketLeft:
             self.parent().scale( 0.95, 0.95 )
 
+    def get_route_level(self, route:'list[HexID]')->int:
+        """
+            Returns the "level" of a route 
+                level 1 means there is a fuel source for every jump
+                level 2 means there may be stops without fuel, but no two consequtively 
+                level 3 means there may be two consequtive stps without fuel, but not three
+                etc etc
+        """
+        max_without = 0
+        current = 0
+
+
+        # current will keep growing for each step as long as 
+        for hexID in route:
+            current += 1
+            without = False
+
+            if hexID not in self._systems:
+                without = True
+            else:
+                if self.get_system(hexID).starport_cat=="X" or self.get_system(hexID).starport_cat=="E":
+                    without = True
+
+            if current > max_without:
+                max_without = current
+
+            if not without:
+                current = 0 # reset it ! 
+        
+        # check one last time in case we got to the destination on the last step and still have no fuel (shouldn't happen, but w/e)
+        if current > max_without:
+            max_without = current
+        
+        return max_without
+
+
     def _get_heuristic(self, start:HexID, end:HexID)->float:
         val =  abs(end - start)
         return val
@@ -492,10 +619,19 @@ class Clicker(QGraphicsScene,ActionManager):
         # if that one is unknown, it has no starport. Avoid! 
         if end_id not in self._systems:
             cost*= 7 # no starport
+            if start_id not in self._systems:
+                cost*=7 # penalize double-nothings a lot 
         else:
             # avoid ones with no starport
             if self.get_system(end_id).starport_cat=="X" or self.get_system(end_id).starport_cat=="E":
                 cost *= 4 # no starport
+                
+                if start_id in self._systems:
+                    if self.get_system(start_id).starport_cat=="X" or self.get_system(start_id).starport_cat=="E":
+                        cost *= 7
+                else:
+                    cost *= 7
+
             # and also ones with bad fuel 
             elif self.get_system(end_id).starport_cat=="C" or self.get_system(end_id).starport_cat=="D":
                 cost *= 1.2

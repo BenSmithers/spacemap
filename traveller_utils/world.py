@@ -27,58 +27,6 @@ star_hex+=[
     "I"
 ]
 
-def services(world:'World'):
-    serv = ""
-
-    if world.starport_cat=="A":
-        fuel = "Refined"
-        berth_scale = 1000
-        fuel_cost = "at Cr500 per ton."
-        facility = "Fully functioning capital-class shipyard. \n Repair"
-    elif world.starport_cat=="B":
-        fuel = "Refined"
-        berth_scale = 500
-        fuel_cost = "at Cr500 per ton."
-        facility = "Shipyard capable of building all craft up to 5,000 tons. \n Repair"
-    elif world.starport_cat=="C":
-        fuel = "Unrefined"
-        fuel_cost = "at Cr100 per ton."
-        berth_scale = 100
-        facility = "Shipyard capable of building all craft below 100 tons. \n Repair"
-    elif world.starport_cat=="D":
-        fuel = "Unrefined"
-        berth_scale = 10
-        fuel_cost = "at Cr100 per ton."
-        facility = "Limited Repair. Can only fix hull damage."
-    else:
-        fuel = "No"
-        berth_scale = 0
-        facility = "No repair facilities."
-        fuel_cost=0
-
-    serv += "{} fuel available {}\n".format(fuel, fuel_cost)
-    serv+=facility+"\n"
-    serv+="Berthing costs Cr{}.".format(roll1d()*berth_scale)
-    serv+="\n\n"
-    if Bases.Naval in world.services:
-        serv+="Has naval base. Ex-Naval Travellers may meet Contacts or Allies here, and mercenary Travellers can try to pick up work. "
-        serv+="Naval bases also have an advanced hospital, though it is normally available only to naval personnel. "
-        serv+="Travellers may also be able to purchase navy-surplus weapons here.\n\n"
-    if Bases.Scout in world.services:
-        serv+="The scout base here offers refined fuel and supplies to scout ships (including retired scout ships obtained by retired scouts). "
-        serv+="They are also an excellent place to pickup rumors and news. "
-        serv+="\n\n"
-    if Bases.TAS in world.services:
-        serv+="Has a Traveller's Aid Society Hostel, where Travellers with TAS memberships and their guests can stay. "
-        serv+="In the Third Imperium TAS Hostels offer medical facilities for members, as well as supplies and luxuries notnormally available on most worlds. TAS Hostels are a good source of rumors and passengers. "
-        serv+="\n\n"
-    if Bases.Research in world.services:
-        serv+="A Research base is here. It might be a weapons testing facility, or a solar observatory, or part of a secret Imperial project. "
-        serv+="A research base may have Contacts or Allies of Travellers who followed a Scholar career. "
-        serv+="Such bases may have advanced medical facilities. "
-        serv+="\n\n"
-        
-    return serv
 
 
 star_hex = [str(entry) for entry in star_hex]
@@ -93,7 +41,6 @@ class Government:
             for good in Contraband:
                 if entry.lower() in good.name.lower():
                     self._contraband.append(good)
-        self.notes = ""
         self._strength = factions.access(roll() if is_faction else 12)
         self._is_faction = is_faction
 
@@ -122,7 +69,6 @@ class Government:
     def unpack(cls, packed:dict):
         new = cls(packed, is_faction=packed["is_faction"])
         new._what= packed["examples"]
-        new.notes = packed["notes"]
         new._strength = packed["strength"]
         return new
 
@@ -132,7 +78,6 @@ class Government:
             "description":self._desc,
             "examples":self._what,
             "contraband":[entry.name for entry in self._contraband],
-            "notes":self.notes,
             "strength":self._strength,
             "is_faction":self._is_faction
         }
@@ -184,6 +129,33 @@ class World:
 
         if generate:
             self.populate(modifier=modifier)
+
+    @property
+    def desireability(self):
+        mod = 1
+
+        if self._population_raw<=1:
+            mod -= 4
+        elif self._population_raw==6 or self._population_raw==7:
+            mod += 1
+        elif self._population_raw>8:
+            mod += self._population_raw-8 + 3
+
+        letter = self.starport_cat
+        if letter=="A":
+            mod +=2
+        elif letter=="B":
+            mod +=1
+        elif letter=="E":
+            mod -=1
+        elif letter=="X":
+            mod -=3
+        if WorldCategory.red_zone in self._category:
+            mod -=4
+        if WorldCategory.amber_zone in self._category:
+            mod -=1
+
+        return mod
 
     @property
     def retailers(self):
@@ -439,6 +411,10 @@ class World:
 
         return new
 
+
+    @property
+    def generated(self):
+        return self._generated
     def generate_passengers(self, steward_mod:int)->'dict[Person]':
         if self._generated:
             return self._passengers        
@@ -453,26 +429,7 @@ class World:
             elif key=="low":
                 mod +=1
             
-            if self._population_raw<=1:
-                mod-=4
-            elif self._population_raw==6 or self._population_raw==7:
-                mod+=1
-            elif self._population_raw>8:
-                mod += self._population_raw-8 + 3
-
-            letter = starports_str[self._starport_raw]
-            if letter=="A":
-                mod +=2
-            elif letter=="B":
-                mod +=1
-            elif letter=="E":
-                mod -=1
-            elif letter=="X":
-                mod -=3
-            if WorldCategory.red_zone in self._category:
-                mod -=4
-            if WorldCategory.amber_zone in self._category:
-                mod -=1
+            mod += self.desireability
             
             die_roll = roll(mod=mod)
             if die_roll<0:
@@ -627,7 +584,14 @@ class World:
     def pressure(self)->float:
 
         pressures = [
-            0.00, 0.05, 0.1,0.3, 0.43, 0.65, 1.0, 1.0, 1.5, 2.5, -1, -1, -1, 8.2, 0.3, -1
+            0.00, 0.05, 
+            0.1,0.3, 
+            0.43, 0.65, 
+            1.0, 1.0, 
+            1.5, 2.5,
+            -1, -1, 
+            -1, 8.2, 
+            0.3, -1
         ]
         self._pressure = pressures[self._atmosphere]
 
@@ -683,7 +647,8 @@ class World:
 
     @property
     def atmosphere_str(self)->str:
-        return "The atmophere is " + atmo.access(self._atmosphere).lower()
+        what= "{} atmosphere.".format(atmo.access(self._atmosphere).lower())
+        return  what[0].upper() + what[1:].lower()
 
     @property
     def hydro_str(self)->str:
@@ -821,4 +786,55 @@ class World:
         return mod
         
 
-         
+    def notes(self):
+        serv = ""
+
+        if self.starport_cat=="A":
+            fuel = "Refined"
+            berth_scale = 1000
+            fuel_cost = "at Cr500 per ton."
+            facility = "Fully functioning capital-class shipyard. \n Repair"
+        elif self.starport_cat=="B":
+            fuel = "Refined"
+            berth_scale = 500
+            fuel_cost = "at Cr500 per ton."
+            facility = "Shipyard capable of building all craft up to 5,000 tons. \n Repair"
+        elif self.starport_cat=="C":
+            fuel = "Unrefined"
+            fuel_cost = "at Cr100 per ton."
+            berth_scale = 100
+            facility = "Shipyard capable of building all craft below 100 tons. \n Repair"
+        elif self.starport_cat=="D":
+            fuel = "Unrefined"
+            berth_scale = 10
+            fuel_cost = "at Cr100 per ton."
+            facility = "Limited Repair. Can only fix hull damage."
+        else:
+            fuel = "No"
+            berth_scale = 0
+            facility = "No repair facilities."
+            fuel_cost=0
+
+        serv += "{} fuel available {}\n".format(fuel, fuel_cost)
+        serv+=facility+"\n"
+        serv+="Berthing costs Cr{}.".format(roll1d()*berth_scale)
+        serv+="\n\n"
+        if Bases.Naval in self.services:
+            serv+="Has naval base. Ex-Naval Travellers may meet Contacts or Allies here, and mercenary Travellers can try to pick up work. "
+            serv+="Naval bases also have an advanced hospital, though it is normally available only to naval personnel. "
+            serv+="Travellers may also be able to purchase navy-surplus weapons here.\n\n"
+        if Bases.Scout in self.services:
+            serv+="The scout base here offers refined fuel and supplies to scout ships (including retired scout ships obtained by retired scouts). "
+            serv+="They are also an excellent place to pickup rumors and news. "
+            serv+="\n\n"
+        if Bases.TAS in self.services:
+            serv+="Has a Traveller's Aid Society Hostel, where Travellers with TAS memberships and their guests can stay. "
+            serv+="In the Third Imperium TAS Hostels offer medical facilities for members, as well as supplies and luxuries notnormally available on most worlds. TAS Hostels are a good source of rumors and passengers. "
+            serv+="\n\n"
+        if Bases.Research in self.services:
+            serv+="A Research base is here. It might be a weapons testing facility, or a solar observatory, or part of a secret Imperial project. "
+            serv+="A research base may have Contacts or Allies of Travellers who followed a Scholar career. "
+            serv+="Such bases may have advanced medical facilities. "
+            serv+="\n\n"
+            
+        return serv

@@ -47,7 +47,7 @@ class Ui_Form(object):
         self.comboBox.addItem("")
         self.horizontalLayout.addWidget(self.comboBox)
         self.verticalLayout.addLayout(self.horizontalLayout)
-        self.tableView = QtWidgets.QTableView(Form)
+        self.tableView = QtWidgets.QListView(Form)
         self.tableView.setObjectName("tableView")
         self.verticalLayout.addWidget(self.tableView)
 
