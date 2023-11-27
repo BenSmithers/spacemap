@@ -94,8 +94,8 @@ class Clicker(QGraphicsScene,ActionManager):
         }
     
     def unpack(self, packed:dict):
-        for i in range(25):
-            for j in range(20):
+        for i in range(30):
+            for j in range(15):
                 shift = int(i/2)
                 loc = HexID(i ,j-shift)
                 if loc.pack() in packed["systems"]:
@@ -118,8 +118,8 @@ class Clicker(QGraphicsScene,ActionManager):
             for entry in vassal_ids:
                 world.add_vassal(entry, self.get_system(entry))
 
-        for i in range(25):
-            for j in range(20):
+        for i in range(30):
+            for j in range(15):
                 shift = int(i/2)
                 loc = HexID(i ,j-shift)
                 if loc.pack() in packed["systems"]:
@@ -325,7 +325,8 @@ class Clicker(QGraphicsScene,ActionManager):
                 self._drawn_routes[route][destination]=sid
 
     def initialize(self):
-        sample = utils.perlin(150,octave=5)*0.9+0.45
+        sample = utils.perlin(150,octave=3)*0.8 + utils.perlin(150,octave=15)*0.20
+        sample = sample*0.9+0.40
         extra_thresh = 0.9*np.max(sample)
         
         by_title={
@@ -336,8 +337,8 @@ class Clicker(QGraphicsScene,ActionManager):
             Title.Lord:[]
         }
 
-        for i in range(25):
-            for j in range(20):
+        for i in range(30):
+            for j in range(15):
                 this_val = sample[i*5][j*5]
                 shift = int(i/2)
                 loc = HexID(i ,j-shift)
@@ -407,8 +408,8 @@ class Clicker(QGraphicsScene,ActionManager):
             else:
                 self._regions[ultimate_liege] = new
 
-        for i in range(25):
-            for j in range(20):
+        for i in range(30):
+            for j in range(15):
                 shift = int(i/2)
                 loc = HexID(i ,j-shift)
                 if loc in self._systems:

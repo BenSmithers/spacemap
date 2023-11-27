@@ -51,10 +51,15 @@ class HexID:
         ]
         return nb
 
-    def in_range(self, dist:int):
+    def in_range(self, dist:int, include_self=True):
+        """
+            returns all hexIDs in a given range
+        """
         results = []
         for i in range(-dist, dist+1):
             for j in range(max(-dist, -i-dist), min(dist, -i+dist)+1):
+                if i==0 and j==0 and (not include_self):
+                    continue
                 results.append(self + HexID(i,j))
         return results
     def __repr__(self) -> str:
@@ -72,13 +77,13 @@ class HexID:
 
         # -30 degrees, increment by 60 with each
 
-
+# magic numbers for unit conversion
 M = (3.0 / 2.0, 0.0, RTHREE/2.0, RTHREE, # F0-F3
                2.0 / 3.0, 0.0, -1.0 / 3.0, RTHREE / 3.0) #b0-b3
 
 def screen_to_hex(point:QPointF)->HexID:
     """
-        Returns the HexID for the spot under the cursor in pixel-space 
+        Returns the HexID for the hex containing the spot under the cursor in pixel-space 
     """
     fq = (M[4]*point.x())/DRAWSIZE
     fr = (M[6]*point.x() + M[7]*point.y())/DRAWSIZE
@@ -100,7 +105,7 @@ def screen_to_hex(point:QPointF)->HexID:
 
 def hex_to_screen(id:HexID)->QPointF:
     """
-        Returns the pixel location of the center of the gien HexID 
+        Returns the pixel location of the center of the given HexID 
     """
     x_loc = DRAWSIZE*(M[0]*id.xid)
     y_loc = DRAWSIZE*(M[2]*id.xid + M[3]*id.yid)

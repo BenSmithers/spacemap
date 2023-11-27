@@ -11,7 +11,7 @@ from traveller_utils.world import World, Government
 from traveller_utils.person import Person
 from traveller_utils.retailer import Retailer
 from traveller_utils.click_interface import Clicker
-from traveller_utils.coordinates import HexID
+from traveller_utils.coordinates import HexID, DRAWSIZE
 from traveller_utils import utils 
 from traveller_utils.tables import fares
 
@@ -117,6 +117,8 @@ class PassWidget(QtWidgets.QWidget):
         self.ui.tableView.setModel(self.pass_list_entry)
         self.ui.tableView.clicked[QtCore.QModelIndex].connect(self.pass_click)
 
+        self._pass_selected = ""
+
         self.ui.berth_combo.currentIndexChanged.connect(self.log_passengers)
         self.ui.comboBox.currentIndexChanged.connect(self.log_passengers)
 
@@ -127,21 +129,24 @@ class PassWidget(QtWidgets.QWidget):
         self.people_pixes = utils.IconLib(os.path.join(os.path.dirname(__file__),"images","chars"))
 
     def pass_click(self, index):
+        
         passenger_item = self.pass_list_entry.itemFromIndex(index)
         passenger = passenger_item.passenger
 
-        pixname = passenger.image_name
-        pix = self.people_pixes.access(pixname, 100)
-        
-        self.parent.scene.draw_route_to(self._hid, passenger.destination)
-
-        dialog = PassengerDialog(self)
-        dialog.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-        dialog.update_gui(passenger, pix)
-        dialog.exec_()
+        if self._pass_selected!=passenger.name:
+            self.parent.scene.draw_route_to(self._hid, passenger.destination)
+            self._pass_selected = passenger.name
+        else:
+            pixname = passenger.image_name
+            pix = self.people_pixes.access(pixname, 100)
+            dialog = PassengerDialog(self)
+            dialog.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+            dialog.update_gui(passenger, pix)
+            dialog.exec_()
 
     def clear_pass(self):
         self.pass_list_entry.clear()
+        self._pass_selected = ""
 
     def log_passengers(self, loc):
 
@@ -153,15 +158,26 @@ class PassWidget(QtWidgets.QWidget):
             self._cache_pass = all_passengers
             self._hid = loc
 
+        
+
         self.pass_list_entry.clear()
         for berth_key in all_passengers.keys():
             for passenger in all_passengers[berth_key]:
                 if self.ui.berth_combo.currentText()!="Any":
                     if self.ui.berth_combo.currentText().lower() != berth_key.lower():
                         continue
+                
                 world = self.parent.scene.get_system(passenger.destination)
-                dist = int(passenger.destination - self._hid) - 1
-                fare = fares[berth_key][dist]
+                dist = int(passenger.destination - self._hid) 
+                if self.ui.comboBox.currentText()!="Any":
+                    index = self.ui.comboBox.currentIndex()
+                    if index==4:
+                        if dist<4:
+                            continue
+                    elif index!=dist:
+                        continue
+                
+                fare = fares[berth_key][dist-1]
                 #entry = [PassengerItem(berth_key, passenger), PassengerItem(passenger.name, passenger)]
                 self.pass_list_entry.appendRow(PassengerItem(passenger, berth_key, world.name, fare))
 
@@ -346,6 +362,7 @@ class main_window(QMainWindow):
         self.ui.map_view.setScene( self.scene )
         self.ui.map_view.setMouseTracking(True)
 
+        self.export_image()
 
         self.govs = []
 
@@ -391,6 +408,13 @@ class main_window(QMainWindow):
             first.deleteLater()
             self._planet_widget.ui.formLayout_2.removeWidget(first)
 
+    def export_image(self):
+        size   = QtCore.QSize(DRAWSIZE*45    ,DRAWSIZE*27)
+        image  = QtGui.QImage(size,QtGui.QImage.Format_ARGB32_Premultiplied)
+        painter= QtGui.QPainter(image)
+        self.scene.render(painter)
+        painter.end()
+        image.save(os.path.join(os.path.dirname(__file__),"galaxy.png"))
 
 
 app = QApplication(sys.argv)
