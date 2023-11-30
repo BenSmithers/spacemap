@@ -4,8 +4,10 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QGraphicsScene, QGraphicsSceneMouseEvent, QMainWindow
 from traveller_utils.actions import ActionManager
 
-from traveller_utils.enums import Title, LandTitle, Bases
+from traveller_utils.enums import Title, LandTitle, Bases, WorldCategory
+
 from traveller_utils.coordinates import HexID, DRAWSIZE, screen_to_hex, hex_to_screen
+from traveller_utils.ship import Ship
 from traveller_utils.core import Hex, Region
 from traveller_utils.world import World
 from traveller_utils import utils
@@ -43,6 +45,9 @@ class Clicker(QGraphicsScene,ActionManager):
         self._routes = {}
         self._drawn_routes = {}
 
+        self._ships = {} # shipid->Ship
+        self._ship_locations={} #hexid->list[shipids]
+
         self._alt_select = None
         self._alt_route_sid = None
 
@@ -67,8 +72,49 @@ class Clicker(QGraphicsScene,ActionManager):
         else:
             self.initialize()
             self.initialize_routes()
+            self.initialize_regions()
+        self.draw_all_hexes()
 
         self.update()        
+
+        all_ts = []
+        for hid in self._systems:
+            world = self.get_system(hid)
+            ts = world.wealth
+            all_ts.append(ts)
+
+        if False:
+            import matplotlib.pyplot as plt 
+            plt.hist(all_ts, bins=np.arange(0, 15,1))
+            plt.xlabel("Wealth Score")
+            plt.ylabel("Count")
+            plt.show()
+
+
+    def get_ship(self, ship_id)->Ship:
+        if ship_id in self._ships:
+            return self._ships[ship_id]
+    def get_ships_at(self,hid:HexID)->'list[int]':
+        if hid in self._ship_locations:
+            return self._ship_locations[hid]
+        else:
+            return []
+        
+    def move_ship(self, ship_id, dest:HexID):
+        """
+            Updates maps regarding where a Ship is
+        """
+        ship = self.get_ship(ship_id)
+        all_ships = self.get_ships_at(ship.location)
+
+        if ship_id in all_ships:        
+            all_ships.remove(ship_id)
+        ship.set_location(dest)
+
+        if dest not in self._ship_locations:
+            self._ship_locations[dest] = []
+        self._ship_locations[dest].append()
+
 
     def closeEvent(self, event):
         packed= self.pack()
@@ -117,15 +163,6 @@ class Clicker(QGraphicsScene,ActionManager):
 
             for entry in vassal_ids:
                 world.add_vassal(entry, self.get_system(entry))
-
-        for i in range(30):
-            for j in range(15):
-                shift = int(i/2)
-                loc = HexID(i ,j-shift)
-                if loc.pack() in packed["systems"]:
-                    self.draw_system(loc)
-                else:
-                    self.draw_hex(loc)
         
         for key in packed["routes"]:
             keyunpack = HexID.unpack(key)
@@ -222,6 +259,62 @@ class Clicker(QGraphicsScene,ActionManager):
         return dests
 
     def initialize_routes(self):
+        for system_key in self.systems.keys():
+            of_interest = [
+                WorldCategory.Industrial,
+                WorldCategory.High_Tech,
+                WorldCategory.High_Pop,
+                WorldCategory.Rich
+            ]
+            
+            this_world = self.get_system(system_key)
+            these_pass = any([entry in this_world.category for entry in of_interest])
+            if not these_pass:
+                continue
+            if WorldCategory.Industrial in this_world.category or WorldCategory.High_Tech in this_world.category:
+                check = [
+                    WorldCategory.Asteroid,
+                    WorldCategory.Desert,
+                    WorldCategory.Ice_Capped,
+                    WorldCategory.Non_Industrial
+                ]
+            elif WorldCategory.High_Pop in this_world.category or WorldCategory.Rich in this_world.category:
+                check = [
+                    WorldCategory.Agricultural,
+                    WorldCategory.Garden, 
+                    WorldCategory.Water_World
+                ]
+            else:
+                check = []
+
+            
+            in_range = system_key.in_range(4, False)
+            in_range = list(filter(lambda x:x in self._systems, in_range))
+            for other_key in in_range:
+                other_world = self.get_system(other_key)
+                if any([entry in other_world.category for entry in check]):
+                    # draw route! 
+                    if  not self._route_present(system_key, other_key):
+                        route = self.get_route_a_star(system_key, other_key)
+                        if self.get_route_level(route)<=2:
+                            self.add_route(system_key, other_key, route)
+
+        self.draw_routes()
+
+    def add_route(self, start:HexID, end:HexID, route):
+        if self._route_present(start, end):
+            return
+        else:
+            if start not in self._routes:
+                self._routes[start] = {}
+            self._routes[start][end] = route
+            for hid in route:
+                world = self.get_system(hid)
+                if world is not None:
+                    world.iterate_ts()
+                    self._systems[hid] = world
+
+    def initialize_routes_old(self):
         print("Initilizing routes...")
         by_grade = {
             "A":[],
@@ -325,18 +418,10 @@ class Clicker(QGraphicsScene,ActionManager):
                 self._drawn_routes[route][destination]=sid
 
     def initialize(self):
-        sample = utils.perlin(150,octave=3)*0.8 + utils.perlin(150,octave=15)*0.20
-        sample = sample*0.9+0.40
+        sample = utils.perlin(150,octave=3)*0.6 + utils.perlin(150,octave=15)*0.40
+        sample = sample*0.9+0.4
         extra_thresh = 0.9*np.max(sample)
         
-        by_title={
-            Title.Emperor:[],
-            Title.King:[],
-            Title.Duke:[],
-            Title.Count:[],
-            Title.Lord:[]
-        }
-
         for i in range(30):
             for j in range(15):
                 this_val = sample[i*5][j*5]
@@ -346,27 +431,38 @@ class Clicker(QGraphicsScene,ActionManager):
                     mod = 0 if this_val<extra_thresh else 2
 
                     self._systems[loc] = World(modifier = mod)
-                    by_title[self._systems[loc].title].append(loc)
         
+    def initialize_regions(self):
+        by_title={
+            Title.Emperor:[],
+            Title.King:[],
+            Title.Duke:[],
+            Title.Count:[],
+            Title.Lord:[]
+        }
+        for key in self._systems:
+            world = self.get_system(key)
+            world.update_category()
+            by_title[world.title].append(key)
         """
             For each title, we assign each lower ranking house to an upper one. There are chances for each level that a given house has no liege 
 
             So, each Duke is assigned to its nearest king
         """
-        max_dist = 2
+        max_dist = 3
         ordered_labels= [Title.Lord, Title.Count, Title.Duke, Title.King, Title.Emperor]
-        odds = [0.01, 0.08, 0.25, 0.40]
+        odds = [0.01, 0.08, 0.25, 0.40, 1.0]
 
         for i, title in enumerate(ordered_labels):
-            if title==Title.Emperor:
-                continue
+            #if title==Title.Emperor:
+            #    continue
             for system_id in by_title[title]:
                 roll = np.random.rand()
                 if roll<odds[i]:
                     continue
 
                 use = []
-                all_lists = [by_title[ordered_labels[j]] for j in range(i+1, 4)]
+                all_lists = [by_title[ordered_labels[j]] for j in range(i+1, 5)]
                 for entry in all_lists:
                     use+= entry
        
@@ -408,6 +504,11 @@ class Clicker(QGraphicsScene,ActionManager):
             else:
                 self._regions[ultimate_liege] = new
 
+
+        for rid in self._regions.keys():
+            self.draw_region(rid)
+
+    def draw_all_hexes(self):
         for i in range(30):
             for j in range(15):
                 shift = int(i/2)
@@ -416,11 +517,6 @@ class Clicker(QGraphicsScene,ActionManager):
                     self.draw_system(loc)
                 else:
                     self.draw_hex(loc)
-
-        for rid in self._regions.keys():
-            self.draw_region(rid)
-
-        
 
     def get_ultimate_liege(self, hexID:HexID):
         world = self.get_system(hexID)
@@ -624,17 +720,19 @@ class Clicker(QGraphicsScene,ActionManager):
                 cost*=7 # penalize double-nothings a lot 
         else:
             # avoid ones with no starport
-            if self.get_system(end_id).starport_cat=="X" or self.get_system(end_id).starport_cat=="E":
-                cost *= 4 # no starport
+            fuel = self.get_system(end_id).fuel_present()
+
+            if fuel==0:
+                cost *= 4 # no fuel
                 
                 if start_id in self._systems:
-                    if self.get_system(start_id).starport_cat=="X" or self.get_system(start_id).starport_cat=="E":
+                    if self.get_system(start_id).fuel_present()==0:
                         cost *= 7
                 else:
                     cost *= 7
 
-            # and also ones with bad fuel 
-            elif self.get_system(end_id).starport_cat=="C" or self.get_system(end_id).starport_cat=="D":
+            # and also penalize ones with bad fuel 
+            elif fuel<3:
                 cost *= 1.2
         return cost
     

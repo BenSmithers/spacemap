@@ -95,6 +95,7 @@ class World:
         self._atmosphere= 0
         self._pressure = -1
         self._temperature=0
+        self._trade_score = 0
         self._biosphere = 0
         self._population_raw=0
         self._population=0
@@ -111,6 +112,7 @@ class World:
         self._vassal_names = []
         self._services = []
         self._retailers = []
+        self._has_gas_giant = False
         self._persistent_passengers={
             "high":[],
             "middle":[],
@@ -172,6 +174,33 @@ class World:
         self._liege = hid
         self._liege_name = which
 
+    
+    @property
+    def wealth(self):
+        score = int(self.trade_score / 5)
+        if self._population_raw>8:
+            score+=1
+        if self._starport_raw>8:
+            score+=1
+        if self._starport_raw>10:
+            score+=1
+        if self._tech_level>10:
+            score+=1
+        if self._tech_level>14:
+            score+=2
+        if self._tech_level<4:
+            score -= 4
+        if self._tech_level<8:
+            score -= 2
+        return score
+        
+
+    @property 
+    def trade_score(self):
+        return self._trade_score
+    def iterate_ts(self):
+        self._trade_score = self._trade_score + 1
+
     @property
     def title(self):
         return self._title
@@ -186,6 +215,27 @@ class World:
     def add_vassal(self, hid:HexID, which:'World'):
         self._vassals.append(hid)
         self._vassal_names.append(which)
+
+    def fuel_present(self):
+        """
+            0 - none
+            1 - gas giant
+            2 - unrefined
+            3 - refined
+        """
+        cat = self.starport_cat
+        if cat=="A" or cat=="B":
+            fuel = 3
+        elif cat=="C" or cat=="D":
+            fuel = 2
+        elif self._has_gas_giant:
+            fuel = 1
+        elif cat=="E" or cat=="X":
+            fuel = 0
+        else:
+            raise NotImplementedError("This should be un-reachable!")
+        return fuel 
+
 
     def populate(self,name="",rng=None,
                 atmosphere=-1, temperature=-1,biosphere=-1,
@@ -302,6 +352,8 @@ class World:
 
         self.update_category()
 
+        self._has_gas_giant = roll() < 10
+
         naval_roll = roll()
         scout_roll = roll()
         research_roll = roll()
@@ -357,12 +409,14 @@ class World:
             "raw_population":self._population_raw,
             "population":self._population,
             "hydro":self._hydro,
+            "trade_score":self._trade_score,
             "tech":self._tech_level,
             "law":self._law_level,
             "government":self._government.pack(),
             "gov_raw":self._government_raw,
             "factions":[fact.pack() for fact in self._factions],
             "generated":self._generated,
+            "gas_giant":self._has_gas_giant,
             "starport_raw":self._starport_raw,
             "services":[entry.name for entry in self._services],
             "persistent_pass":{
@@ -394,7 +448,9 @@ class World:
         new._population=packed["population"]
         new._hydro=packed["hydro"]
         new._tech_level=packed["tech"]
+        new._trade_score = packed["trade_score"] 
         new._law_level=packed["law"]
+        new._has_gas_giant = packed["gas_giant"]
         new._government=Government.unpack(packed["government"])
         new._government_raw=packed["gov_raw"]
         new._generated=packed["generated"]
@@ -503,6 +559,21 @@ class World:
             self._title = Title.King
         else:
             self._title = Title.Emperor
+
+        wealth = self.wealth
+        if wealth>8:
+            self._title = Title.Emperor
+            print(self.name)
+        elif wealth>=6:
+            self._title = Title.King
+        elif wealth>=4:
+            self._title = Title.Duke
+        elif wealth>=2:
+            self._title = Title.Count
+        else:
+            self._title = Title.Lord
+
+
 
         self._category = []
         if self._atmosphere==0 and self._size==0 and self._hydro==0:
@@ -836,5 +907,8 @@ class World:
             serv+="A research base may have Contacts or Allies of Travellers who followed a Scholar career. "
             serv+="Such bases may have advanced medical facilities. "
             serv+="\n\n"
+
+        serv+="Wealth Score: {}\n".format(self.wealth)
+        serv+="Trade Score: {}\n".format(self._trade_score)
             
         return serv
