@@ -8,7 +8,7 @@ from traveller_utils.enums import Title, LandTitle, Bases, WorldCategory
 
 from traveller_utils.coordinates import HexID, DRAWSIZE, screen_to_hex, hex_to_screen
 from traveller_utils.ship import Ship
-from traveller_utils.core import Hex, Region
+from traveller_utils.core import Hex, Region, Route
 from traveller_utils.world import World
 from traveller_utils import utils
 from collections import deque
@@ -132,9 +132,7 @@ class Clicker(QGraphicsScene,ActionManager):
             "regions":{rkey.pack():self._regions[rkey].pack() for rkey in self._regions.keys()},
             "routes":{
                 key.pack():{
-                    subkey.pack():[
-                        entry.pack() for entry in self._routes[key][subkey]
-                    ] for subkey in self._routes[key]
+                    subkey.pack():self._routes[key][subkey].pack() for subkey in self._routes[key]
                 } for key in self._routes
             }
         }
@@ -169,9 +167,7 @@ class Clicker(QGraphicsScene,ActionManager):
             self._routes[keyunpack] = {}
             for subkey in packed["routes"][key]:
                 subkey_unpack = HexID.unpack(subkey)
-                self._routes[keyunpack][subkey_unpack] = [
-                    HexID.unpack(entry) for entry in packed["routes"][key][subkey]
-                ]
+                self._routes[keyunpack][subkey_unpack] = Route.unpack(packed["routes"][key][subkey])
         self.draw_routes()
 
     def draw_alt(self, hexID:HexID):
@@ -260,17 +256,8 @@ class Clicker(QGraphicsScene,ActionManager):
 
     def initialize_routes(self):
         for system_key in self.systems.keys():
-            of_interest = [
-                WorldCategory.Industrial,
-                WorldCategory.High_Tech,
-                WorldCategory.High_Pop,
-                WorldCategory.Rich
-            ]
-            
             this_world = self.get_system(system_key)
-            these_pass = any([entry in this_world.category for entry in of_interest])
-            if not these_pass:
-                continue
+
             if WorldCategory.Industrial in this_world.category or WorldCategory.High_Tech in this_world.category:
                 check = [
                     WorldCategory.Asteroid,
@@ -285,7 +272,7 @@ class Clicker(QGraphicsScene,ActionManager):
                     WorldCategory.Water_World
                 ]
             else:
-                check = []
+                continue
 
             
             in_range = system_key.in_range(4, False)
@@ -295,82 +282,39 @@ class Clicker(QGraphicsScene,ActionManager):
                 if any([entry in other_world.category for entry in check]):
                     # draw route! 
                     if  not self._route_present(system_key, other_key):
-                        route = self.get_route_a_star(system_key, other_key)
-                        if self.get_route_level(route)<=2:
+                        route_raw = self.get_route_a_star(system_key, other_key)
+                        level = self.get_route_level(route_raw)
+                        route = Route(route_raw, level)
+                        if len(route)>6:
+                            continue
+                        if route.level<=2:
                             self.add_route(system_key, other_key, route)
 
         self.draw_routes()
 
-    def add_route(self, start:HexID, end:HexID, route):
+    def add_route(self, start:HexID, end:HexID, route:Route):
+
         if self._route_present(start, end):
             return
         else:
             if start not in self._routes:
                 self._routes[start] = {}
+            if end not in self._routes:
+                self._routes[end] = {}
+            
+            # we do this so that it's symmetric
             self._routes[start][end] = route
+            self._routes[end][start] = route
             for hid in route:
                 world = self.get_system(hid)
                 if world is not None:
                     world.iterate_ts()
                     self._systems[hid] = world
 
-    def initialize_routes_old(self):
-        print("Initilizing routes...")
-        by_grade = {
-            "A":[],
-            "B":[],
-        }
-        for system_key in self.systems.keys():
-            system = self.get_system(system_key)
-            if system is None:
-                continue
-            if system.starport_cat=="A":
-                by_grade["A"].append(system_key)
-            elif system.starport_cat=="B":
-                by_grade["B"].append(system_key)
-        for system_key in by_grade["A"]:
-            # choose another at random
-            costs = []
-            routes = []
-            for each in by_grade["A"]:
-                if each==system_key:
-                    cost = inf
-                    routes.append([0,])
-                elif self._route_present(system_key,each):
-                    cost = inf
-                    routes.append([0,])
-                else:
-                    route = self.get_route_a_star(system_key, each)
-                    routes.append(route)
-                    cost = self.get_route_cost(route)
-
-                costs.append(cost)
-            
-            if min(costs)==inf:
-                continue
-            min_index = costs.index(min(costs))
-            if system_key not in self._routes:
-                self._routes[system_key]={}
-
-            self._routes[system_key][by_grade["A"][min_index]] = routes[min_index]
-
-        for system_key in by_grade["B"]:
-            costs = []
-            routes = []
-            for each in by_grade["A"]:
-                route = self.get_route_a_star(system_key, each)
-                routes.append(route)
-
-                cost = self.get_route_cost(route)
-                costs.append(cost)
-            
-            min_index=costs.index(min(costs))
-            if system_key not in self._routes:
-                self._routes[system_key] = {}
-            self._routes[system_key][by_grade["A"][min_index]] = routes[min_index]
-        self.draw_routes()
-
     def draw_route_to(self, start:HexID, to:HexID):
+        """
+            This is exclusively used to draw routes a passenger would want to take 
+        """
         self.clear_drawn_route()
 
         this_route = self.get_route_a_star(start, to)
@@ -387,35 +331,61 @@ class Clicker(QGraphicsScene,ActionManager):
         
 
     def clear_drawn_route(self):
+        """
+            clears a route a passenger would like to take to get somewhere
+        """
         if self._alt_route_sid is not None:
             self.removeItem(self._alt_route_sid)
             self._alt_route_sid= None
 
+
     def draw_routes(self):
         for route in self._routes.keys():
-            
-            if route not in self._drawn_routes:
-                self._drawn_routes[route]={}
             for destination in self._routes[route].keys():
-                full_path = self._routes[route][destination]
-                level = self.get_route_level(full_path)
-                
-                shift = level-1
+                self.draw_route(route, destination)
 
-                vertices = [hex_to_screen(hid) for hid in full_path]
-                path = QtGui.QPainterPath()
-                path.addPolygon(QtGui.QPolygonF(vertices))
-                self._pen.setStyle(level)                
-                self._pen.setWidth(5)
-                if level==1:
-                    self._pen.setColor(QtGui.QColor(150,255,150))
-                else:
-                    
-                    self._pen.setColor(QtGui.QColor(255,250-40*shift,250-40*shift))
-                self._brush.setStyle(0)
-                sid = self.addPath(path, self._pen, self._brush)
-                sid.setZValue(2)
-                self._drawn_routes[route][destination]=sid
+    def all_connections(self, start)->'list[HexID]':
+        if start in self._routes:
+            return list(self._routes[start].keys())
+        else:
+            return []
+
+    def draw_route(self, start, end, highlight=False):
+        if start not in self._drawn_routes:
+            self._drawn_routes[start]={}
+
+        if end in self._drawn_routes[start]:
+            if self._drawn_routes[start][end] is not None:
+                self.removeItem(self._drawn_routes[start][end])
+                self._drawn_routes[start][end] = None
+        
+        if start not in self._routes:
+            return
+        if end not in self._routes[start]:
+            return
+
+        full_path = self._routes[start][end]
+        
+        shift = full_path.level-1
+
+        vertices = [hex_to_screen(hid) for hid in full_path]
+        path = QtGui.QPainterPath()
+        path.addPolygon(QtGui.QPolygonF(vertices))
+        self._pen.setStyle(1 if full_path.level==1 else 3)                
+        self._pen.setWidth(8 if highlight else 5)
+        if highlight:
+            self._pen.setColor(QtGui.QColor(255, 231, 71))
+        else:
+            if full_path.level==1:
+                self._pen.setColor(QtGui.QColor(150,255,150))
+            else:
+                
+                self._pen.setColor(QtGui.QColor(255,250-40*shift,250-40*shift))
+            
+        self._brush.setStyle(0)
+        sid = self.addPath(path, self._pen, self._brush)
+        sid.setZValue(2)
+        self._drawn_routes[start][end]=sid
 
     def initialize(self):
         sample = utils.perlin(150,octave=3)*0.6 + utils.perlin(150,octave=15)*0.40

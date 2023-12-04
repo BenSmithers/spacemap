@@ -68,6 +68,16 @@ class MapAction(MapEvent):
         """
         raise NotImplementedError("Must override base implementation in {}".format(self.__class__))
 
+class ShipMoveAction(MapAction):
+    def __init__(self, ship_id, from_id, to_id):
+        self.shipid = ship_id
+        self.fromid = from_id
+        self.toid = to_id
+    def __call__(self, map: QGraphicsScene):
+        map.move_ship(self.shipid, self.toid)
+        return ShipMoveAction(self.shipid, self.toid, self.fromid)
+
+
 
 class NullAction(MapAction):
     """

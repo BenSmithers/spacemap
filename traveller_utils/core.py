@@ -119,6 +119,41 @@ class Hex(QPolygonF):
         new_hx.wind = np.array(obj["wind"])
         return new_hx
 
+class Route:
+    def __init__(self, hexes:'list[HexID]', level=1, kind=""):
+        self._kind = kind
+        self._level = level
+        self._route = hexes
+
+    @property 
+    def level(self):
+        return self._level
+    @property
+    def kind(self):
+        return self._kind
+    @property
+    def route(self):
+        return self._route
+    def __iter__(self):
+        return self._route.__iter__()
+    def __len__(self):
+        return len(self._route)
+    
+    def pack(self):
+        return {
+            "kind":self._kind,
+            "level":self._level,
+            "route":[entry.pack() for entry in self._route]
+        }
+    
+    @classmethod
+    def unpack(self, other):
+        return Route(
+            [HexID.unpack(entry) for entry in other["route"]],
+            other["level"],
+            other["kind"]
+        )
+
 
 
 class Region(QPolygonF):

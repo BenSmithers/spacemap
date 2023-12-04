@@ -365,6 +365,7 @@ class main_window(QMainWindow):
         self.export_image()
 
         self.govs = []
+        self._previous = None
 
     def closeEvent(self, event):
         self.scene.closeEvent(event)
@@ -396,7 +397,23 @@ class main_window(QMainWindow):
                 i+12, QtWidgets.QFormLayout.SpanningRole, entry
             )
 
+        if self._previous is not None:
+            prev_con = self.scene.all_connections(self._previous)
+            for con in prev_con:
+                self.scene.draw_route(self._previous, con, False)
+        
+        self._previous = loc
+        new_con = self.scene.all_connections(loc)
+        for con in new_con:
+            self.scene.draw_route(loc, con, True)
+
     def select_none(self):
+        if self._previous is not None:
+            prev_con = self.scene.all_connections(self._previous)
+            for con in prev_con:
+                self.scene.draw_route(self._previous, con, False)
+        self._previous = None
+
         self._planet_widget.clear_ui()
         self._pass_widget.clear_pass()
         self._trade_widget.clear()
