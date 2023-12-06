@@ -29,6 +29,12 @@ class Ui_Form(object):
         self.code_lbl_2.setAlignment(QtCore.Qt.AlignCenter)
         self.code_lbl_2.setObjectName("code_lbl_2")
         self.verticalLayout.addWidget(self.code_lbl_2)
+
+        self.edit_button = QtWidgets.QPushButton(Form)
+        self.edit_button.setMaximumSize(QtCore.QSize(16777215, 20))
+        self.edit_button.setText("Edit")
+        self.edit_button.setObjectName("edit_button")
+        self.verticalLayout.addWidget(self.edit_button)
         self.toolBox = QtWidgets.QToolBox(Form)
         self.toolBox.setObjectName("toolBox")
         self.overview_page = QtWidgets.QWidget()
@@ -108,6 +114,8 @@ class Ui_Form(object):
         self.trade_code_desc.setObjectName("trade_code_desc")
         self.trade_code_desc.setWordWrap(True)
         self.formLayout_2.setWidget(8, QtWidgets.QFormLayout.FieldRole, self.trade_code_desc)
+
+
 
         self.services_lbl = QtWidgets.QLabel(self.overview_page)
         self.services_lbl.setObjectName("services_lbl")

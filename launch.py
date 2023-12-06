@@ -7,7 +7,7 @@ from PyQt5 import QtWidgets, QtGui, QtCore
 
 from qtdesigner.main_window import Ui_MainWindow as main_gui
 
-from traveller_utils.world import World, Government
+from traveller_utils.world import World, Government, star_hex
 from traveller_utils.person import Person
 from traveller_utils.retailer import Retailer
 from traveller_utils.click_interface import Clicker
@@ -21,11 +21,83 @@ from qtdesigner.planet_page import Ui_Form as planet_widget_gui
 from qtdesigner.person import Ui_Form as passenger_desc_dialog_gui
 from qtdesigner.government import Ui_Form as gov_widget_gui
 from qtdesigner.notes_ui import Ui_Form as notes_widget
+from qtdesigner.editor_window import Ui_Form as editor_window
+
+from traveller_utils.tables import *
+
 
 import os 
 import sys
 
 
+class EditorDialog(QDialog):
+    def __init__(self, parent):
+        super(EditorDialog, self).__init__(parent)
+        self.ui = editor_window()
+        self.ui.setupUi(self)
+        self._configuring = None
+
+        self.ui.atmo_desc.valueChanged.connect(self.update_descriptions)
+        self.ui.size_spin.valueChanged.connect(self.update_descriptions)
+        self.ui.starport_combo.currentIndexChanged.connect(self.update_descriptions)
+        self.ui.temp_spin.valueChanged.connect(self.update_descriptions)
+        self.ui.hydro_spin.valueChanged.connect(self.update_descriptions)
+        self.ui.pop_spin.valueChanged.connect(self.update_descriptions)
+        self.ui.tl_spin.valueChanged.connect(self.update_descriptions)
+
+    def set_ui_to_world(self, world:World):
+        """
+            prepares the internal UI to that of the world it is passed
+        """
+        self._configuring = world
+        self.ui.atmo_desc.setValue(world._atmosphere)
+        self.ui.size_spin.setValue(world._size)
+        #self.ui.pressure_spin.setValue(world._pressure)
+        values = ["A","B","C","D","E","X"]
+        self.ui.starport_combo.setCurrentIndex(values.index(world.starport_cat))
+        self.ui.temp_spin.setValue(world._temperature)
+        self.ui.hydro_spin.setValue(world._hydro)
+        self.ui.pop_spin.setValue(world._population_raw)
+        self.ui.tl_spin.setValue(world._tech_level)
+        self.ui.label_15.setText(world.world_profile(""))
+        self.ui.lineEdit.setText(world.name)
+        self.update_descriptions()
+
+    def update_descriptions(self):
+        
+        what= "{} atmosphere.".format(atmo.access(self.ui.atmo_desc.value()))
+        self.ui.atmo_spin.setText(what)
+
+        trim = list(sorted((set(starports_quality))))[::-1]
+        star_index = self.ui.starport_combo.currentIndex()
+        self.ui.starport_desc.setText(trim[star_index])
+
+        what = "The planet is " + temp.access(self.ui.temp_spin.value())
+        self.ui.temp_desc.setText(what)
+        
+        what = "The planet " + hydro.access(self.ui.hydro_spin.value()).lower()
+        self.ui.hydro_desc.setText(what)
+
+        pop = int((10**self.ui.pop_spin.value()))
+        what = "It has a population of approximately {}".format(utils.number_add_comma(pop))
+        self.ui.pop_desc.setText(what)
+
+        self.ui.tl_desc.setText("{}".format(tl.access(self.ui.tl_spin.value())))
+
+        profile= ""
+        profile+=starports_str[star_index]
+        profile+=star_hex[self.ui.size_spin.value()]
+        profile+=star_hex[self.ui.atmo_desc.value()]
+        profile+=star_hex[self.ui.hydro_spin.value()]
+        profile+=star_hex[self.ui.pop_spin.value()]
+        profile+="#"
+        profile+="#" #star_hex[min([self._law_level, len(star_hex)-1])]
+        profile+=star_hex[self.ui.tl_spin.value()]
+
+        self.ui.label_15.setText(profile)
+
+    def set_world_to_ui(self, world:World)->World:
+        return world
 
 class PassengerDialog(QDialog):
     def __init__(self, parent):
@@ -297,8 +369,22 @@ class PlanetWidget(QtWidgets.QWidget):
         QtWidgets.QWidget.__init__(self, parent)
         self.ui=planet_widget_gui()
         self.ui.setupUi(self)
+        self.ui.edit_button.clicked.connect(self.edit_button)
+        self._selected = None
+
+    def edit_button(self):
+        if self._selected is None:
+            return 
+        else:
+            
+            dialog = EditorDialog(self)
+            dialog.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+            dialog.set_ui_to_world(self._selected)
+            dialog.exec_()
 
     def update_ui(self, world:World, loc:HexID):
+        self._selected = world
+
         self.ui.size_desc.setText("{} g at surface".format(world.gravity))
         self.ui.pressure_desc.setText("{} atmospheres".format(world.pressure))
         self.ui.atmo_desc.setText(world.atmosphere_str)
@@ -326,6 +412,7 @@ class PlanetWidget(QtWidgets.QWidget):
             self.ui.vassal_desc.setText("")
 
     def clear_ui(self):
+        self._selected = None
         self.ui.size_desc.setText("")
         self.ui.pressure_desc.setText("")
         self.ui.atmo_desc.setText("")
