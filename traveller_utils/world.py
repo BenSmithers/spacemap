@@ -200,6 +200,8 @@ class World:
         return self._trade_score
     def iterate_ts(self):
         self._trade_score = self._trade_score + 1
+    def set_ts(self, value):
+        self._trade_score = value
 
     @property
     def title(self):

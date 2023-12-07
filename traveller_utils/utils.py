@@ -119,8 +119,13 @@ class Table:
         self._mins.append(int(min))
         self._entry.append(entry)
     def access(self, value:int)->str:
-        what = get_loc(value, self._mins)[0]
-        return self._entry[what]
+        if value>max(self._mins):
+            return self._entry[-1]
+        elif value<min(self._mins):
+            return self._entry[0]
+        else:
+            what = get_loc(value, self._mins)[0]
+            return self._entry[what]
 
 def get_loc(x:float, domain:list,closest=False):
     """

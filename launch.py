@@ -1,6 +1,6 @@
 #!/usr/bin/python3.8
 import typing
-from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QDialog, QGraphicsScene
+from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QDialog
 from PyQt5 import QtGui
 from PyQt5.QtCore import Qt
 from PyQt5 import QtWidgets, QtGui, QtCore
@@ -44,6 +44,13 @@ class EditorDialog(QDialog):
         self.ui.hydro_spin.valueChanged.connect(self.update_descriptions)
         self.ui.pop_spin.valueChanged.connect(self.update_descriptions)
         self.ui.tl_spin.valueChanged.connect(self.update_descriptions)
+        self.ui.tl_spin.setMaximum(len(star_hex)-1)
+
+        self.ui.buttonBox.accepted.connect(self.set_world_to_ui)
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.StandardButton.Discard).clicked.connect(self.exit)
+
+    def exit(self):
+        self.close()
 
     def set_ui_to_world(self, world:World):
         """
@@ -59,8 +66,11 @@ class EditorDialog(QDialog):
         self.ui.hydro_spin.setValue(world._hydro)
         self.ui.pop_spin.setValue(world._population_raw)
         self.ui.tl_spin.setValue(world._tech_level)
+
+        self.ui.pop_spin.setMaximum(12)
         self.ui.label_15.setText(world.world_profile(""))
         self.ui.lineEdit.setText(world.name)
+        
         self.update_descriptions()
 
     def update_descriptions(self):
@@ -82,6 +92,7 @@ class EditorDialog(QDialog):
         what = "It has a population of approximately {}".format(utils.number_add_comma(pop))
         self.ui.pop_desc.setText(what)
 
+        self.ui.tl_desc.setWordWrap(True)
         self.ui.tl_desc.setText("{}".format(tl.access(self.ui.tl_spin.value())))
 
         profile= ""
@@ -94,10 +105,14 @@ class EditorDialog(QDialog):
         profile+="#" #star_hex[min([self._law_level, len(star_hex)-1])]
         profile+=star_hex[self.ui.tl_spin.value()]
 
+
+        #self.ui.trade_code_desc.setText(". ".join([str(entry) for entry in world.category]))
+
         self.ui.label_15.setText(profile)
 
-    def set_world_to_ui(self, world:World)->World:
-        return world
+    def set_world_to_ui(self)->World:
+        print("Accept!")
+        return self._configuring
 
 class PassengerDialog(QDialog):
     def __init__(self, parent):

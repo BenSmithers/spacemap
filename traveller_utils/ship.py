@@ -45,3 +45,6 @@ class Ship:
     def icon(self):
         return self._icon
     
+class AIShip(Ship):
+    def __init__(self, route:'list[HexID]', rate=0.183,):
+        super().__init__(rate)

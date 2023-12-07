@@ -48,6 +48,10 @@ class Clicker(QGraphicsScene,ActionManager):
         self._ships = {} # shipid->Ship
         self._ship_locations={} #hexid->list[shipids]
 
+        self._ship_sids = {} # -> shipid -> sid
+
+        self._total_wealth = -1
+
         self._alt_select = None
         self._alt_route_sid = None
 
@@ -99,12 +103,44 @@ class Clicker(QGraphicsScene,ActionManager):
             return self._ship_locations[hid]
         else:
             return []
+    
+    def register_ship(self, ship:Ship, location:HexID):
+        """
+            finds the next available ship ID, registers the ship in the catalogs 
+        """
+        ship_id = 0
+        while ship_id in self._ships:
+            ship_id+=1
+        self._ships[ship_id] = ship
+        if location not in self._ship_locations:
+            self._ship_locations[location] = []
+        self._ship_locations[location].append(ship_id)
+
+        self.draw_ship(ship_id)
+        return ship_id
         
+    def delete_ship(self, ship_id):
+        """
+            deletes the entry in _ship_locations first
+            then deletes it from the ship list
+            then calls the draw function to remove the drawing on the screen
+        """
+        loc = self.get_ship(ship_id)
+        if loc is not None:
+            loc = loc.location
+        self.get_ships_at(loc).remove(ship_id)
+
+        if ship_id in self._ships:
+            del self._ships[ship_id]
+        self.draw_ship(ship_id)
+
+
     def move_ship(self, ship_id, dest:HexID):
         """
-            Updates maps regarding where a Ship is
+            Updates maps regarding where a Ship is, plays an animation as it moves the icon
         """
         ship = self.get_ship(ship_id)
+        old_loc = ship.location
         all_ships = self.get_ships_at(ship.location)
 
         if ship_id in all_ships:        
@@ -113,7 +149,17 @@ class Clicker(QGraphicsScene,ActionManager):
 
         if dest not in self._ship_locations:
             self._ship_locations[dest] = []
-        self._ship_locations[dest].append()
+        self._ship_locations[dest].append(ship_id)
+
+        sid = self._ship_sids[ship_id]
+        start = hex_to_screen(old_loc)
+        end = hex_to_screen(dest)
+
+        animation = QtCore.QPropertyAnimation(sid, b"pos")
+        animation.setStartValue(start)
+        animation.setEndValue(end)
+        animation.setDuration(500) # ms 
+        animation.start()
 
 
     def closeEvent(self, event):
@@ -254,6 +300,37 @@ class Clicker(QGraphicsScene,ActionManager):
 
         return dests
 
+    def _sample_from_wealth(self)->HexID:
+        """
+            samples a HexIDs based on system wealth
+        """
+
+    def _initialize_ship(self):
+        """
+            samples
+        """
+        all_keys = self.systems.keys()
+        if self._total_wealth==-1:
+            for hid in all_keys:
+                world = self.get_system(hid)
+                self._total_wealth += world.wealth
+        
+        sampled_value = np.random.rand()*self._total_wealth
+
+        i = 0
+        count = 0
+        while True:
+            count += self.get_system(all_keys[i]).wealth
+            if sampled_value<count:
+                break
+            i += 1
+
+        new_ship = Ship()
+        self.register_ship(new_ship, all_keys[i])
+
+        
+
+
     def initialize_routes(self):
         for system_key in self.systems.keys():
             this_world = self.get_system(system_key)
@@ -305,10 +382,15 @@ class Clicker(QGraphicsScene,ActionManager):
             # we do this so that it's symmetric
             self._routes[start][end] = route
             self._routes[end][start] = route
-            for hid in route:
+            for i, hid in enumerate(route):
                 world = self.get_system(hid)
+                if i==0 or i==(len(route)-1):
+                    amt = 2
+                else:
+                    amt = 0.5
                 if world is not None:
-                    world.iterate_ts()
+                    #world.iterate_ts()
+                    world.set_ts(world.trade_score + amt)
                     self._systems[hid] = world
 
     def draw_route_to(self, start:HexID, to:HexID):
@@ -552,6 +634,9 @@ class Clicker(QGraphicsScene,ActionManager):
 
         sid = self.addPolygon(this_region, self._pen, self._brush)
         self._drawn_regions[origin] = (sid, )
+
+    def draw_ship(self, ship_id):
+        return
 
     def draw_system(self, hex_id:HexID):
         if hex_id in  self._drawn_systems:
