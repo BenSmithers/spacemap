@@ -1,4 +1,6 @@
 from traveller_utils.coordinates import HexID
+from traveller_utils.person import Person
+from copy import deepcopy
 
 class Ship:
     def __init__(self, rate=0.183):
@@ -22,6 +24,7 @@ class Ship:
             "medium"
             "medium"
         ]
+        return new
 
     @property 
     def description(self):
@@ -48,3 +51,19 @@ class Ship:
 class AIShip(Ship):
     def __init__(self, route:'list[HexID]', rate=0.183,):
         super().__init__(rate)
+
+        self._route = route[::-1]
+        self._captain = Person.generate()
+
+    def step(self):
+        if len(self._route)==0:
+            return
+        else:
+            return self._route.pop()
+
+
+    @classmethod
+    def generate(cls, route):
+        new = super().generate()
+        new._route= deepcopy(route)
+        return new

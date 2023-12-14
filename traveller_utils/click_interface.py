@@ -7,7 +7,7 @@ from traveller_utils.actions import ActionManager
 from traveller_utils.enums import Title, LandTitle, Bases, WorldCategory
 
 from traveller_utils.coordinates import HexID, DRAWSIZE, screen_to_hex, hex_to_screen
-from traveller_utils.ship import Ship
+from traveller_utils.ship import Ship, AIShip
 from traveller_utils.core import Hex, Region, Route
 from traveller_utils.world import World
 from traveller_utils import utils
@@ -48,9 +48,9 @@ class Clicker(QGraphicsScene,ActionManager):
         self._ships = {} # shipid->Ship
         self._ship_locations={} #hexid->list[shipids]
 
-        self._ship_sids = {} # -> shipid -> sid
+        self._ship_sids = {} # -> hexID -> sid
 
-        self._total_wealth = -1
+        self._cummulative_wealths = []
 
         self._alt_select = None
         self._alt_route_sid = None
@@ -95,6 +95,17 @@ class Clicker(QGraphicsScene,ActionManager):
             plt.show()
 
 
+    def update_prices(self):
+        for hid in self._systems:
+            world = self.get_system(hid)
+            # clear out the passenger lists
+            for p_class in world._passengers:
+                world._passengers[p_class] = []
+            
+            for retail in world._retailers:
+                retail.clear()
+            
+
     def get_ship(self, ship_id)->Ship:
         if ship_id in self._ships:
             return self._ships[ship_id]
@@ -108,6 +119,8 @@ class Clicker(QGraphicsScene,ActionManager):
         """
             finds the next available ship ID, registers the ship in the catalogs 
         """
+        ship.set_location(location)
+
         ship_id = 0
         while ship_id in self._ships:
             ship_id+=1
@@ -115,7 +128,7 @@ class Clicker(QGraphicsScene,ActionManager):
         if location not in self._ship_locations:
             self._ship_locations[location] = []
         self._ship_locations[location].append(ship_id)
-
+        
         self.draw_ship(ship_id)
         return ship_id
         
@@ -299,36 +312,47 @@ class Clicker(QGraphicsScene,ActionManager):
         dests = [np.random.choice(all_possible,size=1, p = total_weights)[0] for i in range(samples)]
 
         return dests
+    
+
+    def update_world(self, other:World, hid:HexID)->None:
+        self._cummulative_wealths = []
+        self._systems[hid] = other
+        self.draw_hex(hid)
 
     def _sample_from_wealth(self)->HexID:
         """
             samples a HexIDs based on system wealth
         """
 
+        all_keys = self.systems.keys()
+        if len(self._cummulative_wealths)==0:
+            self._cummulative_wealths = [self.get_system(key).wealth for key in all_keys]
+            self._cummulative_wealths = np.cumsum(self._cummulative_wealths).tolist()
+
+        sampled = np.random.rand()*self._cummulative_wealths[-1]
+        index = utils.get_loc(sampled, self._cummulative_wealths)[0]
+        return all_keys[index]
+                
+    def _step_all_ai_ships(self):
+        for sid in self._ships:
+            this_ship = self.get_ship(sid)
+            
+
     def _initialize_ship(self):
         """
             samples
         """
-        all_keys = self.systems.keys()
-        if self._total_wealth==-1:
-            for hid in all_keys:
-                world = self.get_system(hid)
-                self._total_wealth += world.wealth
-        
-        sampled_value = np.random.rand()*self._total_wealth
+        loc = self._sample_from_wealth()
 
-        i = 0
-        count = 0
-        while True:
-            count += self.get_system(all_keys[i]).wealth
-            if sampled_value<count:
-                break
-            i += 1
+        if loc in self._routes:
+            key_choice = choice(list( self._routes[loc] ))
+            route = self._routes[loc][key_choice]
+        else:
+            other = self._sample_from_wealth()
+            route = self.get_route_a_star(loc, other)
 
-        new_ship = Ship()
-        self.register_ship(new_ship, all_keys[i])
-
-        
+        new_ship = AIShip.generate(route)
+        self.register_ship(new_ship, loc)
 
 
     def initialize_routes(self):
@@ -636,7 +660,30 @@ class Clicker(QGraphicsScene,ActionManager):
         self._drawn_regions[origin] = (sid, )
 
     def draw_ship(self, ship_id):
-        return
+        this_ship = self.get_ship(ship_id)
+        loc = this_ship.location
+
+        if loc in self._ship_sids:
+            self.removeItem(self._ship_sids[loc])
+            del self._ship_sids[loc]
+
+        all_ships = self.get_ships_at(loc)
+
+        names = ["one", "two", "three", "four", "more"]
+        index = len(all_ships)-1
+        if index==-1:
+            return 
+        index = 4 if index>4 else index
+
+        center = hex_to_screen(loc)
+        sid = self.addPixmap(self.icon_map.access("{}_ship.svg".format(names[index], 0.4*DRAWSIZE)))
+        sid.setX(center.x()-DRAWSIZE*0.75)
+        sid.setY(center.y()-DRAWSIZE*0.45)
+        sid.setZValue(12)
+
+        self._ship_sids[loc] = sid
+            
+        
 
     def draw_system(self, hex_id:HexID):
         if hex_id in  self._drawn_systems:
