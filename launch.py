@@ -338,6 +338,9 @@ class TradeWidget(QtWidgets.QWidget):
             return
 
         this_retail = self._world.retailers[index]
+        if not this_retail.generated:
+            this_retail.regenerate(self._world, self.ui.skill_spin.value())
+            
         for entry in this_retail.sale_prices.keys():
             if self.ui.type_combo.currentText()!="Any":
                 if self.ui.type_combo.currentText()=="Uncommon":

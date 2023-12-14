@@ -39,6 +39,11 @@ class Retailer:
         self._purchase_prices = {}
         self._sale_prices = {}
 
+        self._generated = False
+
+    @property
+    def generated(self):
+        return self._generated
     @property
     def purchase_prices(self):
         return self._purchase_prices
@@ -48,6 +53,7 @@ class Retailer:
 
     def pack(self)->dict:
         return {
+            "generated":self._generated,
             "person":self._person.pack(),
             "name":self._name,
             "purchase":{good.name:self._purchase_prices[good] for good in self._purchase_prices.keys()},
@@ -59,6 +65,10 @@ class Retailer:
         newp = Retailer()
         newp._person = Person.unpack(packed["person"])
         newp._name = packed["name"]
+        if "generated" in packed:
+            newp._generated = packed["generated"]
+
+        return newp
 
     @property
     def person(self)->Person:
@@ -71,6 +81,7 @@ class Retailer:
     
 
     def _clear(self):
+        self._generated = False
         self._purchase_prices = {}
         self._sale_prices = {}
 
@@ -80,6 +91,7 @@ class Retailer:
             
         """
         self._clear()
+        self._generated = True
         all_goods = home.list_available_goods()
 
         for good in all_goods:
