@@ -179,19 +179,22 @@ class World:
     def wealth(self):
         score = int(self.trade_score / 5)
         if self._population_raw>8:
-            score+=1
+            score+=5
+            
         if self._starport_raw>8:
-            score+=1
+            score+=5
         if self._starport_raw>10:
-            score+=1
+            score+=5
+
         if self._tech_level>10:
-            score+=1
+            score+=5
         if self._tech_level>14:
-            score+=2
+            score+=6
+
         if self._tech_level<4:
-            score -= 4
+            score +=0
         if self._tech_level<8:
-            score -= 2
+            score +=2
         return score
         
 
@@ -563,14 +566,14 @@ class World:
             self._title = Title.Emperor
 
         wealth = self.wealth
-        if wealth>8:
+        if wealth>12:
             self._title = Title.Emperor
             print(self.name)
-        elif wealth>=6:
+        elif wealth>=10:
             self._title = Title.King
-        elif wealth>=4:
+        elif wealth>=8:
             self._title = Title.Duke
-        elif wealth>=2:
+        elif wealth>=6:
             self._title = Title.Count
         else:
             self._title = Title.Lord

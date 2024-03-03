@@ -1,6 +1,11 @@
 from traveller_utils.coordinates import HexID
 from traveller_utils.person import Person
+from traveller_utils.actions import MapAction, NullAction, EndRecurring
+from traveller_utils.clock import Time
+
+from PyQt5.QtWidgets import QGraphicsScene
 from copy import deepcopy
+
 
 class Ship:
     def __init__(self, rate=0.183):
@@ -14,8 +19,8 @@ class Ship:
         self._location = None
 
     @classmethod
-    def generate(cls):
-        new = Ship()
+    def generate(cls, **kwargs):
+        new = cls(**kwargs)
         size = [
             "small",
             "large",
@@ -43,7 +48,10 @@ class Ship:
         self._destination = None
     def set_destination(self, hid:HexID):
         self._destination = hid
-
+    
+    @property
+    def rate(self):
+        return self._rate
     @property
     def icon(self):
         return self._icon
@@ -54,6 +62,10 @@ class AIShip(Ship):
 
         self._route = route[::-1]
         self._captain = Person.generate()
+    
+
+    def is_done(self):
+        return len(self._route)==0
 
     def step(self):
         if len(self._route)==0:
@@ -64,6 +76,31 @@ class AIShip(Ship):
 
     @classmethod
     def generate(cls, route):
-        new = super().generate()
+        new = super().generate(route=route)
         new._route= deepcopy(route)
         return new
+    
+
+class MoveShipAction(MapAction):
+    def __init__(self, ship_id, from_id, to_id):
+        self.shipid = ship_id
+        self.fromid = from_id
+        self.toid = to_id
+    def __call__(self, map: QGraphicsScene):
+        map.move_ship(self.shipid, self.toid)
+        return MoveShipAction(self.shipid, self.toid, self.fromid)
+
+class AIShipMoveEvent(MapAction):
+    def __init__(self, frequency:Time,n_events:int, ship_id):
+        self._ship_id = ship_id
+
+        MapAction.__init__(self, frequency, n_events=n_events)
+
+    def __call__(self, map):
+        retval = map.step_ai_ship(self._ship_id)
+
+        if retval==0:
+            return NullAction()
+        else:
+            return EndRecurring()
+        

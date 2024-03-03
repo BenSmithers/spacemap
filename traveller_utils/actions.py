@@ -1,7 +1,6 @@
 from enum import Enum 
 from collections import deque
-from multiprocessing.sharedctypes import Value
-from traveller_utils.clock import Time
+from traveller_utils.clock import Time, Clock
 
 from PyQt5.QtWidgets import QGraphicsScene
 
@@ -16,11 +15,12 @@ class actionDrawTypes(Enum):
 
 
 class MapEvent:
-    def __init__(self, recurring=None, **kwargs):
+    def __init__(self, recurring=None,n_events=0, **kwargs):
         """
         An event used by the Action Manager. 
 
         recurring - a Time object. Represents how frequently the event happens. 'None' for one-time events. When this kind of event is triggered, a new one is auto-queued 
+        n_events - if non-zero, requires `recurring` to be non-None. The event will trigger this number of times 
         kwargs - arguments specific to this kind of event. Varies 
         """
 
@@ -28,6 +28,8 @@ class MapEvent:
             if not isinstance(recurring, Time):
                 raise TypeError("If recurring, arg must be {}, not {}".format(Time, type(recurring)))
         self.recurring = recurring
+
+        self._n_events = n_events
 
         self.brief_desc = "" # will be used on the event list
         self.long_desc = ""
@@ -37,6 +39,19 @@ class MapEvent:
 
         self.needed = []
         self.verify(kwargs)
+
+    def trigger(self)->bool:
+        """
+            returns "true" if there are more events
+            returns "false" otherwise
+        """
+        if self._n_events==0:
+            return True
+        else:
+            self._n_events-=1
+            return self._n_events!=0
+                
+        
     
     def verify(self,kwargs):
         """
@@ -50,6 +65,8 @@ class MapEvent:
     def show(self):
         return(self._show)
 
+
+
 class MapAction(MapEvent):
     """
     These are MapEvents that actually effect the map. We call these when they come up. 
@@ -57,7 +74,7 @@ class MapAction(MapEvent):
     We have a drawtype entry to specify whether or not this Action has an associated redraw command 
     """
     def __init__(self, recurring=None, **kwargs):
-        MapEvent.__init__(self,recurring=None, **kwargs)
+        MapEvent.__init__(self,recurring=recurring, **kwargs)
 
     
     def __call__(self, map:QGraphicsScene):
@@ -68,16 +85,6 @@ class MapAction(MapEvent):
         """
         raise NotImplementedError("Must override base implementation in {}".format(self.__class__))
 
-class ShipMoveAction(MapAction):
-    def __init__(self, ship_id, from_id, to_id):
-        self.shipid = ship_id
-        self.fromid = from_id
-        self.toid = to_id
-    def __call__(self, map: QGraphicsScene):
-        map.move_ship(self.shipid, self.toid)
-        return ShipMoveAction(self.shipid, self.toid, self.fromid)
-
-
 
 class NullAction(MapAction):
     """
@@ -87,6 +94,9 @@ class NullAction(MapAction):
         MapAction.__init__(self, recurring=None, **kwargs)
     def __call__(self, map:QGraphicsScene):
         return NullAction()
+
+class EndRecurring(NullAction):
+    pass
 
 class MetaAction(MapAction):
     """
@@ -125,14 +135,14 @@ class MetaAction(MapAction):
         inverses = [action(map) for action in self.actions][::-1]
         return MetaAction(*inverses)
 
-class ActionManager:
+class ActionManager(object):
     """
     This keeps track of upcoming events (and actions) and the time.
     It allows you to add new events and 
 
     This is made before on launch before the map is loaded, so it doesn't do anything until the map is loaded. 
     """
-    def __init__(self):
+    def __init__(self, clock:Clock):
         self._queue = []
 
         #self.database_dir = get_base_dir()
@@ -149,6 +159,8 @@ class ActionManager:
         self._meta_inverses = []
 
         self._meta_event_holder = None
+
+        self.clock = clock
 
     @property
     def unsaved(self):
@@ -206,7 +218,8 @@ class ActionManager:
         self._unsaved=True
 
         inverse = event(self)
-        if not ignore_history:
+        
+        if (not ignore_history) or isinstance(inverse, NullAction):
             self.undo_history.appendleft(inverse)
             while len(self.undo_history)>self.n_history_max:
                 self.undo_history.pop()
@@ -231,6 +244,9 @@ class ActionManager:
 
         #does the action, stores inverse 
         inverse = list1[0](self)
+        if isinstance(inverse, NullAction):
+            list1.popleft()
+            return
         
         """ might re-add this. 
         # check if we'll need to redraw anything 
@@ -281,17 +297,23 @@ class ActionManager:
                 self._queue.insert(loc, [time,event])
 
     def skip_to_next_event(self):
+        print("called skip to next event")
         if len(self.queue)==0:
             return
+        
+        print("skipping to next event")
 
         data = self.queue[0]
+        
 
         # If this is an action, do it. Otherwise it's an event, nothing is done. 
-        if isinstance(data[1], MapAction):
+        data1 = data[1]
+        if isinstance(data1, MapAction):
             self._unsaved=True
-            data[1].do()
+            inverse = data1(self)
             if data[1].recurring is not None:
-                self.add_event(data[1], data[0]+data[1].recurring)
+                if not isinstance(inverse, EndRecurring):
+                    self.add_event(data1, data[0]+data1.recurring)
 
         self.clock.skip_to(data[0])
         self.queue.pop(0)
@@ -300,8 +322,10 @@ class ActionManager:
         self.skip_to_time(self.clock.time + time)
 
     def skip_to_time(self, time):
+        print("skipping! {}".format(len(self.queue)))
         if len(self.queue)!=0:
-            while time<self.queue[0][0]:
+            print(self.queue[0][0], time)
+            while self.queue[0][0]<time:
                 # moves time up to the next event, does the action (if there is one), and pops the event from the queue
                 self.skip_to_next_event()
 

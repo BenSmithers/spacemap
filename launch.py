@@ -1,4 +1,4 @@
-#!/usr/bin/python3.8
+#!/opt/homebrew/bin/python3.12
 import typing
 from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QDialog
 from PyQt5 import QtGui
@@ -14,6 +14,7 @@ from traveller_utils.click_interface import Clicker
 from traveller_utils.coordinates import HexID, DRAWSIZE
 from traveller_utils import utils 
 from traveller_utils.tables import fares
+from traveller_utils.clock import MultiHexCalendar, Time, Clock
 
 from qtdesigner.passengers import Ui_Form as passenger_widget_gui
 from qtdesigner.trade_goods import Ui_Form as trade_goods_widget_gui
@@ -25,6 +26,7 @@ from qtdesigner.editor_window import Ui_Form as editor_window
 
 from traveller_utils.tables import *
 
+from random import randint
 
 import os 
 import sys
@@ -457,15 +459,25 @@ class main_window(QMainWindow):
         self._trade_widget = TradeWidget(self)
         self._planet_widget = PlanetWidget(self)
         self._notes_widget = NotesTab(self)
+        now = Time(30, 12, randint(0,20), randint(0,11), randint(0,300)+3000)
+
+        self._calendar_widget = MultiHexCalendar(self, now)
+
         self.ui.tabWidget.addTab(self._planet_widget, "Planet")
+        #self.ui.tabWidget.addTab(self._calendar_widget, "Calendar")
         self.ui.tabWidget.addTab(self._pass_widget, "Passengers")
         self.ui.tabWidget.addTab(self._trade_widget, "Trade")
         self.ui.tabWidget.addTab(self._notes_widget, "Notes")
 
-        self.scene = Clicker( self.ui.map_view, self )
+        self.ui.verticalLayout.insertWidget(0, self._calendar_widget)
+
+        self.scene = Clicker( self.ui.map_view, self, Clock(now))
         # Allow the graphics view to follow the mouse when it isn't being clicked, and associate the clicker control with the ui 
         self.ui.map_view.setScene( self.scene )
         self.ui.map_view.setMouseTracking(True)
+
+
+        
 
         self.export_image()
 

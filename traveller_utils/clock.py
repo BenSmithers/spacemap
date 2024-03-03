@@ -91,6 +91,17 @@ class Time:
 
         self._day_shift = 2
 
+    @classmethod
+    def copy(cls, other:'Time'):
+        return Time(
+            other.minute,
+            other.hour,
+            other.day,
+            other.month,
+            other.year,
+            other.date
+        )
+
     @property
     def year(self):
         return( self._year )
@@ -224,6 +235,8 @@ class Time:
                 out+="and "
             out += "{} minutes".format(self._minute)
             return(out)
+    def month_year(self):
+        return "{} {}, {}".format(self.day, self.month_str(), self.year)
 
     def __repr__(self):
         return("<Time Object: {}>".format(self))
@@ -324,6 +337,26 @@ class Time:
         years = self.year*other
         return Time(mins,hours,days,mons,years)
 
+    def pack(self):
+        return {
+            "minute":self.minute,
+            "hour":self.hour,
+            "day":self.day,
+            "month":self.month,
+            "year":self.year,
+            "date":self.date
+        }
+    @classmethod
+    def unpack(self, what):
+        return Time(
+            what["minute"],
+            what["hour"],
+            what["day"],
+            what["month"],
+            what["year"],
+            what["date"],
+        )
+
     def __rmul__(self,other):
         return self.__mul__(other)
 
@@ -357,10 +390,10 @@ class Clock:
     Simple clock class to keep track of the time 
     """
 
-    def __init__(self):
+    def __init__(self, time=Time(0,0)):
         
         # GMT like time counter
-        self._time = Time(0 , 0)
+        self._time = Time.copy(time)
 
         self._axial_tilt = 23.5*degrees
         self._coax = cos(self._axial_tilt)
@@ -724,7 +757,7 @@ class Clock:
 
 # utility for signaling 
 class Signaler(QtCore.QObject):
-    signal = QtCore.pyqtSignal(str)
+    signal = QtCore.pyqtSignal(Time)
 
 class MultiHexCalendar(QtWidgets.QWidget):
     """
@@ -745,6 +778,8 @@ class MultiHexCalendar(QtWidgets.QWidget):
             raise TypeError("Expected {}, got {}".format(Time, type(time)))
 
         self.time = time
+        self.true_time = Time.copy(time)
+        self.selected_time = None
 
         self.setObjectName("MuliHexCalendar")
         self.layout = QtWidgets.QVBoxLayout(self)
@@ -754,11 +789,11 @@ class MultiHexCalendar(QtWidgets.QWidget):
         self.year_layout = QtWidgets.QHBoxLayout()
         self.leftButton = QtWidgets.QPushButton(self)
         self.leftButton.setObjectName("leftButton")
-        self.leftButton.setFixedSize(25,25)
+        self.leftButton.setFixedSize(50,50)
         self.leftButton.setText("<-")
         self.rightButton = QtWidgets.QPushButton(self)
         self.rightButton.setObjectName("rightButton")
-        self.rightButton.setFixedSize(25,25)
+        self.rightButton.setFixedSize(50,50)
         self.rightButton.setText("->")
         self.yearLabel = QtWidgets.QLabel(self)
         self.yearLabel.setObjectName("yearLabel")
@@ -767,17 +802,22 @@ class MultiHexCalendar(QtWidgets.QWidget):
         self.year_layout.addWidget(self.leftButton)
         self.year_layout.addWidget(self.yearLabel)
         self.year_layout.addWidget(self.rightButton)
+
+        self.currentTime = QtWidgets.QLabel(self)
+        self.currentTime.setText(str(self.true_time))
+        self.layout.addWidget(self.currentTime)
+
         self.layout.addItem(self.year_layout)
 
         # define and add the month combo box and the buttons beside it
         self.month_layout = QtWidgets.QHBoxLayout()
         self.leftButtonMon = QtWidgets.QPushButton(self)
         self.leftButtonMon.setObjectName("leftButtonMon")
-        self.leftButtonMon.setFixedSize(25,25)
+        self.leftButtonMon.setFixedSize(50,50)
         self.leftButtonMon.setText("<-")
         self.rightButtonMon = QtWidgets.QPushButton(self)
         self.rightButtonMon.setObjectName("rightButtonMon")
-        self.rightButtonMon.setFixedSize(25,25)
+        self.rightButtonMon.setFixedSize(50,50)
         self.rightButtonMon.setText("->")
         self.month_combo = QtWidgets.QComboBox(self)
         self.month_combo.setObjectName("month_combo")
@@ -811,7 +851,7 @@ class MultiHexCalendar(QtWidgets.QWidget):
         day = 0 # just a button counter...
         while row<=self.total_rows:
             self.day_buttons[day] = QtWidgets.QPushButton(self)
-            self.day_buttons[day].setFixedSize(25,25)
+            #self.day_buttons[day].setFixedSize(25,25)
             self.day_buttons[day].setText("")
             self.day_buttons[day].setEnabled(False)
 
@@ -820,7 +860,7 @@ class MultiHexCalendar(QtWidgets.QWidget):
             def get_func(which):
                 def funcy():
                     temp = self.day_buttons[which]
-                    return( self.buttonPress(temp.text()) )
+                    return( self.buttonPress("{}-{}-{}".format(temp.text(),self.time.month, self.time.year)) )
                 return(funcy)
             # lambda(x : self.buttonPress( self.day_buttons[x]))
             self.day_buttons[day].clicked.connect( get_func(day) )
@@ -834,6 +874,10 @@ class MultiHexCalendar(QtWidgets.QWidget):
                 row += 1
         self.days = day
         self.layout.addItem(self.calendarGrid)
+        self.skipto_button = QtWidgets.QPushButton(self)
+        self.skipto_button.setEnabled(False)
+        self.skipto_button.setText("Skip To")
+        self.layout.addWidget(self.skipto_button)
 
         # Use the current time to choose which buttons to enable
         self.fill_days()
@@ -844,10 +888,21 @@ class MultiHexCalendar(QtWidgets.QWidget):
         self.leftButtonMon.clicked.connect(self.leftMon)
         self.rightButtonMon.clicked.connect(self.rightMon)
 
+        self.skipto_button.clicked.connect(self.skip_to_selected)
+
         # create a signal which is emitted when a button is pressed
         # this is the only way I know how to set up a emit - receive signal system. Used the same technique from the MultiThreading 
         # so it'll go //calendar.signals.signal.connect( function )//
         self.signals = Signaler()
+
+    def skip_to_selected(self):
+        self.true_time = Time.copy(self.selected_time)
+        self.time = Time.copy(self.selected_time)
+        self.selected_time = None 
+
+        self.fill_days()
+
+        self.signals.signal.emit(self.true_time)
 
     def fill_days(self):
         """
@@ -865,6 +920,8 @@ class MultiHexCalendar(QtWidgets.QWidget):
         weekday_of_first_of_month = Time(year=self.time.year, month = self.time.month, day=0).get_day_of_week()
 
         while day < self.days:
+            self.day_buttons[day].setStyleSheet("background-color: white; border: none")
+
             if day==weekday_of_first_of_month and days_so_far==0:
                 counting = True
 
@@ -872,6 +929,12 @@ class MultiHexCalendar(QtWidgets.QWidget):
                 days_so_far += 1
                 self.day_buttons[day].setText(str(days_so_far))
                 self.day_buttons[day].setEnabled(True)
+
+                if days_so_far==self.true_time.day and self.time.month==self.true_time.month and self.time.year==self.true_time.year:
+                    self.day_buttons[day].setStyleSheet("background-color: #db5f53; border: none")
+                elif self.selected_time is not None:
+                    if days_so_far==self.selected_time.day and self.time.month==self.selected_time.month and self.time.year==self.selected_time.year:
+                        self.day_buttons[day].setStyleSheet("background-color: #7bc9e0; border: none")
             else:
                 self.day_buttons[day].setText("")
                 self.day_buttons[day].setEnabled(False)
@@ -881,10 +944,30 @@ class MultiHexCalendar(QtWidgets.QWidget):
 
             day+=1
 
+    def day_selected(self, which_time:Time):
+        self.selected_time = which_time 
+        self.skipto_button.setText("Skip to "+self.selected_time.month_year())        
+        
+
+        if self.selected_time <self.true_time or self.selected_time==self.true_time:
+            self.skipto_button.setEnabled(False)
+        else:
+            self.skipto_button.setEnabled(True)
+
     def buttonPress(self, what):
-        self.signals.signal.emit(what)
-
-
+        
+        chop = what.split("-")
+        this_time = Time(
+            self.true_time.minute, 
+            self.true_time.hour,
+            int(chop[0]),
+            int(chop[1]),
+            int(chop[2])
+        )
+        self.day_selected(this_time)
+        self.fill_days()
+        
+    
     def leftMon(self):
         new = self.month_combo.currentIndex() -1
         if new<0:
@@ -909,15 +992,18 @@ class MultiHexCalendar(QtWidgets.QWidget):
             self.time = self.time- Time(month=-1*month_diff)
         self.fill_days()
         self.yearLabel.setText("{}".format(self.time.year))
+        self.currentTime.setText(str(self.true_time))
 
     def add_year(self):
         self.time += Time(year=1)
         self.yearLabel.setText("{}".format(self.time.year))
         self.fill_days()
+        self.currentTime.setText(str(self.true_time))
 
     def remove_year(self):
         self.time -= Time(year=1)
         self.yearLabel.setText("{}".format(self.time.year))
         self.fill_days()
+        self.currentTime.setText(str(self.true_time))
 
 

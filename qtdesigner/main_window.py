@@ -17,6 +17,10 @@ class Ui_MainWindow(object):
         self.centralwidget.setObjectName("centralwidget")
         self.horizontalLayout = QtWidgets.QHBoxLayout(self.centralwidget)
         self.horizontalLayout.setObjectName("horizontalLayout")
+
+        self.verticalLayout = QtWidgets.QVBoxLayout(self.centralwidget)
+        self.horizontalLayout.addLayout(self.verticalLayout)
+
         self.tabWidget = QtWidgets.QTabWidget(self.centralwidget)
         self.tabWidget.setMaximumSize(QtCore.QSize(750, 16777215))
         self.tabWidget.setObjectName("tabWidget")
@@ -27,7 +31,7 @@ class Ui_MainWindow(object):
 
 
         #self.tabWidget.addTab(self.pass_tab, "")
-        self.horizontalLayout.addWidget(self.tabWidget)
+        self.verticalLayout.addWidget(self.tabWidget)
         self.map_view = QtWidgets.QGraphicsView(self.centralwidget)
         self.map_view.setObjectName("map_view")
         self.horizontalLayout.addWidget(self.map_view)

@@ -5,9 +5,9 @@ from PyQt5.QtWidgets import QGraphicsScene, QGraphicsSceneMouseEvent, QMainWindo
 from traveller_utils.actions import ActionManager
 
 from traveller_utils.enums import Title, LandTitle, Bases, WorldCategory
-
+from traveller_utils.clock import minutes_in_day
 from traveller_utils.coordinates import HexID, DRAWSIZE, screen_to_hex, hex_to_screen
-from traveller_utils.ship import Ship, AIShip
+from traveller_utils.ship import Ship, AIShip, AIShipMoveEvent
 from traveller_utils.core import Hex, Region, Route
 from traveller_utils.world import World
 from traveller_utils import utils
@@ -17,6 +17,7 @@ import numpy as np
 import os 
 import json
 from random import choice
+from traveller_utils.clock import Time, Clock
 water_color = (92, 157, 214)
 no_water = (38, 38, 38)
 
@@ -24,9 +25,10 @@ WORLD_PATH = os.path.join(os.path.dirname(__file__), "..","galaxy.json")
 
 
 class Clicker(QGraphicsScene,ActionManager):
-    def __init__(self, parent, parent_window:QMainWindow):
-        QGraphicsScene.__init__(self, parent)
-        ActionManager.__init__(self)
+    def __init__(self, parent, parent_window:QMainWindow, clock:Clock):
+        QGraphicsScene.__init__(self, parent=parent, clock=clock)
+        ActionManager.__init__(self, clock=clock)
+
 
         
         self._parent_window = parent_window
@@ -77,7 +79,14 @@ class Clicker(QGraphicsScene,ActionManager):
             self.initialize()
             self.initialize_routes()
             self.initialize_regions()
+            n_ships = 20
+
+            for i in range(n_ships):
+                self._initialize_ship()
+
         self.draw_all_hexes()
+
+        self._parent_window._calendar_widget.signals.signal.connect(self.skip_to_time)
 
         self.update()        
 
@@ -93,7 +102,6 @@ class Clicker(QGraphicsScene,ActionManager):
             plt.xlabel("Wealth Score")
             plt.ylabel("Count")
             plt.show()
-
 
     def update_prices(self):
         for hid in self._systems:
@@ -152,9 +160,12 @@ class Clicker(QGraphicsScene,ActionManager):
         """
             Updates maps regarding where a Ship is, plays an animation as it moves the icon
         """
+        
         ship = self.get_ship(ship_id)
         old_loc = ship.location
         all_ships = self.get_ships_at(ship.location)
+
+        print("moving ship {} from {} to {}".format(ship_id, old_loc, dest))
 
         if ship_id in all_ships:        
             all_ships.remove(ship_id)
@@ -164,15 +175,19 @@ class Clicker(QGraphicsScene,ActionManager):
             self._ship_locations[dest] = []
         self._ship_locations[dest].append(ship_id)
 
-        sid = self._ship_sids[ship_id]
+        sid = self._ship_sids[old_loc]
         start = hex_to_screen(old_loc)
         end = hex_to_screen(dest)
 
-        animation = QtCore.QPropertyAnimation(sid, b"pos")
+        animation = QtCore.QVariantAnimation(sid, propertyName=b"pos", parent=self)
         animation.setStartValue(start)
         animation.setEndValue(end)
         animation.setDuration(500) # ms 
         animation.start()
+
+        del self._ship_sids[old_loc]
+        self.draw_ship(ship_id)
+        
 
 
     def closeEvent(self, event):
@@ -324,35 +339,63 @@ class Clicker(QGraphicsScene,ActionManager):
             samples a HexIDs based on system wealth
         """
 
-        all_keys = self.systems.keys()
+        all_keys = list(self.systems.keys())
         if len(self._cummulative_wealths)==0:
             self._cummulative_wealths = [self.get_system(key).wealth for key in all_keys]
             self._cummulative_wealths = np.cumsum(self._cummulative_wealths).tolist()
+        
 
         sampled = np.random.rand()*self._cummulative_wealths[-1]
         index = utils.get_loc(sampled, self._cummulative_wealths)[0]
         return all_keys[index]
                 
-    def _step_all_ai_ships(self):
-        for sid in self._ships:
-            this_ship = self.get_ship(sid)
-            
+    def step_ai_ship(self, ship_id)->bool:
+        """
+            Gets the AI ship, makes sure it's an AI-ship type
+            Then steps it to the next place, updates the map, and deletes it in the case that it is now done moving 
 
-    def _initialize_ship(self):
+            returns True if it deleted the ship
+            returns False otherwise
+        """
+        this_ship = self.get_ship(ship_id)
+        assert isinstance(this_ship, AIShip), "Ship was not an AIShip! it's a {}".format(type(this_ship))
+        if this_ship is None:
+            return 0
+        else:
+            next_step = this_ship.step()
+            self.move_ship(ship_id, next_step)    
+            if this_ship.is_done(): # no more steps after this 
+                self.delete_ship(ship_id)        
+                return 1 
+            else:
+                return 0
+            
+    def _initialize_ship(self, start_hex=None):
         """
             samples
         """
-        loc = self._sample_from_wealth()
+        if start_hex is None:
+            loc = self._sample_from_wealth()
+        else:
+            assert isinstance(start_hex, HexID), "Received non-HexID start hex: {}".format(type(start_hex))
+            loc = start_hex
 
         if loc in self._routes:
             key_choice = choice(list( self._routes[loc] ))
-            route = self._routes[loc][key_choice]
+            route = self._routes[loc][key_choice].route # route object to list! 
         else:
             other = self._sample_from_wealth()
             route = self.get_route_a_star(loc, other)
 
         new_ship = AIShip.generate(route)
-        self.register_ship(new_ship, loc)
+        sid = self.register_ship(new_ship, loc)
+
+        move = AIShipMoveEvent(
+            Time(minute=int(minutes_in_day/new_ship.rate)),
+            len(route),
+            sid
+        )
+        self.add_event(move, self.clock.time +  Time(minute=int(60*np.random.randint(-100,120) +minutes_in_day/new_ship.rate)))
 
 
     def initialize_routes(self):
@@ -676,10 +719,12 @@ class Clicker(QGraphicsScene,ActionManager):
         index = 4 if index>4 else index
 
         center = hex_to_screen(loc)
-        sid = self.addPixmap(self.icon_map.access("{}_ship.svg".format(names[index], 0.4*DRAWSIZE)))
+        sid = self.addPixmap(self.icon_map.access("{}_ship".format(names[index], 0.4*DRAWSIZE)))
         sid.setX(center.x()-DRAWSIZE*0.75)
         sid.setY(center.y()-DRAWSIZE*0.45)
         sid.setZValue(12)
+
+        print("{}".format(loc))
 
         self._ship_sids[loc] = sid
             
