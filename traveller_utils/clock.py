@@ -322,7 +322,7 @@ class Time:
         """
         Implements the ">" operator. Opposite of "<" operator but they can't be equal! 
         """
-        return( (not self.__lt__(other)) and (self.minute!=other.minute))
+        return( (not self.__lt__(other)) and (self!=other))
 
     def __mul__(self, other):
         if not isinstance(other, int):
@@ -896,6 +896,8 @@ class MultiHexCalendar(QtWidgets.QWidget):
         self.signals = Signaler()
 
     def skip_to_selected(self):
+        if self.selected_time is None:
+            return 
         self.true_time = Time.copy(self.selected_time)
         self.time = Time.copy(self.selected_time)
         self.selected_time = None 
@@ -915,14 +917,14 @@ class MultiHexCalendar(QtWidgets.QWidget):
         # total days is N
 
         counting = False
-        days_so_far = 0
+        days_so_far = -1
         day = 0 
         weekday_of_first_of_month = Time(year=self.time.year, month = self.time.month, day=0).get_day_of_week()
 
         while day < self.days:
             self.day_buttons[day].setStyleSheet("background-color: white; border: none")
 
-            if day==weekday_of_first_of_month and days_so_far==0:
+            if (day+1)==weekday_of_first_of_month and days_so_far==-1:
                 counting = True
 
             if counting:
