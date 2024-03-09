@@ -10,6 +10,18 @@ resources_dir = os.path.join( os.path.dirname(__file__),'..','resources')
 Functions for generating a random name from MCMC tables! 
 """
 
+f=open(os.path.join(resources_dir, "text_files", "adjectives"),'rt')
+ALL_ADJECTIVE = f.readlines()
+f.close()
+f=open(os.path.join(resources_dir, "text_files", "nouns"),'rt')
+ALL_NOUNS = f.readlines()
+f.close()
+
+def sample_adjective():
+    return random.choice(ALL_ADJECTIVE)[:-1]
+def sample_noun():
+    return random.choice(ALL_NOUNS)[:-1]
+
 def create_name(what, order=2, filename="scifi"):
     """
     The following function was written by Ross McGuyer. Credit goes to the author (currently unknown) of
@@ -137,6 +149,7 @@ def fetch_synonyms(what):
 
     return switcher.get(what, ["Land"])
 
+    
 
 def determine_name_style(syns, name):
     """

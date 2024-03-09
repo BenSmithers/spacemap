@@ -4,7 +4,6 @@ from traveller_utils.clock import Time, Clock
 
 from PyQt5.QtWidgets import QGraphicsScene
 
-
 class actionDrawTypes(Enum):
     null = 0
     hex = 1
@@ -13,8 +12,40 @@ class actionDrawTypes(Enum):
     path = 4
     meta = 5
 
+def get_action_map()->dict:
+    """
+        Returns a dictionary for the subclasses of MapEvent. 
+
+    """
+    
+    
+    classes = _all_subclasses(MapEvent)
+    names = _all_subclasses(MapEvent, True)
+
+    temp = {
+        names[i]:classes[i] for i in range(len(classes))
+    }
+    temp["MapEvent"] = MapEvent
+    return temp
+        
+def _all_subclasses(cls, get_names = False):
+    """
+        Returns either a list of the names of all subclasses of `cls`, or a list of the classes themselves
+    """
+    if get_names:
+        return list(set(cls.__name__ for cls in cls.__subclasses__()).union(
+            [s.__name__ for c in cls.__subclasses__() for s in _all_subclasses(c)]))
+    else:
+        return list(set(cls.__subclasses__()).union(
+            [s for c in cls.__subclasses__() for s in _all_subclasses(c)]))
+
+def unpack_event(dict_entry)->'MapEvent':
+
+    cls = get_action_map()[dict_entry["classname"]]
+    return cls(**dict_entry)
 
 class MapEvent:
+    
     def __init__(self, recurring=None,n_events=0, **kwargs):
         """
         An event used by the Action Manager. 
@@ -31,14 +62,30 @@ class MapEvent:
 
         self._n_events = n_events
 
-        self.brief_desc = "" # will be used on the event list
-        self.long_desc = ""
+        if "brief" in kwargs:
+            self.brief_desc = kwargs["brief"] # will be used on the event list
+        else:
+            self.brief_desc = ""
+        if "long" in kwargs:
+            self.long_desc = kwargs["long"]
+        else:
+            self.long_desc = ""
 
         # whether or not the event should appear in the Event List
         self._show = True
 
         self.needed = []
         self.verify(kwargs)
+
+    def pack(self):
+        return {
+            "classname":self.__class__.__name__,
+            "recurring":self.recurring.pack(),
+            "n_events":self._n_events,
+            "brief":self.brief_desc,
+            "long":self.long_desc,
+            "show":self._show
+        }
 
     def trigger(self)->bool:
         """
@@ -73,8 +120,8 @@ class MapAction(MapEvent):
 
     We have a drawtype entry to specify whether or not this Action has an associated redraw command 
     """
-    def __init__(self, recurring=None, **kwargs):
-        MapEvent.__init__(self,recurring=recurring, **kwargs)
+    def __init__(self,  **kwargs):
+        MapEvent.__init__(self, **kwargs)
 
     
     def __call__(self, map:QGraphicsScene):
@@ -84,8 +131,7 @@ class MapAction(MapEvent):
         This then does the action defined by this object, and returns the inverse of the action.
         """
         raise NotImplementedError("Must override base implementation in {}".format(self.__class__))
-
-
+    
 class NullAction(MapAction):
     """
     An action used to do nothing 
@@ -94,6 +140,7 @@ class NullAction(MapAction):
         MapAction.__init__(self, recurring=None, **kwargs)
     def __call__(self, map:QGraphicsScene):
         return NullAction()
+
 
 class EndRecurring(NullAction):
     pass
@@ -113,6 +160,19 @@ class MetaAction(MapAction):
             raise ValueError("Cannot make a meta action of no actions {}".format(len(args)))
         
         self._actions = [arg for arg in args]
+
+    def pack(self)->dict:
+        inter = MapAction.pack(self)
+        inter["classname"]="MetaAction"
+        for entry in self._actions:
+            inter["args"] = entry.pack() 
+        return inter
+    
+    @classmethod
+    def unpack(self,packed)->'MetaAction':
+        args = [unpack_event(entry) for entry in packed["args"]]
+        return MetaAction( *args, **packed ) # double-pass *args, but oh well
+
 
     def add_to(self, action:MapAction):
         if action is None:
@@ -140,14 +200,12 @@ class ActionManager(object):
     This keeps track of upcoming events (and actions) and the time.
     It allows you to add new events and 
 
-    This is made before on launch before the map is loaded, so it doesn't do anything until the map is loaded. 
+    This is made on launch before the map is loaded, so it doesn't do anything until the map is loaded. 
     """
     def __init__(self, clock:Clock):
         self._queue = []
 
         #self.database_dir = get_base_dir()
-        self.database_filename = "event_database.csv"
-
         self._unsaved = False
 
         # we keep a list of Actions' inverses we've done, so we can always go back through
@@ -275,11 +333,12 @@ class ActionManager(object):
 
 
 
-    def add_event(self, event, time):
+    def add_event(self, event, _time):
         if not isinstance(event, MapEvent):
             raise TypeError("Can only register {} type events, not {}".format(MapEvent, type(event)))
-        if not isinstance(time, Time):
-            raise TypeError("Expected {} for time, not {}.".format(Time, type(time)))
+        if not isinstance(_time, Time):
+            raise TypeError("Expected {} for time, not {}.".format(Time, type(_time)))
+        time = Time.copy(_time)
 
         if len(self.queue)==0:
             self._queue.append( [time, event] )
@@ -288,20 +347,15 @@ class ActionManager(object):
                 self._queue.insert(0, [time,event])
             elif time > self.queue[-1][0]:
                 self._queue.append([time,event])
-
             else:
-                loc = 0
-                while time > self.queue[loc][0]:
-                    loc+=1
+                index = 0
+                while time > self.queue[index][0]:
+                    index+=1
 
-                self._queue.insert(loc, [time,event])
-
+                self._queue.insert(index, [time,event])
     def skip_to_next_event(self):
-        print("called skip to next event")
         if len(self.queue)==0:
             return
-        
-        print("skipping to next event")
 
         data = self.queue[0]
         
@@ -322,9 +376,7 @@ class ActionManager(object):
         self.skip_to_time(self.clock.time + time)
 
     def skip_to_time(self, time):
-        print("skipping! {}".format(len(self.queue)))
         if len(self.queue)!=0:
-            print(self.queue[0][0], time)
             while self.queue[0][0]<time:
                 # moves time up to the next event, does the action (if there is one), and pops the event from the queue
                 self.skip_to_next_event()
