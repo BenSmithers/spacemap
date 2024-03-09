@@ -2,7 +2,7 @@ from PyQt5 import QtGui, QtCore
 from PyQt5.QtCore import Qt
 
 from PyQt5.QtWidgets import QGraphicsScene, QGraphicsSceneMouseEvent, QMainWindow
-from traveller_utils.actions import ActionManager
+from traveller_utils.actions import ActionManager, unpack_event
 
 from traveller_utils.enums import Title, LandTitle, Bases, WorldCategory
 from traveller_utils.clock import minutes_in_day
@@ -47,10 +47,12 @@ class Clicker(QGraphicsScene,ActionManager):
         self._routes = {}
         self._drawn_routes = {}
 
-        self._ships = {} # shipid->Ship
-        self._ship_locations={} #hexid->list[shipids]
-
-        self._ship_sids = {} # -> hexID -> sid
+        # shipid->Ship
+        self._ships = {} 
+        #hexid->list[shipids]
+        self._ship_locations={} 
+        # -> hexID -> sid
+        self._ship_sids = {} 
 
         self._cummulative_wealths = []
 
@@ -79,7 +81,7 @@ class Clicker(QGraphicsScene,ActionManager):
             self.initialize()
             self.initialize_routes()
             self.initialize_regions()
-            n_ships = 20
+            n_ships = 60
 
             for i in range(n_ships):
                 self._initialize_ship()
@@ -153,7 +155,7 @@ class Clicker(QGraphicsScene,ActionManager):
 
         if ship_id in self._ships:
             del self._ships[ship_id]
-        self.draw_ship(ship_id)
+        self.draw_ships_hex(loc)
 
 
     def move_ship(self, ship_id, dest:HexID):
@@ -163,30 +165,33 @@ class Clicker(QGraphicsScene,ActionManager):
         
         ship = self.get_ship(ship_id)
         old_loc = ship.location
-        all_ships = self.get_ships_at(ship.location)
 
-        print("moving ship {} from {} to {}".format(ship_id, old_loc, dest))
+        if ship_id in self._ship_locations[old_loc]:        
+            self._ship_locations[old_loc].remove(ship_id)
 
-        if ship_id in all_ships:        
-            all_ships.remove(ship_id)
         ship.set_location(dest)
 
         if dest not in self._ship_locations:
             self._ship_locations[dest] = []
         self._ship_locations[dest].append(ship_id)
 
-        sid = self._ship_sids[old_loc]
-        start = hex_to_screen(old_loc)
-        end = hex_to_screen(dest)
+        
 
-        animation = QtCore.QVariantAnimation(sid, propertyName=b"pos", parent=self)
+        """     This wasn't working, I gave up on it... 
+        sid = self._ship_sids[old_loc]
+        start = sid.pos()
+        end = hex_to_screen(dest)
+        animation = QtCore.QPropertyAnimation(self._parent_window)
+        animation.setTargetObject(sid)
+        animation.setPropertyName(b"pos")
         animation.setStartValue(start)
         animation.setEndValue(end)
         animation.setDuration(500) # ms 
         animation.start()
+        """
 
-        del self._ship_sids[old_loc]
-        self.draw_ship(ship_id)
+        self.draw_ships_hex(old_loc)
+        self.draw_ships_hex(dest)
         
 
 
@@ -202,6 +207,10 @@ class Clicker(QGraphicsScene,ActionManager):
 
     def pack(self)->dict:
         return {
+            "ships":{
+                ship_id:self._ships[ship_id].pack() for ship_id in self._ships.keys()
+            },
+            "queue":[[entry[0].pack(), entry[1].pack()] for entry in self.queue],
             "systems":{key.pack():self.systems[key].pack() for key in self.systems.keys()},
             "regions":{rkey.pack():self._regions[rkey].pack() for rkey in self._regions.keys()},
             "routes":{
@@ -212,6 +221,7 @@ class Clicker(QGraphicsScene,ActionManager):
         }
     
     def unpack(self, packed:dict):
+        self._queue = [[Time.unpack(entry[0]), unpack_event(entry[1])] for entry in packed["queue"]]
         for i in range(30):
             for j in range(15):
                 shift = int(i/2)
@@ -244,6 +254,14 @@ class Clicker(QGraphicsScene,ActionManager):
                 self._routes[keyunpack][subkey_unpack] = Route.unpack(packed["routes"][key][subkey])
         self.draw_routes()
 
+        for ship_id in packed["ships"].keys():
+            self._ships[ship_id] = AIShip.unpack(packed["ships"][ship_id])
+            loc = self._ships[ship_id].location
+            if loc not in self._ship_locations:
+                self._ship_locations[loc] = []
+            self._ship_locations[loc].append(ship_id)
+            self.draw_ship(ship_id)
+
     def draw_alt(self, hexID:HexID):
         if self._alt_select is not None:
             self.removeItem(self._alt_select)
@@ -257,6 +275,9 @@ class Clicker(QGraphicsScene,ActionManager):
         self._alt_select.setZValue(99)
 
     def draw_selection(self, hex_id):
+        """
+            Draw a blue hexagon on the planet you selected
+        """
         if self._selected_sid is not None:
             self.removeItem(self._selected_sid)
 
@@ -365,7 +386,8 @@ class Clicker(QGraphicsScene,ActionManager):
             next_step = this_ship.step()
             self.move_ship(ship_id, next_step)    
             if this_ship.is_done(): # no more steps after this 
-                self.delete_ship(ship_id)        
+                self.delete_ship(ship_id)    
+                self._initialize_ship()    
                 return 1 
             else:
                 return 0
@@ -389,13 +411,13 @@ class Clicker(QGraphicsScene,ActionManager):
 
         new_ship = AIShip.generate(route)
         sid = self.register_ship(new_ship, loc)
-
         move = AIShipMoveEvent(
-            Time(minute=int(minutes_in_day/new_ship.rate)),
-            len(route),
-            sid
+            recurring = Time(minute=int(minutes_in_day/new_ship.rate)),
+            n_events = len(route),
+            ship_id=sid
         )
-        self.add_event(move, self.clock.time +  Time(minute=int(60*np.random.randint(-100,120) +minutes_in_day/new_ship.rate)))
+        next_time = self.clock.time +  Time(minute=int(60*np.random.randint(-100,120) +minutes_in_day/new_ship.rate))
+        self.add_event(move, next_time)
 
 
     def initialize_routes(self):
@@ -705,7 +727,10 @@ class Clicker(QGraphicsScene,ActionManager):
     def draw_ship(self, ship_id):
         this_ship = self.get_ship(ship_id)
         loc = this_ship.location
+        
+        self.draw_ships_hex(loc)
 
+    def draw_ships_hex(self, loc):
         if loc in self._ship_sids:
             self.removeItem(self._ship_sids[loc])
             del self._ship_sids[loc]
@@ -723,8 +748,6 @@ class Clicker(QGraphicsScene,ActionManager):
         sid.setX(center.x()-DRAWSIZE*0.75)
         sid.setY(center.y()-DRAWSIZE*0.45)
         sid.setZValue(12)
-
-        print("{}".format(loc))
 
         self._ship_sids[loc] = sid
             

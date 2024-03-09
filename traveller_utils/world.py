@@ -32,7 +32,7 @@ star_hex+=[
 star_hex = [str(entry) for entry in star_hex]
 
 class Government:
-    def __init__(self, dict_entry:dict, is_faction=False):
+    def __init__(self, dict_entry:dict, is_faction=False, score=0):
         self._gov_type = dict_entry["type"]
         self._desc = dict_entry["description"]
         self._what = choice(dict_entry["examples"])
@@ -41,8 +41,22 @@ class Government:
             for good in Contraband:
                 if entry.lower() in good.name.lower():
                     self._contraband.append(good)
-        self._strength = factions.access(roll() if is_faction else 12)
+        self._raw_str = roll()
+        self._strength = factions.access(self._raw_str if is_faction else 12)
         self._is_faction = is_faction
+        self._score = score
+
+        self.civil_war = False
+        self._members = 0
+    @property
+    def score(self):
+        return self._score
+    
+    @property
+    def members(self):
+        return self._members
+    def set_members(self, many):
+        self._members = many
 
     @property
     def gov_type(self):
@@ -62,24 +76,32 @@ class Government:
         return self._strength
     
     @property
+    def raw_strength(self):
+        return self._raw_str
+    @property
     def is_faction(self):
         return self._is_faction
     
     @classmethod
     def unpack(cls, packed:dict):
-        new = cls(packed, is_faction=packed["is_faction"])
+        new = cls(packed, is_faction=packed["is_faction"], score=packed["score"])
         new._what= packed["examples"]
         new._strength = packed["strength"]
+        new._members = packed["memb"]
+        new.civil_war = packed["civil"]
         return new
 
     def pack(self)->dict:
         out = {
+            "score":self._score,
+            "memb":self._members,
             "type":self._gov_type,
             "description":self._desc,
             "examples":self._what,
             "contraband":[entry.name for entry in self._contraband],
             "strength":self._strength,
-            "is_faction":self._is_faction
+            "is_faction":self._is_faction,
+            "civil":self.civil_war
         }
         return out
 
@@ -102,7 +124,7 @@ class World:
         self._hydro=0
         self._tech_level=0
         self._government_raw=0
-        self._government=Government(govs[0], False)
+        self._government=Government(govs[0], False, self._government_raw)
         self._law_level=0
         self._factions=[]
         self._starport_raw=0
@@ -306,7 +328,7 @@ class World:
         if self._population_raw==0:
             self._population=0
             self._tech_level = 0
-            self._government = Government(govs[0], False)
+            self._government = Government(govs[0], False, 0)
             self._government_raw = 0
             self._law_level = 0
             self._factions = []
@@ -318,7 +340,7 @@ class World:
             if self._population_raw>3 and self._government_raw==0:
                 self._government_raw = np.random.randint(1,3)
             self._government_raw = min([len(govs)-1, self._government_raw])
-            self._government = Government(govs[self._government_raw], False)
+            self._government = Government(govs[self._government_raw], False, self._government_raw)
             self._law_level = roll(rng, -7+ self._government_raw)
 
             faction_mod = 0
@@ -329,7 +351,32 @@ class World:
             if self._government_raw<2:
                 self._factions = []
             else:
-                self._factions = [Government(govs[min([roll(rng, -7+self._population_raw), len(govs)-1])], True) for i in range(np.random.randint(1,4)+faction_mod)]
+                working_factions = []
+                for i in range(np.random.randint(1,4)+faction_mod):
+                    score = max([0, min([roll(rng, -7+self._population_raw), len(govs)-1])])
+                    working_factions.append(Government(govs[score], True, score))
+
+                total_weight = sum([entry.raw_strength for entry in working_factions]) + 12
+                others = 0
+                for fact in working_factions:
+
+                    members = int((0.75 + 0.25*np.random.rand())*self._population*fact.raw_strength/total_weight)
+                    fact.set_members(members)
+
+                    if fact.raw_strength > 7 and abs(self._government.score - fact.score)>7 and fact.score>0:
+                        fact.civil_war = True
+                        self._government.civil_war = True
+                        print("Civil war between a {} and a {}".format(
+                            fact.gov_type,
+                            self._government.gov_type
+                        ))
+
+                    if members>0:
+                        others+=members
+                        self._factions.append(fact)   
+                self._government.set_members(self._population - others)
+
+                
 
         star_mod = 0
         if self._population_raw>=8:
