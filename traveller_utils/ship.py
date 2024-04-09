@@ -104,7 +104,7 @@ class AIShip(Ship):
     @classmethod
     def unpack(cls, pack):
         temp = super().unpack(pack)
-        temp._route = [HexID.unpack(entry) for entry in temp["route"]]
+        temp._route = [HexID.unpack(entry) for entry in pack["route"]]
         temp._captain = Person.unpack(pack["cpt"])
         return temp
 

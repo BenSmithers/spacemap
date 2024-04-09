@@ -236,7 +236,7 @@ class Time:
             out += "{} minutes".format(self._minute)
             return(out)
     def month_year(self):
-        return "{} {}, {}".format(self.day, self.month_str(), self.year)
+        return "{} {}, {}".format(self.day+1, self.month_str(), self.year)
 
     def __repr__(self):
         return("<Time Object: {}>".format(self))
@@ -898,11 +898,10 @@ class MultiHexCalendar(QtWidgets.QWidget):
     def skip_to_selected(self):
         if self.selected_time is None:
             return 
-        self.true_time = Time.copy(self.selected_time)
-        self.time = Time.copy(self.selected_time)
-        self.selected_time = None 
 
-        self.fill_days()
+
+        self.set_time(self.selected_time)
+        self.selected_time = None 
 
         self.signals.signal.emit(self.true_time)
 
@@ -924,12 +923,12 @@ class MultiHexCalendar(QtWidgets.QWidget):
         while day < self.days:
             self.day_buttons[day].setStyleSheet("background-color: white; border: none")
 
-            if (day+1)==weekday_of_first_of_month and days_so_far==-1:
+            if (day)==weekday_of_first_of_month and days_so_far==-1:
                 counting = True
 
             if counting:
                 days_so_far += 1
-                self.day_buttons[day].setText(str(days_so_far))
+                self.day_buttons[day].setText(str(days_so_far+1))
                 self.day_buttons[day].setEnabled(True)
 
                 if days_so_far==self.true_time.day and self.time.month==self.true_time.month and self.time.year==self.true_time.year:
@@ -956,13 +955,23 @@ class MultiHexCalendar(QtWidgets.QWidget):
         else:
             self.skipto_button.setEnabled(True)
 
+    def set_time(self, time:Time):
+        self.time = Time.copy(time)
+        self.true_time = Time.copy(time)
+        
+        self.currentTime.setText(str(self.true_time))
+        self.yearLabel.setText("{}".format(self.time.year))
+        self.month_combo.setCurrentIndex(time.month)
+        self.fill_days()
+
+
     def buttonPress(self, what):
         
         chop = what.split("-")
         this_time = Time(
             self.true_time.minute, 
             self.true_time.hour,
-            int(chop[0]),
+            int(chop[0])-1,
             int(chop[1]),
             int(chop[2])
         )

@@ -20,10 +20,8 @@ def get_action_map()->dict:
     
     
     classes = _all_subclasses(MapEvent)
-    names = _all_subclasses(MapEvent, True)
-
     temp = {
-        names[i]:classes[i] for i in range(len(classes))
+        classes[i].__name__:classes[i] for i in range(len(classes))
     }
     temp["MapEvent"] = MapEvent
     return temp
@@ -41,7 +39,10 @@ def _all_subclasses(cls, get_names = False):
 
 def unpack_event(dict_entry)->'MapEvent':
 
+
     cls = get_action_map()[dict_entry["classname"]]
+    print("making", cls)
+
     return cls(**dict_entry)
 
 class MapEvent:
@@ -56,6 +57,9 @@ class MapEvent:
         """
 
         if recurring is not None:
+            if isinstance(recurring, dict):
+                recurring = Time(**recurring)
+
             if not isinstance(recurring, Time):
                 raise TypeError("If recurring, arg must be {}, not {}".format(Time, type(recurring)))
         self.recurring = recurring

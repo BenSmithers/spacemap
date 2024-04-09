@@ -207,6 +207,7 @@ class Clicker(QGraphicsScene,ActionManager):
 
     def pack(self)->dict:
         return {
+            "time":self.clock.time.pack(),
             "ships":{
                 ship_id:self._ships[ship_id].pack() for ship_id in self._ships.keys()
             },
@@ -221,6 +222,10 @@ class Clicker(QGraphicsScene,ActionManager):
         }
     
     def unpack(self, packed:dict):
+        self.clock._time = Time.unpack(packed["time"])
+        
+        self._parent_window._calendar_widget.set_time(self.clock._time)
+
         self._queue = [[Time.unpack(entry[0]), unpack_event(entry[1])] for entry in packed["queue"]]
         for i in range(30):
             for j in range(15):
@@ -254,8 +259,9 @@ class Clicker(QGraphicsScene,ActionManager):
                 self._routes[keyunpack][subkey_unpack] = Route.unpack(packed["routes"][key][subkey])
         self.draw_routes()
 
-        for ship_id in packed["ships"].keys():
-            self._ships[ship_id] = AIShip.unpack(packed["ships"][ship_id])
+        for _ship_id in packed["ships"].keys():
+            ship_id=int(_ship_id)
+            self._ships[ship_id] = AIShip.unpack(packed["ships"][_ship_id])
             loc = self._ships[ship_id].location
             if loc not in self._ship_locations:
                 self._ship_locations[loc] = []
