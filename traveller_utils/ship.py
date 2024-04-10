@@ -3,13 +3,14 @@ from traveller_utils.person import Person
 from traveller_utils.actions import MapAction, NullAction, EndRecurring
 from traveller_utils.clock import Time
 from traveller_utils.name_gen import sample_adjective, sample_noun
-
+from traveller_utils.trade_goods import ALL_GOODS
+from traveller_utils.enums import get_entry_by_name, TradeGood
 from PyQt5.QtWidgets import QGraphicsScene
 from copy import deepcopy
 
 import random 
 
-_sizes = ["small"]*3 + ["medium"]*5 + ["large"]
+_sizes = ["small"]*10 + ["medium"]*3 + ["large"]
 _kinds = ["freighter"]*10 + ["scout ship"]*3 + ["pleasure yacht"] + ["merchant ship"]*5
 
 class Ship:
@@ -24,9 +25,22 @@ class Ship:
         self._location = None
         self._name = ""
         self._size = ""
+        self._cargo = {}
+
+    def cargo(self):
+        return self._cargo
+    def add_cargo(self, tg, quantity):
+        if tg in self._cargo.keys():
+            self._cargo[tg]+=quantity
+        else:
+            self._cargo[tg] = quantity
 
     def pack(self):
+        packed_cargo = {
+            key.name : int(self._cargo[key]) for key in self._cargo 
+        }
         return {
+            "cargo":packed_cargo,
             "rate":self._rate,
             "icon":self._icon,
             "desc":self._description,
@@ -44,6 +58,10 @@ class Ship:
         what._location = HexID.unpack(pack["loc"])
         what._name=pack["name"]
         what._size=pack["size"]
+        unpacked = {
+            get_entry_by_name(key, TradeGood):pack["cargo"][key] for key in pack["cargo"]
+        }
+        what._cargo = unpacked
         return what 
 
     @classmethod
@@ -58,7 +76,7 @@ class Ship:
 
         
         new._size = random.choice(_sizes)
-        new._description = "A {} {} ship".format(new._size, random.choice(_kinds))
+        new._description = "A {} {}".format(new._size, random.choice(_kinds))
         return new
 
     @property
@@ -122,6 +140,10 @@ class AIShip(Ship):
             return
         else:
             return self._route.pop()
+        
+    @property
+    def route(self):
+        return self._route
 
 
     @classmethod
