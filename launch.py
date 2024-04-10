@@ -15,6 +15,7 @@ from traveller_utils.coordinates import HexID, DRAWSIZE
 from traveller_utils import utils 
 from traveller_utils.tables import fares
 from traveller_utils.clock import MultiHexCalendar, Time, Clock
+from traveller_utils.ship import AIShip, Ship
 
 from qtdesigner.passengers import Ui_Form as passenger_widget_gui
 from qtdesigner.trade_goods import Ui_Form as trade_goods_widget_gui
@@ -23,6 +24,8 @@ from qtdesigner.person import Ui_Form as passenger_desc_dialog_gui
 from qtdesigner.government import Ui_Form as gov_widget_gui
 from qtdesigner.notes_ui import Ui_Form as notes_widget
 from qtdesigner.editor_window import Ui_Form as editor_window
+from qtdesigner.ship import Ui_Form as ship_window
+from qtdesigner.stupid_test import Ui_Form as stupid_ship_template
 
 from traveller_utils.tables import *
 
@@ -30,6 +33,7 @@ from random import randint
 
 import os 
 import sys
+
 
 
 class EditorDialog(QDialog):
@@ -122,6 +126,15 @@ class PassengerDialog(QDialog):
         self.ui = passenger_desc_dialog_gui()
         self.ui.setupUi(self)
 
+    def clear(self):
+        self.ui.label_2.clear()
+        self.ui.name_lbl.setText("{}") #, passy.pronouns))
+        self.ui.app_desc.setText("{}")
+        self.ui.quirks_desc.setText("{}")
+        self.ui.Needs_desc.setText("{}")
+        self.ui.wants_desc.setText("{}")
+        self.ui.probs_desc.setText("{}")
+
     def update_gui(self, passy:Person, pixmap):
         self.setWindowTitle(passy.name)
         self.ui.label_2.setPixmap(pixmap)
@@ -132,7 +145,88 @@ class PassengerDialog(QDialog):
         self.ui.wants_desc.setText(passy.wants)
         self.ui.probs_desc.setText(passy.problems)
 
+    """
 
+class ManyShipDialog(QDialog):
+    def __init__(self, parent):
+        super(ManyShipDialog, self).__init__(parent)
+        self.ui = stupid_ship_template()
+        self.ui.setupUi(self)
+        self._pages = []
+
+    def add_ship(self, ship:AIShip, route_names):
+        new_page = ShipDialog(self)
+        new_page.update_gui(ship, route_names)
+        self._pages.append(new_page)
+        self.ui.toolBox.addItem(new_page, ship.name)
+    
+    def clear(self):
+        while self.ui.toolBox.count()>0:
+            self.ui.toolBox.removeItem(0)
+"""
+
+class ManyShipDialog(QDialog):
+    def __init__(self, parent):
+        super(ManyShipDialog, self).__init__(parent)
+        self.ui = ship_window()
+        self.ui.setupUi(self)
+        self.person_widget = None
+
+        self.people_pixes = utils.IconLib(os.path.join(os.path.dirname(__file__),"images","chars"))
+
+        self.person_widget = PassengerDialog(self)
+        self.ui.tabWidget.addTab(self.person_widget, "Captain")
+
+        self.ui.comboBox.currentIndexChanged.connect(self.update_gui)
+
+        self._ships = []
+        self._routes = []
+
+    def add_ship(self, ship:AIShip, route_names):
+        self._ships.append(ship)
+        self._routes.append(route_names)
+
+        self.ui.comboBox.addItem(ship.name)
+        
+
+    def clear(self):
+        self.ui.comboBox.clear()
+        self.person_widget.clear()
+
+        self.ui.speed_lbl.setText("")
+        self.ui.desc.setText("")
+
+        self.ui.route.setText("")
+
+        self.ui.cargo.setText("")    
+        self._ships = []
+        self._routes = []
+
+
+    def update_gui(self):
+        if self.ui.comboBox.count()==0:
+            return
+        
+        index = self.ui.comboBox.currentIndex()
+
+        ship = self._ships[index]
+        route_names = self._routes[index]
+        
+
+        pixname = ship.captain.image_name
+        pix = self.people_pixes.access(pixname, 100)
+        self.person_widget.update_gui(ship.captain, pix)
+
+        self.ui.speed_lbl.setText(  str(1./ship.rate ))
+        self.ui.desc.setText(ship.description)
+
+        route_str = "\n".join(route_names)
+        self.ui.route.setText(route_str)
+
+        cargo = ship.cargo()
+        cargo_str = "\n".join(["{} tons of {}".format(cargo[key], str(key.name)) for key in cargo ])
+        cargo_str = cargo_str.replace("_", " ")
+        self.ui.cargo.setText(cargo_str)    
 
 class PassengerItem(QtGui.QStandardItem):
     """
@@ -460,7 +554,7 @@ class main_window(QMainWindow):
         self._planet_widget = PlanetWidget(self)
         self._notes_widget = NotesTab(self)
         now = Time(30, 12, randint(0,20), randint(0,11), randint(0,300)+3000)
-
+        self._ship_widget = ManyShipDialog(self)
         self._calendar_widget = MultiHexCalendar(self, now)
 
         self.ui.tabWidget.addTab(self._planet_widget, "Planet")
@@ -468,6 +562,7 @@ class main_window(QMainWindow):
         self.ui.tabWidget.addTab(self._pass_widget, "Passengers")
         self.ui.tabWidget.addTab(self._trade_widget, "Trade")
         self.ui.tabWidget.addTab(self._notes_widget, "Notes")
+        self.ui.tabWidget.addTab(self._ship_widget, "Ships")
 
         self.ui.verticalLayout.insertWidget(0, self._calendar_widget)
 
@@ -489,6 +584,7 @@ class main_window(QMainWindow):
 
         
     def planet_selected(self, world:World, loc:HexID):
+        self._ship_widget.clear()
         while len(self.govs)>0:
             first = self.govs.pop()
             first.deleteLater()
@@ -500,6 +596,13 @@ class main_window(QMainWindow):
         self._pass_widget.log_passengers(loc)
         self._notes_widget.set_text(world.notes())
 
+        these_ships = [self.scene.get_ship(sid) for sid in self.scene.get_ships_at(loc)]
+        for ship in these_ships:
+            world_routes_filter = list(filter(lambda entry:entry is not None, [self.scene.get_system(hid) for hid in ship.route]))
+            route_names = [entry.name for entry in world_routes_filter]
+            
+            self._ship_widget.add_ship(ship, route_names)
+        self._ship_widget.update_gui()
 
         self.govs.append(GovWidget(self._planet_widget.ui.overview_page))
         self.govs[0].configure(world.government)
@@ -535,6 +638,7 @@ class main_window(QMainWindow):
         self._pass_widget.clear_pass()
         self._trade_widget.clear()
         self._notes_widget.clear()
+        self._ship_widget.clear()
         self.scene.clear_drawn_route()
 
         while len(self.govs)>0:

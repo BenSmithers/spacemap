@@ -41,8 +41,6 @@ def unpack_event(dict_entry)->'MapEvent':
 
 
     cls = get_action_map()[dict_entry["classname"]]
-    print("making", cls)
-
     return cls(**dict_entry)
 
 class MapEvent:

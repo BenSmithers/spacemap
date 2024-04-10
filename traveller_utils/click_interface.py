@@ -100,7 +100,7 @@ class Clicker(QGraphicsScene,ActionManager):
 
         if False:
             import matplotlib.pyplot as plt 
-            plt.hist(all_ts, bins=np.arange(0, 15,1))
+            plt.hist(all_ts, bins=np.arange(0, 20,1))
             plt.xlabel("Wealth Score")
             plt.ylabel("Count")
             plt.show()
@@ -416,6 +416,20 @@ class Clicker(QGraphicsScene,ActionManager):
             route = self.get_route_a_star(loc, other)
 
         new_ship = AIShip.generate(route)
+        if "freighter" in new_ship.description.lower():
+            scale = 4
+            samples = 1
+            if "medium" in new_ship.description:
+                scale = 6
+                samples = 2
+            elif "large" in new_ship.description:
+                scale = 12
+                samples = 3 
+            for i in range(samples):
+                cargo, quantity = self.get_system(loc).sample_cargo(scale)
+                new_ship.add_cargo(cargo, quantity)
+            
+
         sid = self.register_ship(new_ship, loc)
         move = AIShipMoveEvent(
             recurring = Time(minute=int(minutes_in_day/new_ship.rate)),
@@ -579,6 +593,76 @@ class Clicker(QGraphicsScene,ActionManager):
 
                     self._systems[loc] = World(modifier = mod)
         
+    def alt_initialize_regions(self):
+        """
+            My idea for this one is that each system will exact some 'influence' on all of the other systems. 
+            Influence will be determined by the wealth of a system (and maybe presence of bases?), but then fall off with distance.
+                --> influence will be wealth/5, falls off by 1 per hex, empty hexes count as two. 
+
+
+            A system will be a vassal of another system if its influence on the other system is small compared to the influence of the other system on it. 
+        """
+
+        # threshold in 
+        THRESH = 1
+
+        # map of influence on [first] from [second]
+        influence_map = {}
+
+        for hID in self._systems.keys():
+            influence_map[hID] = {}
+            for other_hid in self._systems.keys():
+                if other_hid==hID:
+                    influence_map[hID][other_hid] = 0
+
+                distance = hID - other_hid
+                if distance>4:
+                    influence_map[hID][other_hid] = 0
+                    continue
+                
+                #cost = self.get_route_cost(self.get_route_a_star(hID, other_hid))
+                #print(cost)
+                influence = self.get_system(other_hid).wealth/5
+                influence_map[hID][other_hid] = max([influence - 1.5*distance, 0])
+
+        for hID in self._systems.keys():
+            world = self.get_system(hID)
+
+
+            keys = list(influence_map[hID].keys()) 
+            values = list(influence_map[hID].values())
+            if max(values)==0:
+                continue
+
+            hid_max = keys[values.index(max(values))] # this is the world that has the most influence on hID 
+            if hid_max==hID:
+                continue
+            liege = self.get_system(hid_max)
+            world.set_liege(hid_max, liege)
+            liege.add_vassal(hID, world)
+
+
+        
+        for system in self._systems.keys():
+            center = hex_to_screen(system)
+            this_hex = Hex(center)
+
+            new = Region(this_hex, system)
+
+            ultimate_liege = self.get_ultimate_liege(system)
+
+            if ultimate_liege in self._regions:
+                original = self._regions[ultimate_liege]
+                self._regions[ultimate_liege] = original.merge(new)
+            else:
+                self._regions[ultimate_liege] = new
+
+
+        for rid in self._regions.keys():
+            self.draw_region(rid)
+
+
+
     def initialize_regions(self):
         by_title={
             Title.Emperor:[],

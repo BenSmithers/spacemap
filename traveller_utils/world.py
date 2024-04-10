@@ -12,6 +12,7 @@ from traveller_utils.trade_goods import ALL_GOODS, TradeGoods
 from traveller_utils.name_gen import create_name
 from traveller_utils.person import Person
 from traveller_utils.coordinates import HexID
+from math import log10 
 
 WorldTag._value2member_map_.keys()
 
@@ -196,17 +197,23 @@ class World:
         self._liege = hid
         self._liege_name = which
 
+
+    @property
+    def wealth_str(self):
+        pass
     
     @property
     def wealth(self):
         score = int(self.trade_score / 5)
         if self._population_raw>8:
-            score+=5
+            score+=3
+        elif self._population_raw<3:
+            score-=3
             
         if self._starport_raw>8:
-            score+=5
+            score+=3
         if self._starport_raw>10:
-            score+=5
+            score+=2
 
         if self._tech_level>10:
             score+=5
@@ -217,7 +224,26 @@ class World:
             score +=0
         if self._tech_level<8:
             score +=2
-        return score
+
+        if self._hydro > 4 and self._hydro<10:
+            score += 2
+        if self._atmosphere==6 or self._atmosphere==7:
+            score += 2
+        if "tainted" in self.atmosphere_str:
+            score -=4
+        
+        if self._temperature>5 and self._temperature<10:
+            score += 2
+        if self._temperature<3 or self._temperature>12:
+            score -=4 
+        if self._tech_level>10:
+            score +=2 
+        if self._tech_level<9:
+            score -=4
+
+        score += len(self.services)
+
+        return max([score, 0])
         
 
     @property 
@@ -582,6 +608,20 @@ class World:
         
 
         return avail
+    
+    def sample_cargo(self, scale=6):
+        """
+            returns 1d<scale> units of cargo sampled from this world's parameters
+        """
+        available = self.list_available_goods()
+        
+        non_norm = [1./log10(self.get_purchase_price(entry)) for entry in available]
+        total = sum(non_norm)
+        weights = [entry/total for entry in non_norm]
+
+        index = np.random.choice(range(len(weights)), p=weights)
+        return available[index], scale*available[index].sample_amount()
+
 
     def get_purchase_price(self, entry:TradeGoods, modifier=0):
         """
@@ -601,31 +641,7 @@ class World:
         return entry.sample_sale_price(self._category, modifier) 
 
     def update_category(self):
-        if self._population<1000:
-            self._title = Title.Lord
-        elif self._population<1e5:
-            self._title = Title.Count
-        elif self._population<1e8:
-            self._title = Title.Duke
-        elif self._population<1e11:
-            self._title = Title.King
-        else:
-            self._title = Title.Emperor
-
-        wealth = self.wealth
-        if wealth>12:
-            self._title = Title.Emperor
-            print(self.name)
-        elif wealth>=10:
-            self._title = Title.King
-        elif wealth>=8:
-            self._title = Title.Duke
-        elif wealth>=6:
-            self._title = Title.Count
-        else:
-            self._title = Title.Lord
-
-
+        self._title = wealth_tbl.access(self.wealth)
 
         self._category = []
         if self._atmosphere==0 and self._size==0 and self._hydro==0:

@@ -2,6 +2,7 @@ import json
 import os
 
 from traveller_utils.utils import Table
+from traveller_utils.enums import Title
 
 fares={
     "high":[8500,12000,20000,41000,45000,470000],
@@ -143,3 +144,11 @@ for key in _data["biosphere"]:
 tl = Table()
 for ik, key in enumerate(tech_levels):
     tl.add_entry(ik-0.5, "TL{} - {}".format(ik, key))
+
+
+wealth_tbl = Table()
+wealth_tbl.add_entry(-5, Title.Lord)
+wealth_tbl.add_entry(5, Title.Count)
+wealth_tbl.add_entry(10, Title.Duke)
+wealth_tbl.add_entry(15, Title.King)
+wealth_tbl.add_entry(20, Title.Emperor)

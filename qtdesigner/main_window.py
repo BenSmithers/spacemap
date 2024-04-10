@@ -17,12 +17,12 @@ class Ui_MainWindow(object):
         self.centralwidget.setObjectName("centralwidget")
         self.horizontalLayout = QtWidgets.QHBoxLayout(self.centralwidget)
         self.horizontalLayout.setObjectName("horizontalLayout")
-
-        self.verticalLayout = QtWidgets.QVBoxLayout(self.centralwidget)
+        self.verticalLayout = QtWidgets.QVBoxLayout()
+        self.verticalLayout.setObjectName("the vertical layout")
         self.horizontalLayout.addLayout(self.verticalLayout)
 
         self.tabWidget = QtWidgets.QTabWidget(self.centralwidget)
-        self.tabWidget.setMaximumSize(QtCore.QSize(750, 16777215))
+        self.tabWidget.setMaximumSize(QtCore.QSize(500, 16777215))
         self.tabWidget.setObjectName("tabWidget")
   
 
