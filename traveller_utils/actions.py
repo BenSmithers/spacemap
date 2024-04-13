@@ -143,6 +143,12 @@ class NullAction(MapAction):
     def __call__(self, map:QGraphicsScene):
         return NullAction()
 
+class MonthlyEvent(MapAction):
+    def __init__(self):
+        MapAction.__init__(self, recurring = Time(month=1))
+    def __call__(self, map: QGraphicsScene):
+        map.update_prices()
+        return NullAction()
 
 class EndRecurring(NullAction):
     pass

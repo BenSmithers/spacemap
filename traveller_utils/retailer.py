@@ -80,7 +80,7 @@ class Retailer:
         return self._name
     
 
-    def _clear(self):
+    def clear(self):
         self._generated = False
         self._purchase_prices = {}
         self._sale_prices = {}
@@ -90,7 +90,7 @@ class Retailer:
             Regenerate sale/purchase prices using the `home` as the base to determine prices and availability 
             
         """
-        self._clear()
+        self.clear()
         self._generated = True
         all_goods = home.list_available_goods()
 

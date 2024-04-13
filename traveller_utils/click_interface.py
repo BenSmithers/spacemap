@@ -2,9 +2,9 @@ from PyQt5 import QtGui, QtCore
 from PyQt5.QtCore import Qt
 
 from PyQt5.QtWidgets import QGraphicsScene, QGraphicsSceneMouseEvent, QMainWindow
-from traveller_utils.actions import ActionManager, unpack_event
+from traveller_utils.actions import ActionManager, unpack_event, MonthlyEvent
 
-from traveller_utils.enums import Title, LandTitle, Bases, WorldCategory
+from traveller_utils.enums import Title, Bases, WorldCategory
 from traveller_utils.clock import minutes_in_day
 from traveller_utils.coordinates import HexID, DRAWSIZE, screen_to_hex, hex_to_screen
 from traveller_utils.ship import Ship, AIShip, AIShipMoveEvent
@@ -12,7 +12,6 @@ from traveller_utils.core import Hex, Region, Route
 from traveller_utils.world import World
 from traveller_utils import utils
 from collections import deque
-from math import inf
 import numpy as np
 import os 
 import json
@@ -29,8 +28,6 @@ class Clicker(QGraphicsScene,ActionManager):
         QGraphicsScene.__init__(self, parent=parent, clock=clock)
         ActionManager.__init__(self, clock=clock)
 
-
-        
         self._parent_window = parent_window
         #self.parent().scale( 0.8, 0.8 )
 
@@ -71,6 +68,7 @@ class Clicker(QGraphicsScene,ActionManager):
 
 
         self._selected_sid = None
+        self._selected_hid = None
 
         if os.path.exists(WORLD_PATH):
             _obj = open(WORLD_PATH, 'rt')
@@ -92,6 +90,13 @@ class Clicker(QGraphicsScene,ActionManager):
 
         self.update()        
 
+
+        self.add_event(
+            MonthlyEvent(),
+            Time(0,0, 0, self.clock._time.month+1,self.clock._time.year)
+        )
+        
+
         all_ts = []
         for hid in self._systems:
             world = self.get_system(hid)
@@ -105,15 +110,20 @@ class Clicker(QGraphicsScene,ActionManager):
             plt.ylabel("Count")
             plt.show()
 
+
     def update_prices(self):
         for hid in self._systems:
             world = self.get_system(hid)
             # clear out the passenger lists
             for p_class in world._passengers:
                 world._passengers[p_class] = []
+            world._generated = False
             
             for retail in world._retailers:
                 retail.clear()
+        if self._selected_hid is not None:
+            self._parent_window._pass_widget.clear_pass()
+            self._parent_window.planet_selected(self._systems[self._selected_hid], self._selected_hid )
             
 
     def get_ship(self, ship_id)->Ship:
@@ -762,9 +772,11 @@ class Clicker(QGraphicsScene,ActionManager):
         loc =  screen_to_hex( event.scenePos() )
 
         if loc in self._systems: 
+            self._selected_hid = loc 
             self.draw_selection(loc)
             self._parent_window.planet_selected(self._systems[loc], loc )
         else:
+            self._selected_hid = None 
             self._parent_window.select_none()
             if self._selected_sid is not None:
                 self.removeItem(self._selected_sid)

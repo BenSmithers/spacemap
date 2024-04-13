@@ -6,7 +6,7 @@ import numpy as np
 import os
 
 from traveller_utils.tables import *
-from traveller_utils.enums import WorldTag, WorldCategory, TradeGood, Contraband, Bases, Title, LandTitle
+from traveller_utils.enums import WorldTag, WorldCategory, Contraband, Bases, Title, LandTitle
 from traveller_utils.utils import roll, d100, roll1d
 from traveller_utils.trade_goods import ALL_GOODS, TradeGoods
 from traveller_utils.name_gen import create_name
@@ -549,6 +549,24 @@ class World:
     @property
     def generated(self):
         return self._generated
+    def degenerate_passengers(self):
+        self._generated = False
+
+        for key in self._passengers.keys():
+            for person in self._passengers[key]:
+                assert isinstance(person, Person)
+
+                if person.persistent:
+                    self._persistent_passengers[key].append(person)
+                    
+        
+        self._passengers ={
+                    "high":[],
+                    "middle":[],
+                    "basic":[],
+                    "low":[], 
+                }
+
     def generate_passengers(self, steward_mod:int)->'dict[Person]':
         if self._generated:
             return self._passengers        
