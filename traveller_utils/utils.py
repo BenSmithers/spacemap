@@ -18,6 +18,18 @@ import os
 from scipy.interpolate import interp2d
 from traveller_utils.coordinates import DRAWSIZE
 
+ 
+def all_subclasses(cls, get_names = False):
+    """
+        Returns either a list of the names of all subclasses of `cls`, or a list of the classes themselves
+    """
+    if get_names:
+        return list(set(cls.__name__ for cls in cls.__subclasses__()).union(
+            [s.__name__ for c in cls.__subclasses__() for s in all_subclasses(c)]))
+    else:
+        return list(set(cls.__subclasses__()).union(
+            [s for c in cls.__subclasses__() for s in all_subclasses(c)]))
+
 def number_add_comma(number):
     number = str(int(number))[::-1]
 

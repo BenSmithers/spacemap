@@ -76,7 +76,7 @@ class Clicker(QGraphicsScene,ActionManager):
             _obj.close()
             self.unpack(data)
         else:
-            self.initialize()
+            self.initialize_systems()
             self.initialize_routes()
             self.initialize_regions()
             n_ships = 60
@@ -232,11 +232,15 @@ class Clicker(QGraphicsScene,ActionManager):
         }
     
     def unpack(self, packed:dict):
-        self.clock._time = Time.unpack(packed["time"])
+        if "time" in packed:
+            self.clock._time = Time.unpack(packed["time"])
+        
         
         self._parent_window._calendar_widget.set_time(self.clock._time)
 
-        self._queue = [[Time.unpack(entry[0]), unpack_event(entry[1])] for entry in packed["queue"]]
+        if "queue" in packed:
+            self._queue = [[Time.unpack(entry[0]), unpack_event(entry[1])] for entry in packed["queue"]]
+            
         for i in range(30):
             for j in range(15):
                 shift = int(i/2)
@@ -367,6 +371,10 @@ class Clicker(QGraphicsScene,ActionManager):
     
 
     def update_world(self, other:World, hid:HexID)->None:
+        """
+            Swaps out the world at hid with the world provided. We then redraw the world, 
+            and clear out the cummulative wealths list so that it's regenerated later
+        """
         self._cummulative_wealths = []
         self._systems[hid] = other
         self.draw_hex(hid)
@@ -374,8 +382,11 @@ class Clicker(QGraphicsScene,ActionManager):
     def _sample_from_wealth(self)->HexID:
         """
             samples a HexIDs based on system wealth
+
+            We first get all of the worlds' wealths, and save the cummulative sum. The sum of all wealths is used for sampling
         """
 
+        # get all of the wealths and accumulate them. Only do this if it hasn't been done already
         all_keys = list(self.systems.keys())
         if len(self._cummulative_wealths)==0:
             self._cummulative_wealths = [self.get_system(key).wealth for key in all_keys]
@@ -410,7 +421,11 @@ class Clicker(QGraphicsScene,ActionManager):
             
     def _initialize_ship(self, start_hex=None):
         """
-            samples
+            samples a ship's origin from the wealth distribution of worlds in the sector
+            Chooses a route for the ship to follow: if this is an endpoint for a route, use one of the routes
+            otherwise sample the endpoint from the same wealth distribution 
+
+            Then make a ship and queue its travel
         """
         if start_hex is None:
             loc = self._sample_from_wealth()
@@ -451,6 +466,9 @@ class Clicker(QGraphicsScene,ActionManager):
 
 
     def initialize_routes(self):
+        """
+            Use the SwoN rules to create hyperlane trade routes between systems
+        """
         for system_key in self.systems.keys():
             this_world = self.get_system(system_key)
 
@@ -489,6 +507,11 @@ class Clicker(QGraphicsScene,ActionManager):
         self.draw_routes()
 
     def add_route(self, start:HexID, end:HexID, route:Route):
+        """
+            Internally reggister the route from the given start and end hexid
+
+            note: the start and end aren't needed, right? 
+        """
 
         if self._route_present(start, end):
             return
@@ -533,7 +556,7 @@ class Clicker(QGraphicsScene,ActionManager):
 
     def clear_drawn_route(self):
         """
-            clears a route a passenger would like to take to get somewhere
+            clears the drawing of the route a passenger would like to take to get somewhere
         """
         if self._alt_route_sid is not None:
             self.removeItem(self._alt_route_sid)
@@ -541,6 +564,9 @@ class Clicker(QGraphicsScene,ActionManager):
 
 
     def draw_routes(self):
+        """
+            draws all of the routes
+        """
         for route in self._routes.keys():
             for destination in self._routes[route].keys():
                 self.draw_route(route, destination)
@@ -588,7 +614,7 @@ class Clicker(QGraphicsScene,ActionManager):
         sid.setZValue(2)
         self._drawn_routes[start][end]=sid
 
-    def initialize(self):
+    def initialize_systems(self):
         sample = utils.perlin(150,octave=3)*0.6 + utils.perlin(150,octave=15)*0.40
         sample = sample*0.9+0.4
         extra_thresh = 0.9*np.max(sample)

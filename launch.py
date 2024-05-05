@@ -25,7 +25,6 @@ from qtdesigner.government import Ui_Form as gov_widget_gui
 from qtdesigner.notes_ui import Ui_Form as notes_widget
 from qtdesigner.editor_window import Ui_Form as editor_window
 from qtdesigner.ship import Ui_Form as ship_window
-from qtdesigner.stupid_test import Ui_Form as stupid_ship_template
 
 from traveller_utils.tables import *
 

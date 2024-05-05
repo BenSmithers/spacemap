@@ -1,6 +1,7 @@
 from enum import Enum 
 from collections import deque
 from traveller_utils.clock import Time, Clock
+from traveller_utils.utils import all_subclasses
 
 from PyQt5.QtWidgets import QGraphicsScene
 
@@ -19,23 +20,13 @@ def get_action_map()->dict:
     """
     
     
-    classes = _all_subclasses(MapEvent)
+    classes = all_subclasses(MapEvent)
     temp = {
         classes[i].__name__:classes[i] for i in range(len(classes))
     }
     temp["MapEvent"] = MapEvent
     return temp
-        
-def _all_subclasses(cls, get_names = False):
-    """
-        Returns either a list of the names of all subclasses of `cls`, or a list of the classes themselves
-    """
-    if get_names:
-        return list(set(cls.__name__ for cls in cls.__subclasses__()).union(
-            [s.__name__ for c in cls.__subclasses__() for s in _all_subclasses(c)]))
-    else:
-        return list(set(cls.__subclasses__()).union(
-            [s for c in cls.__subclasses__() for s in _all_subclasses(c)]))
+       
 
 def unpack_event(dict_entry)->'MapEvent':
 
