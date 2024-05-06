@@ -1,6 +1,7 @@
 from traveller_utils.factions.base_classes import Move, Asset, Roll
 from traveller_utils.factions.enums import AssetTheme
 from traveller_utils.coordinates import HexID
+from traveller_utils.factions.faction import Faction
 
 class PurchaseAsset(Move):
     def __init__(self, location:HexID, asset_type=Asset):
@@ -61,7 +62,7 @@ class AttackAction(Move):
         return(defense_mod, my_mod)
 
 class FactionAttack(Move):
-    def __init__(self, source:Asset, target, attacker_theme:AssetTheme, defender_theme:AssetTheme):
+    def __init__(self, source:Asset, target:Faction, attacker_theme:AssetTheme, defender_theme:AssetTheme):
         self._source = source
         self._target= target
 

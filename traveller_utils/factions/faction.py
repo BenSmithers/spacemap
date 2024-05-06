@@ -3,7 +3,6 @@ from traveller_utils.coordinates import HexID
 from traveller_utils.world import World
 
 from traveller_utils.factions.base_classes import Base_Of_Influence, Asset
-from traveller_utils.factions.moves import *
 from random import choice
 from traveller_utils.utils import all_subclasses
 
@@ -36,27 +35,13 @@ class Faction:
         self._assets[self._homeworld] = []
 
 
-    def get_available_moves(self):
-        # list all of the things we can buy 
-        all_moves_available = [] 
-        all_assets = all_subclasses(Asset)
-        for entry in all_assets:
-            if entry.cost < self._farcreds:
-                appeal = entry.cost*asset_appeal_modifier(entry.theme, self._tag)
-                all_moves_available.append([
-                    appeal,PurchaseAsset(self._homeworld_id, entry)
-                ])
-        
-
-        # check which attacks are available 
-
-        # refit assets 
-
-        # Use asset abilities 
 
     @property
     def homeworld(self)->World:
         return self._homeworld
+    @property
+    def homeworld_id(self)->HexID:
+        return self._homeworld_id
 
     def change_homeworld(self, world):
         if world in self._bases_of_influence:
@@ -111,3 +96,6 @@ class Faction:
     def experience(self)->int:
         return self._experience
 
+    @property
+    def tag(self)->FactionTag:
+        return self._tag
