@@ -26,7 +26,8 @@ class Faction:
 
         self._assets = {} # hexid->list[Asset]
 
-        self._aware_of = {} #Faction -> list of assets 
+
+        self._aware_of = {} #hexID -> Asset type  
 
         self._homeworld = homeworld
         self._homeworld_id = world_loc
@@ -34,7 +35,9 @@ class Faction:
 
         self._assets[self._homeworld] = []
 
-
+    @property 
+    def awareness(self):
+        return self._aware_of
 
     @property
     def homeworld(self)->World:
@@ -60,8 +63,16 @@ class Faction:
         which.set_location(self._homeworld)
         self._assets[self._homeworld].append(which)
 
+    @property
     def assets(self)->'dict[HexID]':
         return self._assets
+    
+    @property
+    def asset_list(self)->'list[Asset]':
+        all_assets = []
+        for hid in self._assets.keys():
+            all_assets += self._assets[hid]
+        return all_assets
         
     def max_hitpoints(self)->int:
         return 4 + hpv[self._force_rating] + hpv[self._cunning] + hpv[self._wealth]

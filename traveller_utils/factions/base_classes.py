@@ -71,6 +71,8 @@ class Asset:
     theme = AssetTheme.cunning
     defense_theme = AssetTheme.cunning
 
+    stealth = False
+
 
     def __init__(self):
         self._hp = self.max_hp

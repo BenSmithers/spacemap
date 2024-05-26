@@ -19,6 +19,19 @@ class FactionTag(Enum):
     PlanetaryGov = 11
     Plutocratic=12
 
+def attack_mod(tag:FactionTag):
+    mod = 1.0
+    if tag==FactionTag.Colonists or tag==FactionTag.Machiavellian:
+        mod *= 0.25
+    if tag==FactionTag.EugenicsCult or tag==FactionTag.MercenaryGroup or FactionTag.Pirates:
+        mod *= 3
+    if tag==FactionTag.Fanatical:
+        mod *= 1.5
+    if tag==FactionTag.Imperialists:
+        mod *= 2
+    return mod
+
+
 def asset_appeal_modifier(theme:AssetTheme, tag:FactionTag):
     if theme.value == AssetTheme.cunning.value:
         modifiers = [
