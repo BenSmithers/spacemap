@@ -1,17 +1,192 @@
 from traveller_utils.coordinates import HexID
 from traveller_utils.person import Person
 from traveller_utils.actions import MapAction, NullAction, EndRecurring
-from traveller_utils.clock import Time
 from traveller_utils.name_gen import sample_adjective, sample_noun
-from traveller_utils.trade_goods import ALL_GOODS
 from traveller_utils.enums import get_entry_by_name, TradeGood
+from traveller_utils.enums import ShipClass, ShipCategory
+from traveller_utils.ship_items import Fitting, ShipDefense, ShipWeapon, hull_data, sample_ships
+
+
 from PyQt5.QtWidgets import QGraphicsScene
 from copy import deepcopy
 
 import random 
+import os 
+import json 
 
 _sizes = ["small"]*10 + ["medium"]*3 + ["large"]
 _kinds = ["freighter"]*10 + ["scout ship"]*3 + ["pleasure yacht"] + ["merchant ship"]*5
+
+
+class ShipSWN:
+    cargo_mult = {
+        ShipClass.Fighter:2,
+        ShipClass.Frigate:20,
+        ShipClass.Cruiser:200,
+        ShipClass.Capital:2000
+    }
+    def __init__(self, shiphull):
+        if shiphull not in hull_data:
+            raise KeyError("Unknown ship hull {}".format(shiphull))
+        data_entry = hull_data[shiphull]
+        self._shiphull = shiphull
+        self._shipcategory = ShipCategory.Unspecified
+
+        if data_entry["class"]=="fighter":
+            self._class = ShipClass.Fighter
+        elif data_entry["class"]=="frigate":
+            self._class = ShipClass.Frigate
+        elif data_entry["class"]=="cruiser":
+            self._class = ShipClass.Cruiser
+        elif data_entry["class"]=="capital":
+            self._class = ShipClass.Capital
+        else:
+            raise NotImplementedError("Unknown class {}".format(data_entry["class"]))
+        
+        self._base_speed = data_entry["speed"]
+        self._base_cost = data_entry["cost"]
+        self._base_armor = data_entry["armor"]
+        self._base_hp = data_entry["hp"]
+        self._crew_min = data_entry["crew_min"]
+        self._crew_max = data_entry["crew_max"]
+        self._base_ac = data_entry["ac"]
+        self._base_power = data_entry["power"]
+        self._base_mass = data_entry["mass"]
+        self._max_hardpoints = data_entry["hardpoints"]
+        self._description = ""
+        self._system_drive = False 
+
+        self._fittings = []
+        self._defense = []
+        self._weapons = []
+
+        self._cargo = {}
+
+    def cargo(self):
+        return self._cargo
+    def add_cargo(self, tg:TradeGood, quantity):
+        if tg in self._cargo.keys():
+            self._cargo[tg]+=quantity
+        else:
+            self._cargo[tg] = quantity
+    
+    def fittings(self)->'list[Fitting]':
+        return self._fittings
+    
+    def weapons(self)->'list[ShipWeapon]':
+        return self._weapons
+    
+    def defenses(self)->'list[ShipDefense]':
+        return self._defense
+
+    def add_fitting(self, new_obj:Fitting):
+        """
+            Checks if the fitting can be added, and then adds it. 
+            Works for weapons and defenses as well 
+
+            Raises ValueError if a fitting can not be added.
+            Raises TypeError if it's not a fitting, weapon, or defense 
+        """
+
+        if self.power_free()>=new_obj.power and self.mass_free()>=new_obj.mass:
+            if isinstance(new_obj, ShipWeapon):
+                if self.hardpoints_free()>=new_obj.hardpoints:
+                    self._weapons.append(new_obj)
+                     
+                else:
+                    raise ValueError("No available hardpoints")
+            elif isinstance(new_obj, ShipDefense):
+                self._defense.append(new_obj)
+            elif isinstance(new_obj, Fitting):
+                if new_obj.name.lower() == "system drive":
+                    self._system_drive = True
+                self._fittings.append(new_obj)
+            else:
+                raise TypeError("Unknown fitting type: {}".format(type(new_obj)))
+        else:
+            raise ValueError("Insufficient power or mass")        
+
+    @property
+    def shiphull(self)->str:
+        """
+            Basic Hull Type 
+        """
+        return self._shiphull
+
+    @property
+    def shipclass(self) -> ShipClass:
+        """
+            Ship Size Class (Fighter / Freighter / Cruiser 
+        """
+        return self._class
+    
+    @property
+    def shipcategory(self) -> ShipCategory:
+        """
+            A representation of the ship's purpose 
+        """
+        return self._shipcategory
+
+    def power_free(self):
+        start = self._base_power 
+        start -= sum([entry.power for entry in self.fittings()])
+        start -= sum([entry.power for entry in self.defenses()])
+        start -= sum([entry.power for entry in self.weapons()])
+        return start 
+
+    def max_cargo(self):
+        mass = self.mass_free()
+        return self.cargo_mult[self.shipclass]*mass
+
+    def cargo_free(self):
+        max_cargo = self.max_cargo()
+        cargo_space =self.cargo()
+        for tg in cargo_space:
+            max_cargo -= cargo_space[tg] 
+        return max_cargo
+
+    def mass_free(self):
+        start = self._base_mass 
+        start -= sum([entry.mass for entry in self.fittings()])
+        start -= sum([entry.mass for entry in self.defenses()])
+        start -= sum([entry.mass for entry in self.weapons()])
+        return start 
+    
+    def hardpoints_free(self):
+        start = self._max_hardpoints
+        for weap in self._weapons:
+            start -= weap.hardpoints
+        return start 
+    
+    def cost(self):
+        start = self._base_cost 
+        if self._system_drive:
+            start *= 0.90
+        start += sum([entry.cost for entry in self.fittings()])
+        start += sum([entry.cost for entry in self.defenses()])
+        start += sum([entry.cost for entry in self.weapons()])
+        return start 
+    
+    def annual_maintenance(self):
+        return self.cost()/10.0
+
+    @classmethod
+    def load_from_template(cls, template_name):
+        template_dict=sample_ships[template_name]
+
+        hulltype = template_dict["shipHullType"]
+        new_ship = cls(hulltype)
+        new_ship._description = template_dict["description"]
+        for entry in template_dict["items"]:
+            if entry["type"]=="shipFitting":
+                item=Fitting(entry["name"], new_ship.shipclass)
+            elif entry["type"]=="shipWeapon":
+                item=ShipWeapon(entry["name"], new_ship.shipclass)
+            elif entry["type"]=="shipDefense":
+                item =ShipDefense(entry["name"], new_ship.shipclass)
+            new_ship.add_fitting(item)
+            
+        return new_ship
 
 class Ship:
     def __init__(self, rate=0.183):
@@ -29,7 +204,7 @@ class Ship:
 
     def cargo(self):
         return self._cargo
-    def add_cargo(self, tg, quantity):
+    def add_cargo(self, tg:TradeGood, quantity):
         if tg in self._cargo.keys():
             self._cargo[tg]+=quantity
         else:

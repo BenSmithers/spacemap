@@ -1,6 +1,22 @@
 
 from enum import Enum
 
+class ShipClass(Enum):
+    Fighter =0
+    Frigate =1
+    Cruiser =2
+    Capital =3
+
+class ShipCategory(Enum):
+    Unspecified = 0
+    Ferry = 1
+    Freight = 2
+    Warship = 3
+    Research = 4
+    Yacht = 5
+    Colony = 6
+    ResourceExtraction = 7
+
 class Title(Enum):
     """
         0 - fewer than 500
