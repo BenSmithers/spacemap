@@ -1,0 +1,639 @@
+{
+    "corvette": {
+        "shipHullType": "corvette",
+        "description": "The usual ship of the line of most modestly-funded frontier navies, a corvette is a true warship, albeit of a minimal size. While it is unable to land on worlds with standard gravity, its cargo lighter allows crew and cargo transit from the surface of a world, and its ex- tended stores allow for more than four months of field operation under normal crew parameters. Most pirates flying reworked free merchants or stolen patrol boats will turn tail as soon as a cor- vette shows up in the region. Good armor, multiple ship-killing guns, and trained boarding marines make a corvette a death sentence to most stellar ruffians, and even when a pirate wolf pack can bring one down, it usually comes at the cost of crippling damage. The model depicted here is standard for anti-pi- racy and basic system defense missions. Against cruis- er-class warships, however, this corvette\u2019s weapons have insufficient armor penetration to seriously threat- en such a major warship.",
+        "items": [
+            {
+                "type": "shipWeapon",
+                "name": "plasma beam"
+            },
+            {
+                "type": "shipWeapon",
+                "name": "plasma beam"
+            },
+            {
+                "type": "shipDefense",
+                "name": "hardened polyceramic overlay"
+            },
+            {
+                "type": "shipFitting",
+                "name": "spike drive-2 upgrade"
+            },
+            {
+                "type": "shipFitting",
+                "name": "cargo lighter"
+            },
+            {
+                "type": "shipFitting",
+                "name": "extended stores"
+            },
+            {
+                "type": "shipFitting",
+                "name": "boarding tubes"
+            },
+            {
+                "type": "shipFitting",
+                "name": "armory"
+            },
+            {
+                "type": "shipFitting",
+                "name": "ship's locker"
+            },
+            {
+                "type": "shipFitting",
+                "name": "fuel bunkers"
+            }
+        ]
+    },
+    "strike fighter": {
+        "shipHullType": "strikeFighter",
+        "description": "The standard drill-capable fighter craft of most TL4 polities, this model retains a spike drive instead of replacing it with a cheaper systems drive. While the lone pilot would have to be desperate and heavily drugged to make an entire spike drill solo, it remains an option when no larger craft is available.\nThis particular model is equipped with a reaper battery for dealing with small, lightly-armored civilian ships. \u201cBomber\u201d-type fighters usually replace this with a fractal impact charge to threaten larger warships, while fighters built to dogfight their peers favor fitting a multifocal laser.",
+        "items": [
+            {
+                "type": "shipWeapon",
+                "name": "reaper battery"
+            },
+            {
+                "type": "shipFitting",
+                "name": "atmospheric configuration"
+            }
+        ]
+    },
+    "torpedo fighter": {
+        "shipHullType": "strikeFighter",
+        "description": "The standard drill-capable fighter craft of most TL4 polities, this model retains a spike drive instead of replacing it with a cheaper systems drive. While the lone pilot would have to be desperate and heavily drugged to make an entire spike drill solo, it remains an option when no larger craft is available.\nThis particular model is equipped with a reaper battery for dealing with small, lightly-armored civilian ships. \u201cBomber\u201d-type fighters usually replace this with a fractal impact charge to threaten larger warships, while fighters built to dogfight their peers favor fitting a multifocal laser.",
+        "items": [
+            {
+                "type": "shipWeapon",
+                "name": "reaper battery"
+            },
+            {
+                "type": "shipFitting",
+                "name": "Atmospheric Configuration"
+            }
+        ]
+    },
+    "dog fighter": {
+        "shipHullType": "strikeFighter",
+        "description": "The standard drill-capable fighter craft of most TL4 polities, this model retains a spike drive instead of replacing it with a cheaper systems drive. While the lone pilot would have to be desperate and heavily drugged to make an entire spike drill solo, it remains an option when no larger craft is available.\nThis particular model is equipped with a reaper battery for dealing with small, lightly-armored civilian ships. \u201cBomber\u201d-type fighters usually replace this with a fractal impact charge to threaten larger warships, while fighters built to dogfight their peers favor fitting a multifocal laser.",
+        "items": [
+            {
+                "type": "shipWeapon",
+                "name": "multifocal laser"
+            },
+            {
+                "type": "shipFitting",
+                "name": "Atmospheric Configuration"
+            }
+        ]
+    },
+    "battleship": {
+        "shipHullType": "battleship",
+        "description": "Built off the biggest hull class that TL4 polities can create, only the richest modern worlds can afford to fabricate these massive engines of war. Even those worlds with adequate resources to do so often balk at expending such a tremendous amount of money on a single ship. Those that do build battleships do so for a reason. The tremendous weight of fire these ships put out can pop a cruiser in a single firing pass, and its reinforced hull plating shrugs off all but the heaviest armor-piercing blows. Where cruisers often require hunter-killer frigates to take them out, battleships commonly require hunter-killer cruisers to disable them.  The main weakness of a battleship is the fact that it is only a single ship\u2026 a single, extremely expensive ship. It can only attack or defend a single location at a time, and an enemy that has the time and resources to build specialized anti-capital ships with AP weaponry and expendable crews can bring the battleship down for far less money than it cost to build it.",
+        "items": [
+            {
+                "type": "shipWeapon",
+                "name": "vortex tunnel inductor"
+            },
+            {
+                "type": "shipWeapon",
+                "name": "lightning charge mantle"
+            },
+            {
+                "type": "shipWeapon",
+                "name": "multifocal laser"
+            },
+            {
+                "type": "shipWeapon",
+                "name": "multifocal laser"
+            },
+            {
+                "type": "shipWeapon",
+                "name": "gravcannon"
+            },
+            {
+                "type": "shipDefense",
+                "name": "hardened polyceramic overlay"
+            },
+            {
+                "type": "shipDefense",
+                "name": "ablative hull compartments"
+            },
+            {
+                "type": "shipFitting",
+                "name": "spike drive-3 upgrade"
+            },
+            {
+                "type": "shipFitting",
+                "name": "drop pod"
+            },
+            {
+                "type": "shipFitting",
+                "name": "armory"
+            },
+            {
+                "type": "shipFitting",
+                "name": "ship's locker"
+            },
+            {
+                "type": "shipFitting",
+                "name": "boarding tubes"
+            },
+            {
+                "type": "shipFitting",
+                "name": "fuel scoops"
+            },
+            {
+                "type": "shipFitting",
+                "name": "advanced nav computer"
+            },
+            {
+                "type": "shipFitting",
+                "name": "ship bay (fighter)"
+            }
+        ]
+    },
+    "shuttle": {
+        "shipHullType": "shuttle",
+        "description": "This craft is a conventional civilian shuttle, albeit one with a spike drive sufficient to get it to a neighboring system and enough passenger space to make it a minimally- acceptable transport for brave VIPs and light cargo. If used as an inter-system transport, however, at least three crew will be needed to safely navigate a drill. While cheap and flexible, the shuttle is entirely unarmed and acutely vulnerable to piracy or hostile warships. In such cases the pilot\u2019s only recourse is to surrender or hope the small craft\u2019s nimble maneuver drives can keep it away from the attacker long enough to get to safety.",
+        "items": [
+            {
+                "type": "shipFitting",
+                "name": "atmospheric configuration"
+            },
+            {
+                "type": "shipFitting",
+                "name": "extended life support"
+            }
+        ]
+    },
+    "luxury shuttle": {
+        "shipHullType": "shuttle",
+        "description": "This craft is a luxurious civilian shuttle, albeit one with a spike drive sufficient to get it to a neighboring system and enough passenger space to make it a minimally- acceptable transport for brave VIPs and light cargo. If used as an inter-system transport, however, at least three crew will be needed to safely navigate a drill. While cheap and flexible, the shuttle is entirely unarmed and acutely vulnerable to piracy or hostile warships. In such cases the pilot\u2019s only recourse is to surrender or hope the small craft\u2019s nimble maneuver drives can keep it away from the attacker long enough to get to safety.",
+        "items": [
+            {
+                "type": "shipFitting",
+                "name": "atmospheric configuration"
+            },
+            {
+                "type": "shipFitting",
+                "name": "extended life support"
+            },
+            {
+                "type": "shipFitting",
+                "name": "fuel bunkers"
+            },
+            {
+                "type": "shipFitting",
+                "name": "luxury cabins"
+            }
+        ]
+    },
+    "fleet cruiser": {
+        "shipHullType": "fleetCruiser",
+        "description": "The archetypal warship of post-Silence humanity, the fleet cruiser is a ship-eating monster compared to its smaller brethren in the navy. Only prosperous polities can build such powerful ships, and even they sometimes find it more practical to have a flexible fleet of small craft rather than a few heavily-armed cruisers. \nThe chief advantage of a fleet cruiser is in its heavily- armored hull. Only special hunter-killer ships fitted with armor-piercing weaponry have any real chance of penetrating the cruiser\u2019s thick skin. Those weapons are almost always more bulky and power-hungry than their peer weapons, so enemy polities must usually choose between building small ships that are very effective at defeating other small ships, or building hunter-killers that can threaten cruisers but are at a disadvantage against their less specialized brethren.",
+        "items": [
+            {
+                "type": "shipWeapon",
+                "name": "gravcannon"
+            },
+            {
+                "type": "shipWeapon",
+                "name": "smart cloud"
+            },
+            {
+                "type": "shipWeapon",
+                "name": "multifocal laser"
+            },
+            {
+                "type": "shipWeapon",
+                "name": "multifocal laser"
+            },
+            {
+                "type": "shipDefense",
+                "name": "hardened polyceramic overlay"
+            },
+            {
+                "type": "shipFitting",
+                "name": "spike drive-3 upgrade"
+            },
+            {
+                "type": "shipFitting",
+                "name": "drop pod"
+            },
+            {
+                "type": "shipFitting",
+                "name": "armory"
+            },
+            {
+                "type": "shipFitting",
+                "name": "ship's locker"
+            },
+            {
+                "type": "shipFitting",
+                "name": "boarding tubes"
+            },
+            {
+                "type": "shipFitting",
+                "name": "fuel scoops"
+            },
+            {
+                "type": "shipFitting",
+                "name": "advanced nav computer"
+            }
+        ]
+    },
+    "patrol boat": {
+        "shipHullType": "patrolBoat",
+        "description": "Patrol boats are often the largest ships fielded by poor or backward frontier worlds that lack the shipyard fa- cilities or available resources to build bigger military craft. Even so, the ability to field two patrol boats for the yearly maintenance cost of one corvette often ap- peals even to richer worlds that need more coverage than their available craft can provide. \nPatrol boats are the smallest independent warships fielded by most navies, as fighters are not normally considered capable of extended independent opera- tion. They have considerable spike drive reach and are faster in-system than most of their potential targets. While their single mounted gun is vulnerable to being disabled by expert enemy gunners, the relatively thick armor of the ship and skilled damage control crew can mitigate that danger. A few patrol boats replace their survey sensor array with a sandthrower to up-gun the ship, but most prefer the additional edge in scanning potential smugglers.",
+        "items": [
+            {
+                "type": "shipWeapon",
+                "name": "plasma beam"
+            },
+            {
+                "type": "shipFitting",
+                "name": "spike drive-2 upgrade"
+            },
+            {
+                "type": "shipFitting",
+                "name": "atmospheric configuration"
+            },
+            {
+                "type": "shipFitting",
+                "name": "extended stores"
+            },
+            {
+                "type": "shipFitting",
+                "name": "boarding tubes"
+            },
+            {
+                "type": "shipFitting",
+                "name": "armory"
+            },
+            {
+                "type": "shipFitting",
+                "name": "ship's locker"
+            },
+            {
+                "type": "shipFitting",
+                "name": "survey sensors"
+            }
+        ]
+    },
+    "freighter miner": {
+        "shipHullType": "bulkFreighter",
+        "description": "Found only in rich, peaceful regions of space, the bulk freighter is capable of hauling thousands of tons of goods between star systems. While it\u2019s equipped with enough of a sting to discourage small-ship piracy, it\u2019s woefully inadequate to handle a warship, or even an up-gunned free merchant. \nSome adventurers do find use for a bulk freighter hull, however, trading off some of its massive cargo space for more fittings and using customized modifications to allow the ship to support heavier power demands. While the end result is no match for a true cruiser, the sheer mass of the freighter can make it a dangerous opponent in the right hands.",
+        "items": [
+            {
+                "type": "shipFitting",
+                "name": "spike drive-2 upgrade"
+            },
+            {
+                "type": "shipFitting",
+                "name": "cargo lighter"
+            },
+            {
+                "type": "shipFitting",
+                "name": "fuel bunkers"
+            },
+            {
+                "type": "shipFitting",
+                "name": "ship's locker"
+            },
+            {
+                "type": "shipFitting",
+                "name": "mobile extractor"
+            },
+            {
+                "type": "shipFitting",
+                "name": "mobile extractor"
+            },
+            {
+                "type": "shipFitting",
+                "name": "mobile extractor"
+            },
+            {
+                "type": "shipFitting",
+                "name": "mobile extractor"
+            },
+            {
+                "type": "shipFitting",
+                "name": "mobile extractor"
+            },
+            {
+                "type": "shipFitting",
+                "name": "mobile extractor"
+            }
+        ]
+    },
+    "bulk freighter": {
+        "shipHullType": "bulkFreighter",
+        "description": "Found only in rich, peaceful regions of space, the bulk freighter is capable of hauling thousands of tons of goods between star systems. While it\u2019s equipped with enough of a sting to discourage small-ship piracy, it\u2019s woefully inadequate to handle a warship, or even an up-gunned free merchant. \nSome adventurers do find use for a bulk freighter hull, however, trading off some of its massive cargo space for more fittings and using customized modifications to allow the ship to support heavier power demands. While the end result is no match for a true cruiser, the sheer mass of the freighter can make it a dangerous opponent in the right hands.",
+        "items": [
+            {
+                "type": "shipWeapon",
+                "name": "plasma beam"
+            },
+            {
+                "type": "shipFitting",
+                "name": "spike drive-2 upgrade"
+            },
+            {
+                "type": "shipFitting",
+                "name": "cargo lighter"
+            },
+            {
+                "type": "shipFitting",
+                "name": "fuel bunkers"
+            },
+            {
+                "type": "shipFitting",
+                "name": "ship's locker"
+            }
+        ]
+    },
+    "heavy frigate": {
+        "shipHullType": "heavyFrigate",
+        "description": "Sometimes confusingly called a \u201clight cruiser\u201d, a heavyfrigate pushes the engineering parameters of a frigate hull to the maximum available to most TL4 worlds. Equipped with a torpedo launcher capable of threatening even cruiser-class enemies, the heavy frigate can intimidate any ship of its weight class. Its heavy crew complement and military drop pod fitting allow it to quickly dispatch well-armed marines to hot spots throughout a solar system.  However, despite the large weapon loadout, the heavy frigate remains a frigate. Its armor is significantly inferior to that of a true cruiser-class warship, and most frigates built for same-class engagements can be a meaningful threat to it. It comes into its own as a bludgeon against the other small warships likely to be fielded by a peer star-faring polity.",
+        "items": [
+            {
+                "type": "shipWeapon",
+                "name": "plasma beam"
+            },
+            {
+                "type": "shipWeapon",
+                "name": "plasma beam"
+            },
+            {
+                "type": "shipDefense",
+                "name": "hardened polyceramic overlay"
+            },
+            {
+                "type": "shipFitting",
+                "name": "spike drive-2 upgrade"
+            },
+            {
+                "type": "shipFitting",
+                "name": "drop pod"
+            },
+            {
+                "type": "shipFitting",
+                "name": "fuel scoops"
+            },
+            {
+                "type": "shipFitting",
+                "name": "fuel bunkers"
+            },
+            {
+                "type": "shipFitting",
+                "name": "armory"
+            },
+            {
+                "type": "shipFitting",
+                "name": "ship's locker"
+            },
+            {
+                "type": "shipFitting",
+                "name": "boarding tubes"
+            }
+        ]
+    },
+    "free merchant": {
+        "shipHullType": "freeMerchant",
+        "description": "A mainstay of freebooting merchant-adventurers throughout human space, the standard free merchant is an extremely versatile craft, capable of hauling sig- nificant amounts of cargo to neighboring systems while requiring very few hands to operate it. Only one crew member is needed for in-system flight, though spike drills require three for normal margins of safety.\nThe standard free merchant is not a warship, but its sandthrower is enough to discourage pirate shuttles and the other small or fragile craft that wreckers or primitive worlds tend to favor. The multifocal laser is ideal for a highly-skilled gunner who can snipe out important systems on an attacking vessel, but the ship lacks the armor and durability to stand up to a true war- ship. Of course, with a sufficiently expert crew, even a corvette might be threatened by the well-aimed guns of a small craft like this.",
+        "items": [
+            {
+                "type": "shipWeapon",
+                "name": "multifocal laser"
+            },
+            {
+                "type": "shipWeapon",
+                "name": "sandthrower"
+            },
+            {
+                "type": "shipFitting",
+                "name": "atmospheric configuration"
+            },
+            {
+                "type": "shipFitting",
+                "name": "fuel scoops"
+            },
+            {
+                "type": "shipFitting",
+                "name": "fuel bunkers"
+            }
+        ]
+    },
+    "poor miner": {
+        "shipHullType": "freeMerchant",
+        "description": "A poor, unarmed, mining vessel",
+        "items": [
+            {
+                "type": "shipFitting",
+                "name": "mobile extractor"
+            },
+            {
+                "type": "shipFitting",
+                "name": "mobile extractor"
+            },
+            {
+                "type": "shipFitting",
+                "name": "mobile extractor"
+            },
+            {
+                "type": "shipFitting",
+                "name": "mobile extractor"
+            }
+        ]
+    },
+    "system miner": {
+        "shipHullType": "freeMerchant",
+        "description": "Anunarmed, local system mining vessel",
+        "items": [
+            {
+                "type": "shipFitting",
+                "name": "mobile extractor"
+            },
+            {
+                "type": "shipFitting",
+                "name": "system drive"
+            },
+            {
+                "type": "shipFitting",
+                "name": "mobile extractor"
+            },
+            {
+                "type": "shipFitting",
+                "name": "mobile extractor"
+            },
+            {
+                "type": "shipFitting",
+                "name": "mobile extractor"
+            },
+            {
+                "type": "shipFitting",
+                "name": "mobile extractor"
+            },
+            {
+                "type": "shipFitting",
+                "name": "mobile extractor"
+            }
+        ]
+    },
+    "carrier":{
+        "shipHullType": "Carrier",
+        "description":"",
+        "items":[
+            {
+                "type":"shipWeapon",
+                "name":"gravcannon"
+            },
+            {
+                "type":"shipDefense",
+                "name":"hardened polyceramic overlay"
+            },
+            {
+                "type":"shipDefense",
+                "name":"ablative hull compartments"
+            },
+            {
+                "type":"shipFitting",
+                "name":"spike drive-3 upgrade"
+            },
+            {
+                "type":"shipFitting",
+                "name":"drop pod"
+            },
+            {
+                "type":"shipFitting",
+                "name":"armory"
+            },
+            {
+                "type":"shipFitting",
+                "name":"ship's locker"
+            },
+            {
+                "type":"shipFitting",
+                "name":"workshop"
+            },
+            {
+                "type":"shipFitting",
+                "name":"fuel scoops"
+            },
+            {
+                "type":"shipFitting",
+                "name":"advanced nav computer"
+            },
+            {
+                "type":"shipFitting",
+                "name":"lifeboats"
+            },
+            {
+                "type":"shipFitting",
+                "name":"fuel bunkers"
+            },
+            {
+                "type":"shipFitting",
+                "name":"ship bay (fighter)"
+            },
+            {
+                "type":"shipFitting",
+                "name":"ship bay (fighter)"
+            },
+            {
+                "type":"shipFitting",
+                "name":"ship bay (fighter)"
+            },
+            {
+                "type":"shipFitting",
+                "name":"ship bay (fighter)"
+            },
+            {
+                "type":"shipFitting",
+                "name":"ship bay (fighter)"
+            },
+            {
+                "type":"shipFitting",
+                "name":"ship bay (fighter)"
+            },
+            {
+                "type":"shipFitting",
+                "name":"ship bay (fighter)"
+            },
+            {
+                "type":"shipFitting",
+                "name":"ship bay (fighter)"
+            },
+            {
+                "type":"shipFitting",
+                "name":"ship bay (fighter)"
+            },
+            {
+                "type":"shipFitting",
+                "name":"ship bay (fighter)"
+            },
+            {
+                "type":"shipFitting",
+                "name":"ship bay (fighter)"
+            },
+            {
+                "type":"shipFitting",
+                "name":"ship bay (fighter)"
+            },
+            {
+                "type":"shipFitting",
+                "name":"ship bay (fighter)"
+            },
+            {
+                "type":"shipFitting",
+                "name":"ship bay (fighter)"
+            },
+            {
+                "type":"shipFitting",
+                "name":"ship bay (fighter)"
+            },
+            {
+                "type":"shipFitting",
+                "name":"ship bay (fighter)"
+            },
+            {
+                "type":"shipFitting",
+                "name":"ship bay (fighter)"
+            },
+            {
+                "type":"shipFitting",
+                "name":"ship bay (fighter)"
+            },
+            {
+                "type":"shipFitting",
+                "name":"ship bay (fighter)"
+            },
+            {
+                "type":"shipFitting",
+                "name":"ship bay (fighter)"
+            },
+            {
+                "type":"shipFitting",
+                "name":"ship bay (frigate)"
+            },
+            {
+                "type":"shipFitting",
+                "name":"ship bay (frigate)"
+            },
+            {
+                "type":"shipFitting",
+                "name":"ship bay (frigate)"
+            },
+            {
+                "type":"shipFitting",
+                "name":"ship bay (frigate)"
+            },
+            {
+                "type":"shipFitting",
+                "name":"ship bay (frigate)"
+            }
+        
+        ]
+    }
+}
