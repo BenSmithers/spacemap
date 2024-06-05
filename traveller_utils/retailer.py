@@ -94,8 +94,13 @@ class Retailer:
         self._generated = True
         all_goods = home.list_available_goods()
 
+        scaling=  4**(home.title.value -2)
+
+
         for good in all_goods:
-            number = good.sample_amount()
+            number = int(good.sample_amount()*scaling)
+            if number<1:
+                continue
             self._sale_prices[good] = {
                 "amount":number,
                 "price":home.get_purchase_price(good, modifier)
@@ -105,7 +110,9 @@ class Retailer:
         quant = roll1d()
         for i in range(quant):
             good = ALL_GOODS[choice(list(ALL_GOODS.keys()))]
-            number = good.sample_amount()
+            number = int(good.sample_amount()*scaling)
+            if number<1:
+                continue
             if good not in self._sale_prices:
                 self._sale_prices[good] = {
                     "amount":number,

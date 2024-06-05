@@ -18,6 +18,8 @@ class Faction:
         self._cunning = 1
         self._wealth = 1
 
+        self._xp = 0
+
         self._hit_points = self.max_hitpoints()
 
         self._farcreds = 1
@@ -31,9 +33,48 @@ class Faction:
 
         self._homeworld = homeworld
         self._homeworld_id = world_loc
-        self._bases_of_influence = [] # hexIDs 
+        self._bases_of_influence = {self._homeworld_id:[Base_Of_Influence(self, self._hit_points), self._homeworld]} # hexIDs 
 
-        self._assets[self._homeworld] = []
+        self._assets[self._homeworld_id] = []
+
+        self._moving = False
+        self._move_turns_remain = 0 
+
+        self._stat_keys = ["force_destroyed", "wealth_destroyed", "cunning_destroyed", 
+                           "planets_seized","new_bases","contested_bases", 
+                           "turns_without_action", "turns_without_attack", 
+                           "hp_damage_done", "factions_destroyed","stealthed_on_enemy_worlds", 
+                           "strongest_force_destroyed", "spent_on_bribes"]
+        self._stats = {}
+
+    def reset_stats(self):
+        self._stats={
+            key:0 for key in self._stat_keys
+        }
+
+    @property 
+    def stats(self):
+        return self._stats
+
+    def award_xp(self, xp):
+        self._xp = self._xp + xp
+    def spend_xp(self, xp):
+        if xp > self._xp:
+            raise ValueError("Cannot spend more xp than is present")
+        self._xp -= xp 
+
+    @property
+    def move_turns_remaining(self):
+        return self._move_turns_remain
+    def step_move(self):
+        self._move_turns_remain = self._move_turns_remain - 1
+    def start_move(self, distance):
+        self._moving = True 
+        self._move_turns_remain = distance 
+    @property
+    def moving(self):
+        return self._moving    
+    
 
     @property 
     def awareness(self):
@@ -46,15 +87,32 @@ class Faction:
     def homeworld_id(self)->HexID:
         return self._homeworld_id
 
-    def change_homeworld(self, world):
-        if world in self._bases_of_influence:
+    def change_homeworld(self, world:World, id:HexID):
+        if id in self._bases_of_influence:
+            
+            # swap the hp for the bases of influence 
+
+            # get the homeworld hp 
+            holder = self._bases_of_influence[self._homeworld_id][0].hp 
+            # set the homeworld to the base 
+            self._bases_of_influence[self._homeworld_id][0].set_hp(
+                self._bases_of_influence[id][0]
+            )
+            # and set the base (new homeworld) to the hoeworld hp 
+            self._bases_of_influence[id][0].set_hp(
+                holder 
+            )
             self._homeworld = world
+            self._homeworld_id = id
+
+        else:
+            raise ValueError("Cannot change homeworld to one where the faction lacks a base of influence")
 
 
-    def expand_influence(self, location:World, cost:int):
+    def expand_influence(self, location:World,location_id:HexID, cost:int):
         new_asset = Base_Of_Influence(self, cost)
-        if location not in self._bases_of_influence:
-            self._bases_of_influence.append(new_asset)
+        if location_id not in self._bases_of_influence:
+            self._bases_of_influence[location_id] = [new_asset, location]
 
 
             # update assest thingy 
@@ -62,6 +120,9 @@ class Faction:
     def buy_asset(self, which:'Asset'):
         which.set_location(self._homeworld)
         self._assets[self._homeworld].append(which)
+        self._farcreds = self._farcreds - which.cost
+        if self._farcreds<0:
+            raise ValueError("Bought asset moving into negative farcreds! Shouldn't be allowed")
 
     @property
     def assets(self)->'dict[HexID]':

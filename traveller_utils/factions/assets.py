@@ -98,6 +98,7 @@ class Cyberninjas(Asset):
     hp=4
     cost=6
     tl=4
+    stealth=True
     type=AssetType.SpecialForces
     theme=AssetTheme.cunning
     defense_theme=AssetTheme.cunning
@@ -105,6 +106,7 @@ class Cyberninjas(Asset):
         super().__init__()
         self._damage = Roll("2d6")
         self._hasattack = True
+        
 class Covert_Shipping(Asset):
     rank=3
     hp=4

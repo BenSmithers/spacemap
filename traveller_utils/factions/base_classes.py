@@ -40,26 +40,23 @@ class Roll:
         return total + self.modifier
 
 
-class Goal:
-    def __init__(self):
-        self._difficulty = 1
-    
-    @property
-    def difficulty(self)->int:
-        return self._difficulty
-
-    def check_done(self, action):
-        raise NotImplementedError()
-
 class Move:
+    _free = False 
+
     def __init__(self, **kwargs):
         self._success = False
         self._actiontype = None
+
+    def __call__(self):
+        raise NotImplementedError()
 
     @property
     def success(self)->bool:
         return self._success
 
+    @property 
+    def free(self)->bool:
+        return self._free
 
 class Asset:
     counter = 0
@@ -88,6 +85,15 @@ class Asset:
 
         self._id = Asset.counter
         Asset.counter += 1
+
+    @property 
+    def hp(self):
+        return self._hp
+    def set_hp(self, new_hp):
+        self._hp = new_hp
+    def set_hp_and_max(self, new_hp):
+        self._hp = new_hp
+        self.max_hp = new_hp
 
     def take_damage(self, damage:int)->bool:
         """
@@ -145,5 +151,6 @@ class Base_Of_Influence(Asset):
     def __init__(self, parent, cost):
         super().__init__(parent)
         self._max_hp = cost
+        self._hp = cost 
         self._cost = cost
         self._type = AssetType.Special

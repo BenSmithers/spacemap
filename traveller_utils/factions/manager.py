@@ -4,23 +4,45 @@ from traveller_utils.factions.base_classes import Asset
 from traveller_utils.factions.enums import asset_appeal_modifier, attack_mod
 
 from traveller_utils.factions.moves import * 
+from traveller_utils.factions.goals import *
+
 
 class FactionManager:
     def __init__(self):
         # int -> faction
         self._factions = {}
+        self._faction_goals = {}
 
+    def get_goal(self, fact_id)->FactionGoal:
+        if fact_id in self._faction_goals:
+            return self._faction_goals[fact_id]
+        else:
+            if fact_id not in self._factions:
+                raise KeyError("No faction '{}' exists!".format(fact_id))
+            raise KeyError("No goal entry for faction {}".format(fact_id))
 
     def get_available_moves(self, faction:Faction):
-        # list all of the things we can buy 
+        
         all_moves_available = [] 
+        if faction.moving:
+            return [1, ContinueChangeHomeworld(faction),]
+        
+        # can change homeworld... for reasons unknown 
+        if len(faction._bases_of_influence)>0:
+            
+            for hexID in faction._bases_of_influence.keys():
+                all_moves_available.append([ 
+                    1, ChangeHomeworld(hexID, faction._bases_of_influence[hexID][1], self) 
+                ])
+
+        # list all of the things we can buy 
         all_assets = all_subclasses(Asset)
         for entry in all_assets:
             if entry.cost < faction.farcreds:
                 appeal = entry.cost*asset_appeal_modifier(entry.theme, faction.tag)
 
                 all_moves_available.append([
-                    appeal,PurchaseAsset(faction.homeworld_id, entry)
+                    appeal,PurchaseAsset(faction.homeworld_id, entry, faction)
                 ])
         
         # check which attacks are available 
@@ -63,6 +85,7 @@ class FactionManager:
         # refit assets 
 
         # Use asset abilities 
+        return all_moves_available
 
     def add_faction(self, faction:Faction):
         fid = 0
