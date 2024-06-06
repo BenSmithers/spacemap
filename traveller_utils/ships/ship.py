@@ -1,10 +1,10 @@
-from traveller_utils.coordinates import HexID
+from traveller_utils.core.coordinates import HexID
 from traveller_utils.person import Person
 from traveller_utils.actions import MapAction, NullAction, EndRecurring
 from traveller_utils.name_gen import sample_adjective, sample_noun
 from traveller_utils.enums import get_entry_by_name, TradeGood
 from traveller_utils.enums import ShipClass, ShipCategory
-from traveller_utils.ship_items import Fitting, ShipDefense, ShipWeapon, hull_data, sample_ships
+from traveller_utils.ships import Fitting, ShipDefense, ShipWeapon, hull_data, sample_ships
 
 
 from PyQt5.QtWidgets import QGraphicsScene
@@ -53,6 +53,8 @@ class ShipSWN:
         self._base_power = data_entry["power"]
         self._base_mass = data_entry["mass"]
         self._max_hardpoints = data_entry["hardpoints"]
+        self._template = ""
+
         self._description = ""
         self._system_drive = False 
 
@@ -61,6 +63,46 @@ class ShipSWN:
         self._weapons = []
 
         self._cargo = {}
+
+    @property
+    def template(self):
+        return self._template
+
+    def export_template(self):
+        items = []
+        for fit in self.fittings():
+            items.append({
+                "type":"shipFitting",
+                "name":fit.name
+            })
+        for weap in self.weapons():
+            items.append({
+                "type":"shipWeapon",
+                "name":weap.name
+            })
+        for defenses in self.defenses():
+            items.append({
+                "type":"shipDefense",
+                "name":defenses.name
+            }) 
+        
+        return json.dumps({
+            "description":self._description,
+            "shipHullType":self._shiphull,
+            "items":items 
+        })
+
+    @property
+    def min_crew(self):
+        return self._crew_min
+    @property
+    def max_crew(self):
+        double = 1.0 
+        for fit in self.fittings():
+            if fit.name.lower()=="extended life support":
+                double += 1
+
+        return self._crew_max*double 
 
     def cargo(self):
         return self._cargo
@@ -177,6 +219,7 @@ class ShipSWN:
         hulltype = template_dict["shipHullType"]
         new_ship = cls(hulltype)
         new_ship._description = template_dict["description"]
+        new_ship._template = template_name
         for entry in template_dict["items"]:
             if entry["type"]=="shipFitting":
                 item=Fitting(entry["name"], new_ship.shipclass)

@@ -7,11 +7,11 @@ import os
 
 from traveller_utils.tables import *
 from traveller_utils.enums import WorldTag, WorldCategory, Contraband, Bases, Title, LandTitle
-from traveller_utils.utils import roll, d100, roll1d
+from traveller_utils.core.utils import roll, d100, roll1d
 from traveller_utils.trade_goods import ALL_GOODS, TradeGoods
 from traveller_utils.name_gen import create_name
 from traveller_utils.person import Person
-from traveller_utils.coordinates import HexID
+from traveller_utils.core.coordinates import HexID
 from math import log10 
 
 WorldTag._value2member_map_.keys()

@@ -5,7 +5,7 @@ import random
 import numpy as np
 
 from traveller_utils.trade_goods import TradeGoods
-from traveller_utils.coordinates import HexID
+from traveller_utils.core.coordinates import HexID
 
 names_fn = os.path.join(os.path.dirname(__file__), "..","resources", "names.json")
 _obj = open(names_fn,'rt')

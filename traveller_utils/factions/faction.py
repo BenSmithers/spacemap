@@ -1,10 +1,10 @@
 from traveller_utils.factions.enums import AssetTheme, FactionTag, asset_appeal_modifier
-from traveller_utils.coordinates import HexID
+from traveller_utils.core.coordinates import HexID
 from traveller_utils.world import World
 
 from traveller_utils.factions.base_classes import Base_Of_Influence, Asset
 from random import choice
-from traveller_utils.utils import all_subclasses
+from traveller_utils.core.utils import all_subclasses
 
 # hit point values of the attributes 
 hpv = [0,1,2,4,6,9,12,16,20]

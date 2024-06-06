@@ -1,6 +1,6 @@
 from random import randint
 from traveller_utils.factions.enums import AssetTheme, AssetType
-from traveller_utils.coordinates import HexID
+from traveller_utils.core.coordinates import HexID
 from traveller_utils.world import World
 
 

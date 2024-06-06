@@ -3,7 +3,7 @@ from PyQt5.QtGui import QPolygonF, QColor
 from math import sqrt,sin,cos
 from PyQt5.QtWidgets import QGraphicsItem
 
-from traveller_utils.coordinates import HexID, hex_to_screen, DRAWSIZE
+from traveller_utils.core.coordinates import HexID, hex_to_screen, DRAWSIZE
 
 import numpy as np
 from numpy.random import randint

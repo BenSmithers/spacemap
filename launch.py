@@ -11,11 +11,11 @@ from traveller_utils.world import World, Government, star_hex
 from traveller_utils.person import Person
 from traveller_utils.retailer import Retailer
 from traveller_utils.click_interface import Clicker
-from traveller_utils.coordinates import HexID, DRAWSIZE
-from traveller_utils import utils 
+from traveller_utils.core.coordinates import HexID, DRAWSIZE
+from traveller_utils.core import utils 
 from traveller_utils.tables import fares
 from traveller_utils.clock import MultiHexCalendar, Time, Clock
-from traveller_utils.ship import AIShip, Ship
+from traveller_utils.ships.ship import AIShip, Ship
 
 from qtdesigner.passengers import Ui_Form as passenger_widget_gui
 from qtdesigner.trade_goods import Ui_Form as trade_goods_widget_gui
@@ -181,11 +181,26 @@ class ManyShipDialog(QDialog):
         self._ships = []
         self._routes = []
 
+        self._cummulative_text = ""
+        self._last_text = ""
+
     def add_ship(self, ship:AIShip, route_names):
         self._ships.append(ship)
         self._routes.append(route_names)
 
         self.ui.comboBox.addItem(ship.name)
+        
+        if self._cummulative_text == "":
+            self._cummulative_text = "There is {}".format(ship.description.lower())
+            self.ui.textBox.setText(self._cummulative_text)
+        else:
+            if self._last_text=="":
+                self._last_text = ship.description.lower() 
+            else:
+                self._cummulative_text += ", {}".format(self._last_text)
+                self._last_text = ship.description.lower()
+
+            self.ui.textBox.setText(self._cummulative_text + " and " + self._last_text)
         
 
     def clear(self):
@@ -198,6 +213,9 @@ class ManyShipDialog(QDialog):
         self.ui.route.setText("")
 
         self.ui.cargo.setText("")    
+        self.ui.textBox.setText("")
+        self._cummulative_text = ""
+        self._last_text = ""
         self._ships = []
         self._routes = []
 

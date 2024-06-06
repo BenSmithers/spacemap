@@ -1,7 +1,7 @@
 from enum import Enum 
 from collections import deque
 from traveller_utils.clock import Time, Clock
-from traveller_utils.utils import all_subclasses
+from traveller_utils.core.utils import all_subclasses
 
 from PyQt5.QtWidgets import QGraphicsScene
 

@@ -1,5 +1,5 @@
 from traveller_utils.factions.faction import Faction 
-from traveller_utils.utils import all_subclasses
+from traveller_utils.core.utils import all_subclasses
 from traveller_utils.factions.base_classes import Asset
 from traveller_utils.factions.enums import asset_appeal_modifier, attack_mod
 

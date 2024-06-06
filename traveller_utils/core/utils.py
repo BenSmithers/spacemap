@@ -16,7 +16,7 @@ from glob import glob
 import os
 
 from scipy.interpolate import interp2d
-from traveller_utils.coordinates import DRAWSIZE
+from traveller_utils.core.coordinates import DRAWSIZE
 
  
 def all_subclasses(cls, get_names = False):

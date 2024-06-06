@@ -5,7 +5,7 @@ from traveller_utils.world import World
 
 from random import choice
 from random import randint
-from traveller_utils.utils import roll1d
+from traveller_utils.core.utils import roll1d
 
 prefixes = [
     "Dr ",

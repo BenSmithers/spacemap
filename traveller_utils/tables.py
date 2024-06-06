@@ -1,7 +1,7 @@
 import json
 import os
 
-from traveller_utils.utils import Table
+from traveller_utils.core.utils import Table
 from traveller_utils.enums import Title
 
 fares={

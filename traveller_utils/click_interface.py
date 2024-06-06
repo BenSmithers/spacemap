@@ -6,11 +6,11 @@ from traveller_utils.actions import ActionManager, unpack_event, MonthlyEvent
 
 from traveller_utils.enums import Title, Bases, WorldCategory
 from traveller_utils.clock import minutes_in_day
-from traveller_utils.coordinates import HexID, DRAWSIZE, screen_to_hex, hex_to_screen
-from traveller_utils.ship import Ship, AIShip, AIShipMoveEvent
-from traveller_utils.core import Hex, Region, Route
+from traveller_utils.core.coordinates import HexID, DRAWSIZE, screen_to_hex, hex_to_screen
+from traveller_utils.ships.ship import Ship, AIShip, AIShipMoveEvent
+from traveller_utils.core.core import Hex, Region, Route
 from traveller_utils.world import World
-from traveller_utils import utils
+from traveller_utils.core import utils
 from collections import deque
 import numpy as np
 import os 
