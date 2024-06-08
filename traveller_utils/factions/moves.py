@@ -2,7 +2,7 @@ from traveller_utils.factions.base_classes import Move, Asset, Roll
 from traveller_utils.factions.enums import AssetTheme
 from traveller_utils.core.coordinates import HexID
 from traveller_utils.factions.faction import Faction
-from traveller_utils.world import World
+from traveller_utils.places.world import World
 
 class ContinueChangeHomeworld(Move):
     def __init__(self, faction:Faction):

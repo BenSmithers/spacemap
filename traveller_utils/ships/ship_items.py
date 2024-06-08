@@ -6,28 +6,28 @@ import random
 from traveller_utils.enums import ShipClass, ShipCategory
 
 
-hull_file = os.path.join(os.path.dirname(__file__), "..", "resources","ship", "ship-hulls.json")
+hull_file = os.path.join(os.path.dirname(__file__),"..", "..", "resources","ship", "ship-hulls.json")
 _obj = open(hull_file, 'rt')
 hull_data = json.load(_obj)
 _obj.close()
 
-hull_file = os.path.join(os.path.dirname(__file__), "..", "resources","ship", "ship-fitting.json")
+hull_file = os.path.join(os.path.dirname(__file__),"..", "..", "resources","ship", "ship-fitting.json")
 _obj = open(hull_file, 'rt')
 fitting_data = json.load(_obj)
 _obj.close()
 
 
-hull_file = os.path.join(os.path.dirname(__file__), "..", "resources","ship", "ship-weapon.json")
+hull_file = os.path.join(os.path.dirname(__file__),"..", "..", "resources","ship", "ship-weapon.json")
 _obj = open(hull_file, 'rt')
 weapon_data = json.load(_obj)
 _obj.close()
 
-hull_file = os.path.join(os.path.dirname(__file__), "..", "resources","ship", "ship-defense.json")
+hull_file = os.path.join(os.path.dirname(__file__),"..", "..", "resources","ship", "ship-defense.json")
 _obj = open(hull_file, 'rt')
 defense_data = json.load(_obj)
 _obj.close()
 
-hull_file = os.path.join(os.path.dirname(__file__), "..", "resources","ship", "ships.json")
+hull_file = os.path.join(os.path.dirname(__file__),"..", "..", "resources","ship", "ships.json")
 _obj = open(hull_file, 'rt')
 sample_ships = json.load(_obj)
 _obj.close()

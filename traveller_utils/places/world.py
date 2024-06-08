@@ -107,7 +107,7 @@ class Government:
         return out
 
 class World:
-    def __init__(self, generate =True, modifier = 0):
+    def __init__(self, generate =True, modifier = 0, other_world = None ):
         """
             Initialize a minimal world, generate full world if `generate`
         """
@@ -153,7 +153,7 @@ class World:
         self._title = Title.Lord
 
         if generate:
-            self.populate(modifier=modifier)
+            self.populate(modifier=modifier, other_world=other_world)
 
     @property
     def desireability(self):
@@ -290,9 +290,7 @@ class World:
         return fuel 
 
 
-    def populate(self,name="",rng=None,
-                atmosphere=-1, temperature=-1,biosphere=-1,
-                population=-1, tech_level=-1,*world_tag,modifier=0, **kwargs) -> None:
+    def populate(self,name="",*world_tag,modifier=0, other_world=None) -> None:
         
         
         if not isinstance(world_tag,(list,tuple)):
@@ -305,8 +303,6 @@ class World:
 
         self._fuel=False
     
-        if "seed" in kwargs.keys():
-            np.random.seed(kwargs["seed"])
 
         self._tags = []
 
@@ -322,9 +318,9 @@ class World:
         if len(world_tag)==0:
             self._tags=[ choice(list(WorldTag)) for i in range(2) ]
         
-        self._size = roll(rng, mod=-2)
+        self._size = roll(mod=-2)
 
-        self._atmosphere = roll(rng, -7+self._size) if atmosphere==-1 else atmosphere
+        self._atmosphere = roll(-7+self._size)
         if self._atmosphere<0:
             self._atmosphere =0
         self._pressure = -1 
@@ -333,14 +329,15 @@ class World:
             0,0, -2,-2,-1,-1, 0,0,1,1,2,6,6,2,-1,2,2
         ]
 
-        self._temperature = roll(rng, atmo_t_mods[self._atmosphere]) if temperature==-1 else temperature
-        self._biosphere = roll(rng) if biosphere==-1 else biosphere
-        self._population_raw = roll(rng, -2) if population==-1 else population
-        self._population_raw += modifier    
+        self._temperature = roll(atmo_t_mods[self._atmosphere]) 
+        self._biosphere = roll()
+        self._population_raw = roll(-2) + modifier
+        
+    
         if self._size<2 or self._atmosphere==0:
             self._hydro = 0
         else:
-            self._hydro = roll(rng) 
+            self._hydro = roll() 
             if self._atmosphere < 2 or (self._atmosphere>9 and self._atmosphere < 13):
                 self._hydro -= 4
 
@@ -350,6 +347,12 @@ class World:
                 self._hydro -= 2
 
             self._hydro= min([10, max([self._hydro, 0])])
+
+        if isinstance(other_world, World):
+            self._population_raw = min([self._population_raw-3, other_world._population_raw])
+            self._hydro = min([self._hydro, other_world._hydro])
+
+            
 
         if self._population_raw==0:
             self._population=0
@@ -362,13 +365,21 @@ class World:
         else:
             self._population = int(round(np.random.rand(),4)*(10**self._population_raw))
             
-            self._government_raw = roll(rng, -7+self._population_raw) + modifier
+            self._government_raw = roll(-7+self._population_raw) + modifier
             if self._population_raw>3 and self._government_raw==0:
                 self._government_raw = np.random.randint(1,3)
+            
+            if isinstance(other_world, World):
+                self._government_raw = min([self._government_raw-3, other_world._government_raw])
             self._government_raw = min([len(govs)-1, self._government_raw])
-            self._government = Government(govs[self._government_raw], False, self._government_raw)
-            self._law_level = roll(rng, -7+ self._government_raw)
 
+            self._government = Government(govs[self._government_raw], False, self._government_raw)
+            self._law_level = roll(-7+ self._government_raw)
+
+            if isinstance(other_world, World):
+                self._law_level = min([self._law_level, other_world._law_level])
+                
+            
             faction_mod = 0
             if self._government_raw==7:
                 faction_mod = 1
@@ -379,7 +390,7 @@ class World:
             else:
                 working_factions = []
                 for i in range(np.random.randint(1,4)+faction_mod):
-                    score = max([0, min([roll(rng, -7+self._population_raw), len(govs)-1])])
+                    score = max([0, min([roll(-7+self._population_raw), len(govs)-1])])
                     working_factions.append(Government(govs[score], True, score))
 
                 total_weight = sum([entry.raw_strength for entry in working_factions]) + 12
@@ -402,70 +413,19 @@ class World:
                         self._factions.append(fact)   
                 self._government.set_members(self._population - others)
 
-                
-
-        star_mod = 0
-        if self._population_raw>=8:
-            star_mod = 1
-        if self._population_raw>=10:
-            star_mod=2
-        if self._population_raw<=4:
-            star_mod=-1
-        if self._population_raw<=2:
-            star_mod=-2
-
-
-        self._starport_raw = roll(rng, star_mod) + modifier
-        if self._starport_raw>= len(starports_str):
-            self._starport_raw = len(starports_str)-1
         if self._population_raw==0:
             self._tech_level=0
         else:
             self._tech_level = np.random.randint(1,7)+ self._get_tl_mod()
             self._tech_level = min([15, self._tech_level])
         
-        self._tech_level = self._tech_level if tech_level==-1 else tech_level
+        self._tech_level = self._tech_level
         
         self._category =[WorldCategory.Common,]
 
         self.update_category()
 
-        self._has_gas_giant = roll() < 10
-
-        naval_roll = roll()
-        scout_roll = roll()
-        research_roll = roll()
-        tas_roll = roll()
-
-        tas_lim = 14
-        naval_lim = 14
-        scout_lim = 14
-        res_lim = 14
-        if starports_str[self._starport_raw]=="A":
-            tas_lim = 0
-            naval_lim = 7
-            scout_lim = 9
-            res_lim = 7
-        elif starports_str[self._starport_raw]=="B":
-            tas_lim = 0
-            naval_lim = 7
-            scout_lim = 7
-            res_lim = 9
-        elif starports_str[self._starport_raw]=="C":
-            tas_lim = 9
-            scout_lim = 7
-            res_lim = 9
-        elif starports_str[self._starport_raw]=="D":
-            scout_lim = 6
-
-        if scout_roll>scout_lim:
-            self._services.append(Bases.Scout)
-        if naval_roll>naval_lim:
-            self._services.append(Bases.Naval)
-        if tas_roll>tas_lim:
-            self._services.append(Bases.TAS)
-        if research_roll>res_lim:
-            self._services.append(Bases.Research)
+        
 
     @property
     def services(self):

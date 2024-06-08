@@ -1,7 +1,7 @@
 from traveller_utils.person import Person
 from traveller_utils.trade_goods import TradeGoods, ALL_GOODS
 
-from traveller_utils.world import World
+from traveller_utils.places.world import World
 
 from random import choice
 from random import randint

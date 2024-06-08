@@ -1,6 +1,6 @@
 from traveller_utils.factions.enums import AssetTheme, FactionTag, asset_appeal_modifier
 from traveller_utils.core.coordinates import HexID
-from traveller_utils.world import World
+from traveller_utils.places.world import World
 
 from traveller_utils.factions.base_classes import Base_Of_Influence, Asset
 from random import choice
