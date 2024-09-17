@@ -1,6 +1,7 @@
 {
     "Common_Electronics":{
         "price":20000,
+        "flex":0.7,
         "available":["all"],
         "tons":"10*2d",
         "supply":{
@@ -16,6 +17,7 @@
     },
     "Common_Industrial_Goods":{
         "price":10000,
+        "flex":0.5,
         "available":["all"],
         "tons":"10*2d",
         "supply":{
@@ -29,6 +31,7 @@
     },
     "Common_Machine_Parts":{
         "price":10000,
+        "flex":0.5,
         "available":["all"],
         "tons":"10*2d",
         "supply":{
@@ -41,6 +44,7 @@
         }}, 
     "Common_Manufactured_Goods":{
         "price":10000,
+        "flex":0.5,
         "available":["all"],
         "tons":"10*2d",
         "supply":{
@@ -53,6 +57,7 @@
         }},
     "Common_Raw_Materials":{
         "price":5000,
+        "flex":0.75,
         "available":["all"],
         "tons":"20*2d",
         "supply":{
@@ -65,6 +70,7 @@
         }},
     "Common_Consumables":{
         "price":500,
+        "flex":1.0,
         "available":["all"],
         "tons":"20*2d",
         "supply":{
@@ -80,6 +86,7 @@
             "high_pop":1
         }},
     "Common_Ore":{
+        "flex":0.9,
         "price":1000,
         "available":["all"],
         "tons":"20*2d",
@@ -92,6 +99,7 @@
             "non_industrial":1
         }},
     "Advanced_Electronics":{
+        "flex":0.3,
         "price":100000,
         "available":["industrial","high_tech"],
         "tons":"5*1d",
@@ -106,6 +114,7 @@
         }},
     "Advanced_Machine_Parts":{
         "price":75000,
+        "flex":0.3,
         "available":["industrial", "high_tech"],
         "tons":"5*1d",
         "supply":{
@@ -118,6 +127,7 @@
         }},
     "Advanced_Manufactured_Goods":{
         "price":100000,
+        "flex":0.4,
         "available":["industrial","high_tech"],
         "tons":"5*1d",
         "supply":{
@@ -129,6 +139,7 @@
             "rich":2
         }},
     "Advanced_Weapons":{
+        "flex":0.2,
         "price":150000,
         "available":["industrial", "high_tech"],
         "tons":"5*1d",
@@ -142,6 +153,7 @@
             "red_zone":4
         }},
     "Advanced_Vehicles":{
+        "flex":0.3,
         "price":180000,
         "available":["industrial","high_tech"],
         "tons":"5*1d",
@@ -154,6 +166,7 @@
             "rich":2
         }},
     "Biochemicals":{
+        "flex":0.6,
         "price":50000,
         "available":["agricultural","water_world"],
         "tons":"5*1d",
@@ -165,6 +178,7 @@
             "industrial":2
         }},
     "Crystals_and_Gems":{
+        "flex":0.4,
         "price":20000,
         "available":["asteroid","desert","ice_capped"],
         "tons":"5*1d",
@@ -178,6 +192,7 @@
             "rich":2
         }},
     "Cybernetics":{
+        "flex":0.4,
         "price":250000,
         "available":["high_tech"],
         "tons":"1*1d",
@@ -189,6 +204,7 @@
             "rich":2
         }},
     "Live_Animlas":{
+        "flex":0.7,
         "price":10000,
         "available":["agricultural","garden"],
         "tons":"10*1d",
@@ -199,6 +215,7 @@
             "low_pop":3
         }},
     "Luxury_Consumables":{
+        "flex":0.1,
         "price":20000,
         "available":["agricultural","garden","water_world"],
         "tons":"10*1d",
@@ -211,6 +228,7 @@
             "high_pop":2
         }},
     "Luxury_Goods":{
+        "flex":0.1,
         "price":200000,
         "available":["high_pop"],
         "tons":"1*1d",
@@ -220,6 +238,7 @@
             "rich":4
         }},
     "Medical_Supplies":{
+        "flex":1.5,
         "price":50000,
         "available":["high_tech","high_pop"],
         "tons":"5*1d",
@@ -232,6 +251,7 @@
             "rich":1
         }},
     "Petrochemicals":{
+        "flex":0.5,
         "price":10000,
         "available":["desert","fluid_oceans","ice_capped","water_world"],
         "tons":"10*1d",
@@ -244,6 +264,7 @@
             "low_tech":2
         }},
     "Pharmaceuticals":{
+        "flex":0.8,
         "price":100000,
         "available":["asteroid","desert","high_pop","water_world"],
         "tons":"1*1d",
@@ -256,6 +277,7 @@
             "low_tech":1
         }},
     "Polymers":{
+        "flex":0.5,
         "price":7000,
         "available":["industrial"],
         "tons":"10*1d",
@@ -267,6 +289,7 @@
             "non_industrial":1
         }},
     "Precious_Metals":{
+        "flex":0.25,
         "price":50000,
         "available":["asteroid","desert","ice_capped","fluid_oceans"],
         "tons":"1*1d",
@@ -281,6 +304,7 @@
             "high_tech":1
         }},
     "Radioactives":{
+        "flex":0.5,
         "price":1000000,
         "available":["asteroid","desert","low_pop"],
         "tons":"1*1d",
@@ -295,6 +319,7 @@
             "agricultural":-3
         }},
     "Robots":{
+        "flex":0.6,
         "price":400000,
         "available":["industrial","high_tech"],
         "tons":"5*1d",
@@ -305,6 +330,7 @@
             "high_tech":1
         }},
     "Spices":{
+        "flex":0.5,
         "price":6000,
         "available":["garden","desert","water_world"],
         "tons":"10*1d",
@@ -317,6 +343,7 @@
             "poor":3
         }},
     "Textiles":{
+        "flex":0.5,
         "price":3000,
         "available":["agricultural","non_industrial"],
         "tons":"20*1d",
@@ -328,6 +355,7 @@
             "non_agricultural":2
         }},
     "Uncommon_Ore":{
+        "flex":0.5,
         "price":5000,
         "available":["asteroid","ice_capped"],
         "tons":"20*1d",
@@ -339,6 +367,7 @@
             "non_industrial":1
         }},
     "Uncommon_Raw_Materials":{
+        "flex":0.5,
         "available":["agricultural","desert","water_world"],
         "tons":"10*1d",
         "price":20000,
@@ -351,6 +380,7 @@
             "high_tech":1
         }},
     "Wood":{
+        "flex":0.5,
         "price":1000,
         "available":["agricultural","garden"],
         "tons":"20*1d",
@@ -362,6 +392,7 @@
             "industrial":1
         }},
     "Vehicles":{
+        "flex":0.75,
         "price":15000,
         "available":["industrial","high_tech"],
         "tons":"10*1d",
@@ -374,6 +405,7 @@
             "high_pop":1
         }},
     "Illegal_Biochemicals":{
+        "flex":0.1,
         "price":50000,
         "available":["agricultural","water_world"],
         "tons":"5*1d",
@@ -384,6 +416,7 @@
             "industrial":6        
         }},
     "Illegal_Cybernetics":{
+        "flex":0.1,
         "price":250000,
         "available":["high_tech"],
         "tons":"5*1d",
@@ -398,6 +431,7 @@
             "red_zone":6
         }},
     "Illegal_Drugs":{
+        "flex":0.1,
         "price":100000,
         "available":["asteroid","desert","high_pop","water_world"],
         "tons":"1*1d",
@@ -412,6 +446,7 @@
             "high_pop":6
         }},
     "Illegal_Luxuries":{
+        "flex":0.1,
         "price":50000,
         "available":["agricultural","garden","water_world"],
         "tons":"1*1d",
@@ -424,6 +459,7 @@
             "high_pop":4
         }},
     "Illegal_Weapons":{
+        "flex":0.1,
         "price":150000,
         "available":["industrial","high_tech"],
         "tons":"5*1d",

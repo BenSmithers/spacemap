@@ -32,7 +32,7 @@ class TradeGoods:
         json_entry:dict
     ):
         self.name = name
-
+        self._demand_flexibility = float(json_entry["flex"])
         self._price = float(json_entry["price"])
         self._amount_string = json_entry["tons"]
         self._common = False
@@ -51,8 +51,38 @@ class TradeGoods:
             get_entry_by_name(entry, WorldCategory):json_entry["supply"][entry] for entry in json_entry["supply"]
         }
 
+    @property
+    def base_price(self):
+        return self._price
+    @property
+    def supply_mod(self):
+        return self._supply_mod
+    @property
+    def demand_mod(self):
+        return self._demand_mod
+    @property 
+    def available(self):
+        return self._availble
+
+    @property
+    def demand_flexibility(self):
+        """
+            A metric for flexible demand is 
+             <1 inflexible (like, food)
+             >1 flexible (luxury goods)
+        """
+        return self._demand_flexibility
+
+
     def __hash__(self) -> int:
         return self.name.__hash__()
+
+    def extract_base_tonnage(self):
+        split= self._amount_string.split("*")
+
+        factor = int(split[0])
+
+        return factor*int(split[1].split("d")[0])*3.5
 
     def sample_amount(self):
         split= self._amount_string.split("*")
@@ -120,9 +150,15 @@ class TradeGoods:
         
         return self._price*scale
 
-# map a tradegood enum entryto a constructed TradeGoods object
-ALL_GOODS = {
-    get_entry_by_name(entry, TradeGood):TradeGoods(entry, tg_data[entry]) for entry in tg_data
-}
 
+
+
+# map a tradegood enum entry to a constructed TradeGoods object
+ALL_GOODS = {}
+for entry in tg_data:
+    new_good = TradeGoods(entry, tg_data[entry])
+    ALL_GOODS[new_good.name] = new_good
+
+def get_good(good_name)->TradeGoods:
+    return ALL_GOODS[good_name]
 
