@@ -77,6 +77,27 @@ class HexID:
 
         # -30 degrees, increment by 60 with each
 
+class SubHID(HexID):
+    def __init__(self, xid: int, yid: int, region:int, point:int):
+        super().__init__(xid, yid)
+        self._region = region
+        self._point = point 
+
+    @property
+    def region(self):
+        return self._region 
+    @property 
+    def point(self):
+        return self._point
+    
+    def downsize(self):
+        return HexID(self.xid, self.yid)
+
+    def __hash__(self):
+        return hash((self._xid, self._yid, self._region, self._point))
+    def __str__(self) -> str:
+        return "{}-{}-{}-{}".format(self._xid, self._yid, self._region, self._point)
+
 # magic numbers for unit conversion
 M = (3.0 / 2.0, 0.0, RTHREE/2.0, RTHREE, # F0-F3
                2.0 / 3.0, 0.0, -1.0 / 3.0, RTHREE / 3.0) #b0-b3

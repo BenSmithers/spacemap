@@ -7,7 +7,7 @@ from PyQt5 import QtWidgets, QtGui, QtCore
 
 from qtdesigner.main_window import Ui_MainWindow as main_gui
 
-from traveller_utils.world import World, Government, star_hex
+from traveller_utils.places.world import World, Government, star_hex
 from traveller_utils.person import Person
 from traveller_utils.retailer import Retailer
 from traveller_utils.click_interface import Clicker

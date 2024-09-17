@@ -97,11 +97,9 @@ def roll1d(rng=None, mod=0):
     else:
         return rng.randint(1,7) + mod 
 
-def roll(rng=None, mod=0):
-    if rng is None:
-        return np.random.randint(1,7)+np.random.randint(1,7)+mod
-    else:
-        return rng.randint(1,7) + rng.randint(1,7) + mod
+def roll( mod=0):
+    return np.random.randint(1,7)+np.random.randint(1,7)+mod
+
 
 
 def d100(rng=None):

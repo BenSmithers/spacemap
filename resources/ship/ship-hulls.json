@@ -154,5 +154,18 @@
         "mass":40,
         "hardpoints":10,
         "class":"cruiser"
+    },
+    "tinyStation":{
+        "cost":500000,
+        "speed":-1,
+        "armor":20,
+        "hp":60,
+        "crew_min":10,
+        "crew_max":50,
+        "ac":10,
+        "power":25,
+        "mass":30,
+        "hardpoints":4,
+        "class":"frigate"
     }
 }

@@ -1,7 +1,7 @@
 {
     "corvette": {
         "shipHullType": "corvette",
-        "description": "The usual ship of the line of most modestly-funded frontier navies, a corvette is a true warship, albeit of a minimal size. While it is unable to land on worlds with standard gravity, its cargo lighter allows crew and cargo transit from the surface of a world, and its ex- tended stores allow for more than four months of field operation under normal crew parameters. Most pirates flying reworked free merchants or stolen patrol boats will turn tail as soon as a cor- vette shows up in the region. Good armor, multiple ship-killing guns, and trained boarding marines make a corvette a death sentence to most stellar ruffians, and even when a pirate wolf pack can bring one down, it usually comes at the cost of crippling damage. The model depicted here is standard for anti-pi- racy and basic system defense missions. Against cruis- er-class warships, however, this corvette\u2019s weapons have insufficient armor penetration to seriously threat- en such a major warship.",
+        "description": "The usual ship of the line of most modestly-funded frontier navies, a corvette is a true warship, albeit of a minimal size. While it is unable to land on worlds with standard gravity, its cargo lighter allows crew and cargo transit from the surface of a world, and its extended stores allow for more than four months of field operation under normal crew parameters. Most pirates flying reworked free merchants or stolen patrol boats will turn tail as soon as a corvette shows up in the region. Good armor, multiple ship-killing guns, and trained boarding marines make a corvette a death sentence to most stellar ruffians, and even when a pirate wolf pack can bring one down, it usually comes at the cost of crippling damage. The model depicted here is standard for anti-piracy and basic system defense missions. Against cruiser-class warships, however, this corvette\u2019s weapons have insufficient armor penetration to seriously threaten such a major warship.",
         "items": [
             {
                 "type": "shipWeapon",
@@ -155,7 +155,7 @@
     },
     "shuttle": {
         "shipHullType": "shuttle",
-        "description": "This craft is a conventional civilian shuttle, albeit one with a spike drive sufficient to get it to a neighboring system and enough passenger space to make it a minimally- acceptable transport for brave VIPs and light cargo. If used as an inter-system transport, however, at least three crew will be needed to safely navigate a drill. While cheap and flexible, the shuttle is entirely unarmed and acutely vulnerable to piracy or hostile warships. In such cases the pilot\u2019s only recourse is to surrender or hope the small craft\u2019s nimble maneuver drives can keep it away from the attacker long enough to get to safety.",
+        "description": "This craft is a conventional civilian shuttle, albeit one with a spike drive sufficient to get it to a neighboring system and enough passenger space to make it a minimally acceptable transport for brave VIPs and light cargo. If used as an inter-system transport, however, at least three crew will be needed to safely navigate a drill. While cheap and flexible, the shuttle is entirely unarmed and acutely vulnerable to piracy or hostile warships. In such cases the pilot\u2019s only recourse is to surrender or hope the small craft\u2019s nimble maneuver drives can keep it away from the attacker long enough to get to safety.",
         "items": [
             {
                 "type": "shipFitting",
@@ -245,7 +245,7 @@
     },
     "patrol boat": {
         "shipHullType": "patrolBoat",
-        "description": "Patrol boats are often the largest ships fielded by poor or backward frontier worlds that lack the shipyard fa- cilities or available resources to build bigger military craft. Even so, the ability to field two patrol boats for the yearly maintenance cost of one corvette often ap- peals even to richer worlds that need more coverage than their available craft can provide. \nPatrol boats are the smallest independent warships fielded by most navies, as fighters are not normally considered capable of extended independent opera- tion. They have considerable spike drive reach and are faster in-system than most of their potential targets. While their single mounted gun is vulnerable to being disabled by expert enemy gunners, the relatively thick armor of the ship and skilled damage control crew can mitigate that danger. A few patrol boats replace their survey sensor array with a sandthrower to up-gun the ship, but most prefer the additional edge in scanning potential smugglers.",
+        "description": "Patrol boats are often the largest ships fielded by poor or backward frontier worlds that lack the shipyard facilities or available resources to build bigger military craft. Even so, the ability to field two patrol boats for the yearly maintenance cost of one corvette often appeals even to richer worlds that need more coverage than their available craft can provide. \nPatrol boats are the smallest independent warships fielded by most navies, as fighters are not normally considered capable of extended independent operation. They have considerable spike drive reach and are faster in-system than most of their potential targets. While their single mounted gun is vulnerable to being disabled by expert enemy gunners, the relatively thick armor of the ship and skilled damage control crew can mitigate that danger. A few patrol boats replace their survey sensor array with a sandthrower to up-gun the ship, but most prefer the additional edge in scanning potential smugglers.",
         "items": [
             {
                 "type": "shipWeapon",
@@ -401,7 +401,7 @@
     },
     "free merchant": {
         "shipHullType": "freeMerchant",
-        "description": "A mainstay of freebooting merchant-adventurers throughout human space, the standard free merchant is an extremely versatile craft, capable of hauling sig- nificant amounts of cargo to neighboring systems while requiring very few hands to operate it. Only one crew member is needed for in-system flight, though spike drills require three for normal margins of safety.\nThe standard free merchant is not a warship, but its sandthrower is enough to discourage pirate shuttles and the other small or fragile craft that wreckers or primitive worlds tend to favor. The multifocal laser is ideal for a highly-skilled gunner who can snipe out important systems on an attacking vessel, but the ship lacks the armor and durability to stand up to a true war- ship. Of course, with a sufficiently expert crew, even a corvette might be threatened by the well-aimed guns of a small craft like this.",
+        "description": "A mainstay of freebooting merchant-adventurers throughout human space, the standard free merchant is an extremely versatile craft, capable of hauling significant amounts of cargo to neighboring systems while requiring very few hands to operate it. Only one crew member is needed for in-system flight, though spike drills require three for normal margins of safety.\nThe standard free merchant is not a warship, but its sandthrower is enough to discourage pirate shuttles and the other small or fragile craft that wreckers or primitive worlds tend to favor. The multifocal laser is ideal for a highly-skilled gunner who can snipe out important systems on an attacking vessel, but the ship lacks the armor and durability to stand up to a true warship. Of course, with a sufficiently expert crew, even a corvette might be threatened by the well-aimed guns of a small craft like this.",
         "items": [
             {
                 "type": "shipWeapon",
@@ -422,6 +422,20 @@
             {
                 "type": "shipFitting",
                 "name": "fuel bunkers"
+            }
+        ]
+    },
+    "hauler": {
+        "shipHullType": "freeMerchant",
+        "description": "A mainstay of freebooting merchant-adventurers throughout human space, the standard free merchant is an extremely versatile craft, capable of hauling significant amounts of cargo to neighboring systems while requiring very few hands to operate it. Only one crew member is needed for in-system flight, though spike drills require three for normal margins of safety.\nThe standard free merchant is not a warship, but its sandthrower is enough to discourage pirate shuttles and the other small or fragile craft that wreckers or primitive worlds tend to favor. The multifocal laser is ideal for a highly-skilled gunner who can snipe out important systems on an attacking vessel, but the ship lacks the armor and durability to stand up to a true warship. Of course, with a sufficiently expert crew, even a corvette might be threatened by the well-aimed guns of a small craft like this.",
+        "items": [
+            {
+                "type": "shipWeapon",
+                "name": "sandthrower"
+            },
+            {
+                "type": "shipFitting",
+                "name": "atmospheric configuration"
             }
         ]
     },
@@ -635,5 +649,100 @@
             }
         
         ]
-    }
+    },
+    "colony frigate":{
+        "description": "a frigate-scale colony ship ferrying 720 people, expands to support 3600",
+        "shipHullType": "heavyFrigate",
+        "items": [
+            {"type": "shipFitting", "name": "colony core"},
+            {"type": "shipFitting", "name": "extended life support"},
+            {"type": "shipFitting", "name": "extended life support"},
+            {"type": "shipFitting", "name": "extended life support"},
+            {"type": "shipFitting", "name": "extended life support"},
+            {"type": "shipFitting", "name": "extended life support"},
+            {"type": "shipFitting", "name": "ship's locker"},
+            {"type": "shipFitting", "name": "extended medbay"}
+        ]
+    },
+    "colonyCruiser":{"description": "a frigate-scale colony ship ferrying 800 peopl with 2000 in statsis, expands to support 4000",
+        "shipHullType": "fleetCruiser",
+        "items": [
+            {"type": "shipFitting", "name": "extended life support"},
+            {"type": "shipFitting", "name": "extended life support"},
+            {"type": "shipFitting", "name": "extended life support"},
+            {"type": "shipFitting", "name": "exodus bay"},
+            {"type": "shipFitting", "name": "exodus bay"},
+            {"type": "shipFitting", "name": "colony core"},
+            {"type": "shipFitting", "name": "ship's locker"},
+            {"type": "shipFitting", "name": "armory"},
+            {"ty[e": "shipWeapon", "name": "mag spike array"}
+        ]
+    },
+    "stationAClass":{"description": "An A-class space station", 
+        "shipHullType": "largeStation", 
+        "items": [
+            {"type": "shipFitting", "name": "mobile factory"}, 
+            {"type": "shipFitting", "name": "advanced lab"}, 
+            {"type": "shipFitting", "name": "tractor beams"}, 
+            {"type": "shipFitting", "name": "workshop"}, 
+            {"type": "shipFitting", "name": "ship bay (frigate)"}, 
+            {"type": "shipFitting", "name": "ship bay (frigate)"}, 
+            {"type": "shipFitting", "name": "ship bay (fighter)"}, 
+            {"type": "shipFitting", "name": "ship bay (fighter)"},
+            {"type": "shipFitting", "name": "ship bay (fighter)"},
+            {"type": "shipFitting", "name": "ship bay (fighter)"}, 
+            {"type": "shipFitting", "name": "hydroponic production"}, 
+            {"type": "shipFitting", "name": "luxury cabins"}, 
+            {"type": "shipWeapon", "name": "smart cloud"}, 
+            {"type": "shipWeapon", "name": "vortex tunnel inductor"}, 
+            {"type": "shipDefense", "name": "planetary defense array"}, 
+            {"type": "shipDefense", "name": "ablative hull compartments"}
+            ]
+        },
+    "stationBClass":{"description": "An B-class space station", 
+        "shipHullType": "largeStation", 
+        "items": [
+            {"type": "shipFitting", "name": "mobile factory"}, 
+            {"type": "shipFitting", "name": "advanced lab"}, 
+            {"type": "shipFitting", "name": "tractor beams"}, 
+            {"type": "shipFitting", "name": "workshop"}, 
+            {"type": "shipFitting", "name": "ship bay (frigate)"}, 
+            {"type": "shipFitting", "name": "ship bay (fighter)"}, 
+            {"type": "shipFitting", "name": "ship bay (fighter)"}, 
+            {"type": "shipFitting", "name": "hydroponic production"}, 
+            {"type": "shipFitting", "name": "luxury cabins"}, 
+            {"type": "shipWeapon", "name": "smart cloud"}, 
+            {"type": "shipDefense", "name": "planetary defense array"}, 
+            {"type": "shipDefense", "name": "ablative hull compartments"}
+            ]
+        },
+    "stationCClass":{
+        "description": "A C-class space station", 
+        "shipHullType": "smallStation", 
+        "items": [
+            {"type": "shipFitting", "name": "hydroponic production"}, 
+            {"type": "shipFitting", "name": "workshop"}, 
+            {"type": "shipFitting", "name": "tractor beams"}, 
+            {"type": "shipFitting", "name": "mobile factory"}, 
+            {"type": "shipFitting", "name": "luxury cabins"}, 
+            {"type": "shipWeapon", "name": "smart cloud"}, 
+            {"type": "shipDefense", "name": "planetary defense array"}
+            ]
+        },
+    "stationDClass":{"description": "A D-class space station", 
+        "shipHullType": "tinyStation", 
+        "items": [{
+            "type": "shipFitting", "name": "hydroponic production"}, 
+            {"type": "shipFitting", "name": "tractor beams"},
+            {"type": "shipFitting", "name": "shiptender mount"},
+            {"type": "shipWeapon", "name": "sandthrower"}, 
+            {"type": "shipDefense", "name": "ablative hull compartments"}
+
+        ]},
+        "stationEClass":{"description": "An E-class space station", 
+        "shipHullType": "tinyStation", 
+        "items": [
+            {"type": "shipFitting", "name": "hydroponic production"}, 
+            {"type": "shipWeapon", "name": "sandthrower"}
+        ]}
 }

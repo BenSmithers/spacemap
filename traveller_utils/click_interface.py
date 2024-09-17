@@ -9,8 +9,9 @@ from traveller_utils.clock import minutes_in_day
 from traveller_utils.core.coordinates import HexID, DRAWSIZE, screen_to_hex, hex_to_screen
 from traveller_utils.ships.ship import Ship, AIShip, AIShipMoveEvent
 from traveller_utils.core.core import Hex, Region, Route
-from traveller_utils.world import World
+from traveller_utils.places.world import World
 from traveller_utils.core import utils
+from traveller_utils.core.catalogs import ShipCatalog, SystemCatalog
 from collections import deque
 import numpy as np
 import os 
@@ -44,12 +45,11 @@ class Clicker(QGraphicsScene,ActionManager):
         self._routes = {}
         self._drawn_routes = {}
 
-        # shipid->Ship
-        self._ships = {} 
-        #hexid->list[shipids]
-        self._ship_locations={} 
         # -> hexID -> sid
         self._ship_sids = {} 
+
+        self._ship_catalog = ShipCatalog(self.draw_ships_hex)
+        self._system_catalog = SystemCatalog(self.draw_hex)
 
         self._cummulative_wealths = []
 
@@ -127,85 +127,10 @@ class Clicker(QGraphicsScene,ActionManager):
             
 
     def get_ship(self, ship_id)->Ship:
-        if ship_id in self._ships:
-            return self._ships[ship_id]
-    def get_ships_at(self,hid:HexID)->'list[int]':
-        if hid in self._ship_locations:
-            return self._ship_locations[hid]
-        else:
-            return []
-    
-    def register_ship(self, ship:Ship, location:HexID):
-        """
-            finds the next available ship ID, registers the ship in the catalogs 
-        """
-        ship.set_location(location)
-
-        ship_id = 0
-        while ship_id in self._ships:
-            ship_id+=1
-        self._ships[ship_id] = ship
-        if location not in self._ship_locations:
-            self._ship_locations[location] = []
-        self._ship_locations[location].append(ship_id)
-        
-        self.draw_ship(ship_id)
-        return ship_id
-        
-    def delete_ship(self, ship_id):
-        """
-            deletes the entry in _ship_locations first
-            then deletes it from the ship list
-            then calls the draw function to remove the drawing on the screen
-        """
-        loc = self.get_ship(ship_id)
-        if loc is not None:
-            loc = loc.location
-        self.get_ships_at(loc).remove(ship_id)
-
-        if ship_id in self._ships:
-            del self._ships[ship_id]
-        self.draw_ships_hex(loc)
-
-
-    def move_ship(self, ship_id, dest:HexID):
-        """
-            Updates maps regarding where a Ship is, plays an animation as it moves the icon
-        """
-        
-        ship = self.get_ship(ship_id)
-        old_loc = ship.location
-
-        if ship_id in self._ship_locations[old_loc]:        
-            self._ship_locations[old_loc].remove(ship_id)
-
-        ship.set_location(dest)
-
-        if dest not in self._ship_locations:
-            self._ship_locations[dest] = []
-        self._ship_locations[dest].append(ship_id)
-
-        
-
-        """     This wasn't working, I gave up on it... 
-        sid = self._ship_sids[old_loc]
-        start = sid.pos()
-        end = hex_to_screen(dest)
-        animation = QtCore.QPropertyAnimation(self._parent_window)
-        animation.setTargetObject(sid)
-        animation.setPropertyName(b"pos")
-        animation.setStartValue(start)
-        animation.setEndValue(end)
-        animation.setDuration(500) # ms 
-        animation.start()
-        """
-
-        self.draw_ships_hex(old_loc)
-        self.draw_ships_hex(dest)
-        
-
+        return self._ship_catalog.get(ship_id)
 
     def closeEvent(self, event):
+        return 
         packed= self.pack()
         _obj = open(WORLD_PATH, 'wt')
         json.dump(packed, _obj, indent=4)
@@ -275,12 +200,9 @@ class Clicker(QGraphicsScene,ActionManager):
 
         for _ship_id in packed["ships"].keys():
             ship_id=int(_ship_id)
-            self._ships[ship_id] = AIShip.unpack(packed["ships"][_ship_id])
-            loc = self._ships[ship_id].location
-            if loc not in self._ship_locations:
-                self._ship_locations[loc] = []
-            self._ship_locations[loc].append(ship_id)
-            self.draw_ship(ship_id)
+            self._ship_catalog.update(AIShip.unpack(packed["ships"][_ship_id]), ship_id)
+            self._ship_catalog.move(ship_id, 0)
+            print("NEED TO GET LOCATION")
 
     def draw_alt(self, hexID:HexID):
         if self._alt_select is not None:
@@ -411,9 +333,9 @@ class Clicker(QGraphicsScene,ActionManager):
             return 0
         else:
             next_step = this_ship.step()
-            self.move_ship(ship_id, next_step)    
+            self._ship_catalog.move(ship_id, next_step)    
             if this_ship.is_done(): # no more steps after this 
-                self.delete_ship(ship_id)    
+                self._ship_catalog.delete(ship_id)    
                 self._initialize_ship()    
                 return 1 
             else:
@@ -455,7 +377,7 @@ class Clicker(QGraphicsScene,ActionManager):
                 new_ship.add_cargo(cargo, quantity)
             
 
-        sid = self.register_ship(new_ship, loc)
+        sid = self._ship_catalog.register(new_ship, loc)
         move = AIShipMoveEvent(
             recurring = Time(minute=int(minutes_in_day/new_ship.rate)),
             n_events = len(route),
@@ -863,7 +785,7 @@ class Clicker(QGraphicsScene,ActionManager):
             self.removeItem(self._ship_sids[loc])
             del self._ship_sids[loc]
 
-        all_ships = self.get_ships_at(loc)
+        all_ships = self._ship_catalog.get_at(loc)
 
         names = ["one", "two", "three", "four", "more"]
         index = len(all_ships)-1

@@ -26,7 +26,8 @@
         "power": 5,
         "powerMultiplier": false,
         "qualities": "AP 20",
-        "tl": 4
+        "tl": 4,
+        "hardpoint":1
     },
     "lightning charge mantle": {
         "broken": false,

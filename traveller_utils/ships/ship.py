@@ -1,4 +1,3 @@
-from traveller_utils.core.coordinates import HexID
 from traveller_utils.person import Person
 from traveller_utils.actions import MapAction, NullAction, EndRecurring
 from traveller_utils.name_gen import sample_adjective, sample_noun
@@ -62,7 +61,20 @@ class ShipSWN:
         self._defense = []
         self._weapons = []
 
+        self._fuel_scoop = False 
+        self._drive_rating = 1 
+        self._fuel = 1
+        self._fuel_max = 1
+
         self._cargo = {}
+
+    @property 
+    def has_fuel_scoop(self):
+        return self._fuel_scoop
+
+    def add_fuel(self):
+        if self._fuel_max>self._fuel:
+            self._fuel += 1
 
     @property
     def template(self):
@@ -134,7 +146,6 @@ class ShipSWN:
             if isinstance(new_obj, ShipWeapon):
                 if self.hardpoints_free()>=new_obj.hardpoints:
                     self._weapons.append(new_obj)
-                     
                 else:
                     raise ValueError("No available hardpoints")
             elif isinstance(new_obj, ShipDefense):
@@ -143,6 +154,11 @@ class ShipSWN:
                 if new_obj.name.lower() == "system drive":
                     self._system_drive = True
                 self._fittings.append(new_obj)
+
+                self._fuel_scoop = self._fuel_scoop or new_obj.name.lower()=="fuel scoop"
+                if new_obj.name.lower()=="fuel bunkers":
+                    self._fuel_max+=1 
+
             else:
                 raise TypeError("Unknown fitting type: {}".format(type(new_obj)))
         else:
@@ -218,18 +234,21 @@ class ShipSWN:
 
         hulltype = template_dict["shipHullType"]
         new_ship = cls(hulltype)
-        new_ship._description = template_dict["description"]
+        new_ship._load_template(template_dict)
         new_ship._template = template_name
-        for entry in template_dict["items"]:
-            if entry["type"]=="shipFitting":
-                item=Fitting(entry["name"], new_ship.shipclass)
-            elif entry["type"]=="shipWeapon":
-                item=ShipWeapon(entry["name"], new_ship.shipclass)
-            elif entry["type"]=="shipDefense":
-                item =ShipDefense(entry["name"], new_ship.shipclass)
-            new_ship.add_fitting(item)
             
         return new_ship
+    def _load_template(self, template_dict):
+        self._description = template_dict["description"]
+        for entry in template_dict["items"]:
+            if entry["type"]=="shipFitting":
+                item=Fitting(entry["name"], self.shipclass)
+            elif entry["type"]=="shipWeapon":
+                item=ShipWeapon(entry["name"], self.shipclass)
+            elif entry["type"]=="shipDefense":
+                item =ShipDefense(entry["name"], self.shipclass)
+            self.add_fitting(item)
+
 
 class Ship:
     def __init__(self, rate=0.183):
@@ -272,8 +291,6 @@ class Ship:
         what = cls(rate = pack["rate"])
         what._icon = pack["icon"]
         what._description = pack["desc"]
-        what._destination = None if pack["dest"]=="" else HexID.unpack(pack["dest"])
-        what._location = HexID.unpack(pack["loc"])
         what._name=pack["name"]
         what._size=pack["size"]
         unpacked = {
@@ -305,20 +322,6 @@ class Ship:
         return self._description
 
     @property
-    def location(self)->HexID:
-        return self._location
-    def set_location(self, hid:HexID):
-        self._location = hid
-    
-    @property
-    def destination(self)->HexID:
-        return self._destination
-    def clear_destination(self):
-        self._destination = None
-    def set_destination(self, hid:HexID):
-        self._destination = hid
-    
-    @property
     def rate(self):
         return self._rate
     @property
@@ -326,7 +329,7 @@ class Ship:
         return self._icon
     
 class AIShip(Ship):
-    def __init__(self, route:'list[HexID]'=[], rate=0.183,**kwargs):
+    def __init__(self, route=[], rate=0.183,**kwargs):
         super().__init__(rate)
 
         self._route = route[::-1]
@@ -340,7 +343,6 @@ class AIShip(Ship):
     @classmethod
     def unpack(cls, pack):
         temp = super().unpack(pack)
-        temp._route = [HexID.unpack(entry) for entry in pack["route"]]
         temp._captain = Person.unpack(pack["cpt"])
         return temp
 
