@@ -25,6 +25,15 @@ _data = open(os.path.join(os.path.dirname(__file__),"..","resources","swon_trade
 tg_data = json.load(_data)
 _data.close()
 
+class Cargo:
+    def __init__(self, **cargodict):
+        self._cargo = cargodict
+
+
+    def validate(self, cargodict):
+        pass
+
+
 class TradeGoods:
     def __init__(
         self,

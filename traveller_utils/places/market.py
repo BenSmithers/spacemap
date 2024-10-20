@@ -1,14 +1,17 @@
 from traveller_utils.places.world import World 
 from traveller_utils.places.trade_route import TradeRoute
+from traveller_utils.core.coordinates import SubHID
 from traveller_utils.trade_goods import ALL_GOODS, TradeGoods, get_good
 from math import exp, log
+
 class Market:
-    def __init__(self, linked_world:World):
+    def __init__(self, linked_world:World, linked_shid):
         self._linked_world = linked_world
+        self._linked_shid = linked_shid
 
         self._supply = {}
         self._demand = {}
-        self._trade_routes = {} 
+        self._trade_routes = []
         for tg in list(ALL_GOODS.values()):
             self._trade_routes[tg.name] = []
             self._supply[tg.name] = 0 
@@ -30,16 +33,23 @@ class Market:
             if scale_factor!=0:
                 self._supply[tg.name] = scale_factor*tg.extract_base_tonnage()*self._linked_world._population/100000
                 self._supply[tg.name] = max([self._supply[tg.name], 1])
+
             if demand_factor!=0:
                 self._demand[tg.name] = demand_factor*tg.extract_base_tonnage()*self._linked_world._population/100000
                 self._demand[tg.name] = max([self._demand[tg.name], 1])        
 
+    @property
+    def linked_shid(self)->SubHID:
+        return self._linked_shid
 
-        
-
-    def get_market_price(self, good_name):
+    def get_market_price(self, good_name, fudge_supply=0):
         tg = get_good(good_name)
-        supply_diff = self._supply[tg.name] - self._demand[tg.name]
+        supply_diff = self._supply[tg.name] - self._demand[tg.name] + fudge_supply
+        for route in self.trade_routes:
+            if self.linked_shid in route:
+                pass 
+                
+
         tonnage = tg.extract_base_tonnage()
         flex = tg.demand_flexibility
 
@@ -49,7 +59,7 @@ class Market:
         return net_cost
 
     @property
-    def trade_routes(self)->'list[str, TradeRoute]':
+    def trade_routes(self)->'list[TradeRoute]':
         return self._trade_routes
 
     @property 
