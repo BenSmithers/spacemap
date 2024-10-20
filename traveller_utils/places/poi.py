@@ -56,14 +56,16 @@ def make_point_of_interest():
 
     return points[first], occupiers[first][second].lower(), situation[first][third].lower()
 
-
 class PointOfInterest:
+    def __init__(self, **kwargs):
+        self._scoopable = False
+
+
+class Situation(PointOfInterest):
     def __init__(self, **kwargs):
         self._classification = ""
         self._occupiers = ""
-        self._situation = ""
-        self._scoopable = False
-
+        self._situation = "" 
     @classmethod
     def generate(cls):
         new = cls()
@@ -75,7 +77,7 @@ class InterRegion(PointOfInterest):
 class InFlight(PointOfInterest):
     pass
 
-class GasGiant(PointOfInterest):
+class GasGiant(Situation):
     def __init__(self, **kwargs):
         super().__init__(**kwargs) 
         self._scoopable = True
