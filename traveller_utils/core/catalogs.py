@@ -10,6 +10,9 @@ class Catalog:
 
         self._function = draw_function
 
+    def __in__(self, what):
+        return what in self._entries
+
     def __iter__(self):
         return self._entries.__iter__()
 
@@ -18,7 +21,7 @@ class Catalog:
             Updates the object with the id 'id' 
         """
         self._entries[id] = token 
-
+        self.draw(id)
     
     def draw(self, location:token_type):
         """
@@ -145,7 +148,8 @@ class ShipCatalog(Catalog):
 class SystemCatalog(Catalog):
     token_type=HexID
     def register(self, system: System, location: HexID):
-        return super().register(system, location)
+        self._entries[location] = system
+        
     def get(self, hid:HexID)->System:
         return super().get(hid)
     def getworld(self, subh:SubHID)->World:
@@ -168,3 +172,5 @@ class SystemCatalog(Catalog):
         this_system = self.get(hID)
         this_system.append(world)
         self.update(this_system, hID)
+
+    

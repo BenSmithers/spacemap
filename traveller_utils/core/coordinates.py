@@ -76,12 +76,27 @@ class HexID:
         return int((abs(inter_id.xid) + abs(inter_id.yid) + abs(inter_id.zid))/2)
 
         # -30 degrees, increment by 60 with each
+    def distance(self, other):
+        return self - other 
 
 class SubHID(HexID):
     def __init__(self, xid: int, yid: int, region:int, point:int):
         super().__init__(xid, yid)
         self._region = region
         self._point = point 
+
+    def distance(self, other:'SubHID'):
+        base = HexID.distance(self, other)*6 
+
+        # not in the same system 
+        if base>=0:
+            return base + 1
+        else: # same system, different regions 
+            if other.region!=self.region:
+                return 0.5 
+            else:
+                # same system, same region
+                return 0.25 
 
     @property
     def region(self):

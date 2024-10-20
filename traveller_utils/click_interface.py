@@ -6,10 +6,11 @@ from traveller_utils.actions import ActionManager, unpack_event, MonthlyEvent
 
 from traveller_utils.enums import Title, Bases, WorldCategory
 from traveller_utils.clock import minutes_in_day
-from traveller_utils.core.coordinates import HexID, DRAWSIZE, screen_to_hex, hex_to_screen
+from traveller_utils.core.coordinates import HexID, DRAWSIZE, screen_to_hex, hex_to_screen, SubHID
 from traveller_utils.ships.ship import Ship, AIShip, AIShipMoveEvent
 from traveller_utils.core.core import Hex, Region, Route
 from traveller_utils.places.world import World
+from traveller_utils.places.system import generate_system, System
 from traveller_utils.core import utils
 from traveller_utils.core.catalogs import ShipCatalog, SystemCatalog
 from collections import deque
@@ -36,7 +37,6 @@ class Clicker(QGraphicsScene,ActionManager):
         self.icon_map = utils.IconLib(os.path.join(os.path.dirname(__file__),"..","images","icons"), ext="svg")
 
 
-        self._systems = {}
         self._drawn_systems = {}
 
         self._regions = {}
@@ -77,12 +77,12 @@ class Clicker(QGraphicsScene,ActionManager):
             self.unpack(data)
         else:
             self.initialize_systems()
-            self.initialize_routes()
-            self.initialize_regions()
+            #self.initialize_routes()
+            #self.initialize_regions()
             n_ships = 60
 
-            for i in range(n_ships):
-                self._initialize_ship()
+            #for i in range(n_ships):
+            #    self._initialize_ship()
 
         self.draw_all_hexes()
 
@@ -98,8 +98,8 @@ class Clicker(QGraphicsScene,ActionManager):
         
 
         all_ts = []
-        for hid in self._systems:
-            world = self.get_system(hid)
+        for hid in self._system_catalog:
+            world = self.get_system(hid).mainworld
             ts = world.wealth
             all_ts.append(ts)
 
@@ -112,8 +112,8 @@ class Clicker(QGraphicsScene,ActionManager):
 
 
     def update_prices(self):
-        for hid in self._systems:
-            world = self.get_system(hid)
+        for hid in self._system_catalog:
+            world = self.get_world(hid)
             # clear out the passenger lists
             for p_class in world._passengers:
                 world._passengers[p_class] = []
@@ -137,8 +137,8 @@ class Clicker(QGraphicsScene,ActionManager):
         _obj.close()
 
     @property
-    def systems(self):
-        return self._systems
+    def systems(self)->SystemCatalog:
+        return self._system_catalog
 
     def pack(self)->dict:
         return {
@@ -178,8 +178,8 @@ class Clicker(QGraphicsScene,ActionManager):
             self._regions[id_unpacked] = Region.unpack(packed["regions"][key])
             self.draw_region(id_unpacked)
             
-        for key in self._systems.keys():
-            world = self.get_system(key)
+        for key in self._system_catalog.keys():
+            world = self.get_world(key)
             if world._liege is not None:
                 world.set_liege(key, self.get_system(world.liege))
 
@@ -232,7 +232,7 @@ class Clicker(QGraphicsScene,ActionManager):
         self._selected_sid = self.addPolygon(this_hex, self._pen, self._brush)
         self._selected_sid.setZValue(100)
 
-    def _route_present(self, start:HexID, end:HexID):
+    def _route_present(self, start:SubHID, end:SubHID):
         if start not in self._routes and end not in self._routes:
             return False
         # a route exists with either start or end as the start point
@@ -267,7 +267,7 @@ class Clicker(QGraphicsScene,ActionManager):
 
         return all_passengers
 
-    def choose_dest(self, source:HexID, samples=1)->HexID:
+    def choose_dest(self, source:SubHID, samples=1)->HexID:
         """
         Uses desireability of worlds around a given HexID to sample `samples` destinations 
         Punishes distant destinations
@@ -275,11 +275,11 @@ class Clicker(QGraphicsScene,ActionManager):
 
         max_dist = 6
         all_possible = source.in_range(6)
-        all_possible = list(filter(lambda x:x in self._systems, all_possible))
+        all_possible = list(filter(lambda x:x in self._system_catalog, all_possible))
         all_possible = list(filter(lambda entry:entry!=source, all_possible))
 
-        distance_weight = np.array([(source - entry)**2 for entry in all_possible])
-        desireability = np.array([self.get_system(hid).desireability for hid in all_possible])
+        distance_weight = np.array([source.distance(entry)**2 for entry in all_possible])
+        desireability = np.array([self.get_world(hid).desireability for hid in all_possible])
         desireability += min(desireability)
 
         total_weights = desireability.astype(float)**2 / distance_weight
@@ -298,10 +298,9 @@ class Clicker(QGraphicsScene,ActionManager):
             and clear out the cummulative wealths list so that it's regenerated later
         """
         self._cummulative_wealths = []
-        self._systems[hid] = other
-        self.draw_hex(hid)
+        self._system_catalog.update(other, hid)
 
-    def _sample_from_wealth(self)->HexID:
+    def _sample_from_wealth(self)->SubHID:
         """
             samples a HexIDs based on system wealth
 
@@ -309,9 +308,9 @@ class Clicker(QGraphicsScene,ActionManager):
         """
 
         # get all of the wealths and accumulate them. Only do this if it hasn't been done already
-        all_keys = list(self.systems.keys())
+        all_keys = list(self._system_catalog.keys())
         if len(self._cummulative_wealths)==0:
-            self._cummulative_wealths = [self.get_system(key).wealth for key in all_keys]
+            self._cummulative_wealths = [self.get_world(key).wealth for key in all_keys]
             self._cummulative_wealths = np.cumsum(self._cummulative_wealths).tolist()
         
 
@@ -549,7 +548,9 @@ class Clicker(QGraphicsScene,ActionManager):
                 if np.random.rand()<this_val:       
                     mod = 0 if this_val<extra_thresh else 2
 
-                    self._systems[loc] = World(modifier = mod)
+                    new_system = generate_system(mod, loc)
+                    self._system_catalog.register(new_system, loc)
+
         
     def alt_initialize_regions(self):
         """
@@ -702,7 +703,7 @@ class Clicker(QGraphicsScene,ActionManager):
             for j in range(15):
                 shift = int(i/2)
                 loc = HexID(i ,j-shift)
-                if loc in self._systems:
+                if loc in self._system_catalog:
                     self.draw_system(loc)
                 else:
                     self.draw_hex(loc)
@@ -719,10 +720,10 @@ class Clicker(QGraphicsScene,ActionManager):
     def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         loc =  screen_to_hex( event.scenePos() )
 
-        if loc in self._systems: 
+        if loc in self._system_catalog: 
             self._selected_hid = loc 
             self.draw_selection(loc)
-            self._parent_window.planet_selected(self._systems[loc], loc )
+            self._parent_window.planet_selected(self.get_system(loc).mainworld, loc )
         else:
             self._selected_hid = None 
             self._parent_window.select_none()
@@ -731,11 +732,11 @@ class Clicker(QGraphicsScene,ActionManager):
             self._selected_sid = None
     
 
-    def get_system(self, hex_id:HexID)->World:
-        if hex_id in self._systems:
-            return self._systems[hex_id]
-        else:
-            return None
+    def get_system(self, hex_id:HexID)->System:
+        return self._system_catalog.get(hex_id)
+        
+    def get_world(self, shi: SubHID)->World:
+        return self._system_catalog.getworld(shi)
         
     def get_region(self, hex_id:HexID)->Region:
         if hex_id in self._regions:
@@ -808,7 +809,10 @@ class Clicker(QGraphicsScene,ActionManager):
             for entry in self._drawn_systems[hex_id]:
                 self.removeItem(entry)
 
-        this_world = self.get_system(hex_id)
+        this_system = self.get_system(hex_id)
+        this_world = this_system.mainworld
+        this_starport = this_system.starport
+        
         if this_world is None:
             del self._drawn_systems[hex_id]
             return
@@ -862,18 +866,19 @@ class Clicker(QGraphicsScene,ActionManager):
         sid_2.setZValue(10) 
         all_sids.append(sid_2)
 
-        if Bases.Naval in this_world.services or Bases.Scout in this_world.services:
-            sid_base = self.addPixmap(self.icon_map.access("anchor", 0.3*DRAWSIZE))
-            sid_base.setX(center.x()-DRAWSIZE*0.75)
-            sid_base.setY(center.y()-DRAWSIZE*0.15)
-            sid_base.setZValue(12)
-            all_sids.append(sid_base)
-        if Bases.TAS in this_world.services:
-            sid_plus = self.addPixmap(self.icon_map.access("plus", 0.3*DRAWSIZE))
-            sid_plus.setX(center.x()+DRAWSIZE*0.5)
-            sid_plus.setY(center.y()-DRAWSIZE*0.15)
-            sid_plus.setZValue(12)
-            all_sids.append(sid_plus)
+        if this_starport is not None:
+            if Bases.Naval in this_starport.services or Bases.Scout in this_starport.services:
+                sid_base = self.addPixmap(self.icon_map.access("anchor", 0.3*DRAWSIZE))
+                sid_base.setX(center.x()-DRAWSIZE*0.75)
+                sid_base.setY(center.y()-DRAWSIZE*0.15)
+                sid_base.setZValue(12)
+                all_sids.append(sid_base)
+            if Bases.TAS in this_starport.services:
+                sid_plus = self.addPixmap(self.icon_map.access("plus", 0.3*DRAWSIZE))
+                sid_plus.setX(center.x()+DRAWSIZE*0.5)
+                sid_plus.setY(center.y()-DRAWSIZE*0.15)
+                sid_plus.setZValue(12)
+                all_sids.append(sid_plus)
         
        
         self._drawn_systems[hex_id] = tuple(all_sids)

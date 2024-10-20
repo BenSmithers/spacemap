@@ -12,6 +12,7 @@ from traveller_utils.trade_goods import ALL_GOODS, TradeGoods
 from traveller_utils.name_gen import create_name
 from traveller_utils.person import Person
 from traveller_utils.core.coordinates import HexID
+from traveller_utils.places.poi import PointOfInterest
 from math import log10 
 
 WorldTag._value2member_map_.keys()
@@ -106,11 +107,12 @@ class Government:
         }
         return out
 
-class World:
+class World(PointOfInterest):
     def __init__(self, generate =True, modifier = 0, other_world = None ):
         """
             Initialize a minimal world, generate full world if `generate`
         """
+        PointOfInterest.__init__(self)
         self._name = ""
         self._fuel = False
         self._tags = []
@@ -731,6 +733,27 @@ class World:
 
         return output
     
+    def get_st_class(self)->str:
+        if self._size<2 or self._atmosphere<2:
+            return "C"
+        
+        if self._temperature>12:
+            return "A"
+        elif self._temperature>11:
+            return "B"
+        elif self._temperature<3:
+            return "P"
+        
+        
+        if self._hydro<4:
+            return "H"
+        elif self._hydro<9:
+            if self._temperature<5:
+                return "L"
+            return "M"
+        else:
+            return "O"
+
     def get_image_name(self)->str:
         if self._size<2 or self._atmosphere<2:
             return "RClassC" + str(choice(range(3)) +1)

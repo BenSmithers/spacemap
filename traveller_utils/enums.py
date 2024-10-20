@@ -1,6 +1,11 @@
 
 from enum import Enum
 
+class SystemNote(Enum):
+    Nothing = 0
+    MainWorld = 1
+    MainPort = 2
+
 class ShipClass(Enum):
     Fighter =0
     Frigate =1
