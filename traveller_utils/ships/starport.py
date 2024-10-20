@@ -3,8 +3,10 @@ from traveller_utils.ships.ship_items import sample_ships
 from traveller_utils.core.utils import roll 
 from traveller_utils.places.world import World
 
+from traveller_utils.places.terminal import Terminal
+from traveller_utils.places.market import Market
 
-class StarPort(ShipSWN):
+class StarPort(ShipSWN, Terminal, Market):
     def __init__(self, starport_class, linked_world:World):
         
         station_template = "station{}Class".format(starport_class.upper())
@@ -13,6 +15,9 @@ class StarPort(ShipSWN):
         self._load_template(template_dict)   
 
         self._linked_world = linked_world
+
+        Terminal.__init__(self, linked_world)
+        Market.__init__(self, linked_world)
 
         self._services = []
 

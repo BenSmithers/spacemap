@@ -5,13 +5,13 @@ from traveller_utils.trade_goods import ALL_GOODS, TradeGoods, get_good
 from math import exp, log
 
 class Market:
-    def __init__(self, linked_world:World, linked_shid):
+    def __init__(self, linked_world:World):
         self._linked_world = linked_world
-        self._linked_shid = linked_shid
+        self._linked_shid = SubHID(0,0,0,0)
 
         self._supply = {}
         self._demand = {}
-        self._trade_routes = []
+        self._trade_routes = {}
         for tg in list(ALL_GOODS.values()):
             self._trade_routes[tg.name] = []
             self._supply[tg.name] = 0 
@@ -38,9 +38,8 @@ class Market:
                 self._demand[tg.name] = demand_factor*tg.extract_base_tonnage()*self._linked_world._population/100000
                 self._demand[tg.name] = max([self._demand[tg.name], 1])        
 
-    @property
-    def linked_shid(self)->SubHID:
-        return self._linked_shid
+    def link_shid(self, subhid:SubHID):
+        self._linked_shid = subhid
 
     def get_market_price(self, good_name, fudge_supply=0):
         tg = get_good(good_name)

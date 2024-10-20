@@ -78,6 +78,7 @@ class System:
             self._mainworld = location
         elif of_note.value==SystemNote.MainPort.value:
             self._starport = location 
+        
 
 def generate_system(modifier, location:HexID):
     
@@ -158,12 +159,13 @@ def generate_system(modifier, location:HexID):
         services.append(Bases.Research)
 
     if not no_starport:
-        starport = StarPort(starport_class, tas)
+        starport = StarPort(starport_class, new_world)
         for entry in services:
             starport.add_service(entry)
+        
 
         new_system.insert(starport_loc, starport, SystemNote.MainPort)
-
+        starport.link_shid(starport_loc)
     # generate other worlds 
 
     # generate gas giant or two 

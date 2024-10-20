@@ -78,7 +78,7 @@ class Clicker(QGraphicsScene,ActionManager):
         else:
             self.initialize_systems()
             #self.initialize_routes()
-            #self.initialize_regions()
+            self.initialize_regions()
             n_ships = 60
 
             #for i in range(n_ships):
@@ -584,8 +584,8 @@ class Clicker(QGraphicsScene,ActionManager):
                 influence = self.get_system(other_hid).wealth/5
                 influence_map[hID][other_hid] = max([influence - 1.5*distance, 0])
 
-        for hID in self._systems.keys():
-            world = self.get_system(hID)
+        for hID in self._system_catalog.keys():
+            world = self.get_system(hID).mainworld
 
 
             keys = list(influence_map[hID].keys()) 
@@ -630,8 +630,8 @@ class Clicker(QGraphicsScene,ActionManager):
             Title.Count:[],
             Title.Lord:[]
         }
-        for key in self._systems:
-            world = self.get_system(key)
+        for key in self._system_catalog:
+            world = self.get_system(key).mainworld
             world.update_category()
             by_title[world.title].append(key)
         """
@@ -672,13 +672,13 @@ class Clicker(QGraphicsScene,ActionManager):
                 senior_index = distances.index(min(distances))
 
 
-                this_world = self.get_system(system_id)
-                senior_world = self.get_system( use[senior_index])
+                this_world = self.get_system(system_id).mainworld
+                senior_world = self.get_system( use[senior_index]).mainworld
 
                 this_world.set_liege(use[senior_index] , senior_world)
                 senior_world.add_vassal(system_id, this_world)
         
-        for system in self._systems.keys():
+        for system in self._system_catalog:
             
 
             center = hex_to_screen(system)
@@ -709,7 +709,7 @@ class Clicker(QGraphicsScene,ActionManager):
                     self.draw_hex(loc)
 
     def get_ultimate_liege(self, hexID:HexID):
-        world = self.get_system(hexID)
+        world = self.get_system(hexID).mainworld
         liege = world.liege
         if liege is None:
             return hexID
