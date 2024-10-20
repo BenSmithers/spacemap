@@ -1,60 +1,89 @@
 from traveller_utils.core import HexID, SubHID
 from traveller_utils.places.world import World
+from traveller_utils.places.system import System
 from traveller_utils.ships import ShipSWN
 
 class Catalog:
     token_type = int
-    def __init__(self, draw_function:function):
-        self._ships = {}
+    def __init__(self, draw_function:callable):
+        self._entries = {}
+
+        self._function = draw_function
+
+    def __iter__(self):
+        return self._entries.__iter__()
+
+    def update(self, token, id):
+        """
+            Updates the object with the id 'id' 
+        """
+        self._entries[id] = token 
+
+    
+    def draw(self, location:token_type):
+        """
+            Re-draws whatever is at the token type
+        """
+        return self._function(location)
+    
+             
+    def get(self, shipID)->token_type:
+        if shipID in self._entries:
+            return self._entries[shipID]
+
+    def register(self, ship:token_type):
+        ship_id = 0
+        while ship_id in self._entries:
+            ship_id+=1
+        self._entries[ship_id] = ship 
+
+        return ship_id
+
+    def delete(self, id):
+        if id in self._entries:
+            del self._entries[id]
+
+        self.draw(id)
+
+
+
+class ShipCatalog(Catalog):
+    token_type = int
+    def __init__(self, draw_function:callable):
+        Catalog.__init__(self, draw_function)
         self._ship_locations = {} #ship_id -> SubHID
         self._ships_at = {} # SubHID -> list[ship_ids]
         self._ships_at_hid = {} # HexID -> list[ship_ids]
 
         self._function = draw_function
 
+    def delete(self, id):
+        location = self.get_loc(id)
+        
+        self.get_at(location).remove(id)
+        Catalog.delete(self, id)
+
+        self.draw(location)
+
     def update(self, token, id):
         """
             Updates the object with the id 'id' 
         """
-        self._ships[id] = token 
+        Catalog.update(self, token, id)
 
         # now we need to re-draw thing, whereever it is 
         location = self.get_loc(id)
         if location is not None:
             self.draw(location)
-        
 
     def register(self, ship:token_type, location:SubHID):
-        ship_id = 0
-        while ship_id in self._ships:
-            ship_id+=1
-        self._ships[ship_id] = ship 
-
-        self.move(ship_id, location)
-
-        return ship_id
-
-    def delete(self, id):
-        location = self.get_loc(id)
-        
-        self.get_at(location).remove(id)
-        if id in self._ships:
-            del self._ships[id]
-        
-        self.draw(location)
-
-            
-
-    def draw(self, location:SubHID):
-        return self._function(location)
+        this_id  = Catalog.register(ship)
+        self.move(this_id, location)
+        return this_id
 
 
     def get_loc(self, shipID)->SubHID:
         if shipID in self._ship_locations:
-            return self._ship_locations[shipID]
-         
-    def get(self, shipID)->token_type:
-        if shipID in self._ships:
             return self._ship_locations[shipID]
 
     def get_at(self, hid:HexID)->list:
@@ -68,6 +97,21 @@ class Catalog:
         if hid in use_dict:
             return use_dict[hid] 
         
+    def draw(self, location):
+        """
+            If we're given a SubHID, we downsize to a HexID and draw
+            If it's a HexID, we just draw
+            If it's neither, we assume it's a ship id, get its location, and draw
+        """
+        if isinstance(location, SubHID):
+            use_id = location.downsize()
+        elif isinstance(location,HexID):
+            use_id = location 
+        else:
+            use_id = self.get_loc(location)
+        self._function(use_id)
+
+
     def move(self, ship_id, dest:SubHID):
         """
             Updates internal maps to represent the new ship location
@@ -81,6 +125,7 @@ class Catalog:
         if dest not in self._ships_at:
             self._ships_at[dest] = []
         self._ships_at[dest].append(ship_id)
+
 
         # now the general listings 
         hid_old_loc = old_loc.downsize()
@@ -96,19 +141,30 @@ class Catalog:
         self.draw(old_loc)
         self.draw(dest)
 
-class ShipCatalog(Catalog):
-    def register(self, ship: ShipSWN, location: SubHID):
-        return super().register(ship, location)
-    def get(self, shipID) -> ShipSWN:
-        return super().get(shipID)
-    def get_at(self, hid: HexID) -> 'list[ShipSWN]':
-        return super().get_at(hid)
-
 
 class SystemCatalog(Catalog):
+    token_type=HexID
+    def register(self, system: System, location: HexID):
+        return super().register(system, location)
+    def get(self, hid:HexID)->System:
+        return super().get(hid)
+    def getworld(self, subh:SubHID)->World:
+        system = self.get(subh.downsize())
+        return system.get(subh)
+    
     def has_fuel(self, hID:HexID):
-        pass 
+        this_system = self.get(hID)
+        return this_system.fuel 
+     
     def main_world(self, hID:HexID)->World:
-        pass 
+        this_system = self.get(hID)
+        return this_system.mainworld
+      
     def star_port(self, hID:HexID)->ShipSWN:
-        pass
+        this_system = self.get(hID)
+        return this_system.starport
+    
+    def insert_world(self, hID, world:World):
+        this_system = self.get(hID)
+        this_system.append(world)
+        self.update(this_system, hID)
