@@ -21,6 +21,11 @@ class StarPort(ShipSWN, Terminal, Market):
 
         self._services = []
 
+        self._category = starport_class.upper()
+    @property
+    def category(self):
+        return self._category
+
     def add_service(self, what):
         self._services.append(what)
 
