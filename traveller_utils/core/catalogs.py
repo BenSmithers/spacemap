@@ -2,6 +2,7 @@ from traveller_utils.core import HexID, SubHID
 from traveller_utils.places.world import World
 from traveller_utils.places.system import System
 from traveller_utils.ships import ShipSWN
+from traveller_utils.ships.starport import StarPort
 
 class Catalog:
     token_type = int
@@ -164,7 +165,7 @@ class SystemCatalog(Catalog):
         this_system = self.get(hID)
         return this_system.mainworld
       
-    def star_port(self, hID:HexID)->ShipSWN:
+    def star_port(self, hID:HexID)->StarPort:
         this_system = self.get(hID)
         return this_system.starport
     
@@ -172,5 +173,15 @@ class SystemCatalog(Catalog):
         this_system = self.get(hID)
         this_system.append(world)
         self.update(this_system, hID)
+
+    def expand_route(self, hid_route:'list[HexID]')->'list[SubHID]':
+        result = []
+
+        for i, hexid in hid_route:
+            this_port = self.star_port(hexid)
+
+            if i==0:
+                pass 
+        
 
     

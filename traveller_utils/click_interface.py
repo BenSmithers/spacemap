@@ -12,6 +12,9 @@ from traveller_utils.core.core import Hex, Region, Route
 from traveller_utils.places.world import World
 from traveller_utils.places.system import generate_system, System
 from traveller_utils.core import utils
+from traveller_utils.ships.ship import ShipSWN
+from traveller_utils.places.market import find_maximum_sale
+from traveller_utils.places.trade_route import TradeRoute
 from traveller_utils.core.catalogs import ShipCatalog, SystemCatalog
 from collections import deque
 import numpy as np
@@ -77,7 +80,7 @@ class Clicker(QGraphicsScene,ActionManager):
             self.unpack(data)
         else:
             self.initialize_systems()
-            #self.initialize_routes()
+            self.initialize_routes()
             self.initialize_regions()
             n_ships = 60
 
@@ -246,12 +249,27 @@ class Clicker(QGraphicsScene,ActionManager):
         return False 
     
     def generate_passengers(self, hexID, mod=0):
-        world = self.get_system(hexID)
-        skip = world.generated
-
-        all_passengers = world.generate_passengers(mod)
+        system = self.get_system(hexID)
+        skip = False
+        if system is None:
+            skip = True 
+        starport = system.starport
+        if starport is None:
+            skip = True 
         if skip:
+            return {
+                    "high":[],
+                    "middle":[],
+                    "basic":[],
+                    "low":[], 
+                }
+        
+        now_skip = starport.generated
+
+        all_passengers = starport.generate_passengers(mod)
+        if now_skip:
             return all_passengers
+
 
         n_gen = 0
         for berth_key in all_passengers.keys():
@@ -260,14 +278,14 @@ class Clicker(QGraphicsScene,ActionManager):
 
         item = 0
         for berth_key in all_passengers.keys():
-            for passenger in all_passengers[berth_key]:
+            for ip, passenger in enumerate(all_passengers[berth_key]):
                 passenger.set_destination(destinations[item])
-                #passenger.set_destination(self.get_system(destinations[item]))
+                all_passengers[berth_key][ip] = passenger
                 item += 1
 
         return all_passengers
 
-    def choose_dest(self, source:SubHID, samples=1)->HexID:
+    def choose_dest(self, source:HexID, samples=1)->HexID:
         """
         Uses desireability of worlds around a given HexID to sample `samples` destinations 
         Punishes distant destinations
@@ -279,7 +297,7 @@ class Clicker(QGraphicsScene,ActionManager):
         all_possible = list(filter(lambda entry:entry!=source, all_possible))
 
         distance_weight = np.array([source.distance(entry)**2 for entry in all_possible])
-        desireability = np.array([self.get_world(hid).desireability for hid in all_possible])
+        desireability = np.array([self.get_system(hid).mainworld.desireability for hid in all_possible])
         desireability += min(desireability)
 
         total_weights = desireability.astype(float)**2 / distance_weight
@@ -388,46 +406,36 @@ class Clicker(QGraphicsScene,ActionManager):
 
     def initialize_routes(self):
         """
-            Use the SwoN rules to create hyperlane trade routes between systems
+            See if there are profitable trade routes within 4 hexes of the current system
+
         """
-        for system_key in self.systems.keys():
+
+
+        for system_key in self._system_catalog:
             this_world = self.get_system(system_key)
+            market = this_world.starport
 
-            if WorldCategory.Industrial in this_world.category or WorldCategory.High_Tech in this_world.category:
-                check = [
-                    WorldCategory.Asteroid,
-                    WorldCategory.Desert,
-                    WorldCategory.Ice_Capped,
-                    WorldCategory.Non_Industrial
-                ]
-            elif WorldCategory.High_Pop in this_world.category or WorldCategory.Rich in this_world.category:
-                check = [
-                    WorldCategory.Agricultural,
-                    WorldCategory.Garden, 
-                    WorldCategory.Water_World
-                ]
-            else:
-                continue
-
-            
-            in_range = system_key.in_range(4, False)
+            in_range = system_key.in_range(6, False)
             in_range = list(filter(lambda x:x in self._systems, in_range))
+
             for other_key in in_range:
-                other_world = self.get_system(other_key)
-                if any([entry in other_world.category for entry in check]):
-                    # draw route! 
-                    if  not self._route_present(system_key, other_key):
-                        route_raw = self.get_route_a_star(system_key, other_key)
-                        level = self.get_route_level(route_raw)
-                        route = Route(route_raw, level)
-                        if len(route)>6:
-                            continue
-                        if route.level<=2:
-                            self.add_route(system_key, other_key, route)
+                other_system = self.get_system(other_key)
+                if other_system is None:
+                    continue
+                other_market = other_system.starport
+                        
+                for good_name in market.supply:
+                    new_route, ship_template = market.check_route(other_market, good_name)
+                    if new_route is None:
+                        continue
+
+                    route = self.get_route_a_star(system_key, other_key, ship_template)
+
+                    self.add_route(system_key, other_key,)
 
         self.draw_routes()
 
-    def add_route(self, start:HexID, end:HexID, route:Route):
+    def add_route(self, start:HexID, end:HexID, route:TradeRoute):
         """
             Internally reggister the route from the given start and end hexid
 
@@ -549,6 +557,7 @@ class Clicker(QGraphicsScene,ActionManager):
                     mod = 0 if this_val<extra_thresh else 2
 
                     new_system = generate_system(mod, loc)
+                    new_system.starport.link_shid(loc)
                     self._system_catalog.register(new_system, loc)
 
         
@@ -723,7 +732,7 @@ class Clicker(QGraphicsScene,ActionManager):
         if loc in self._system_catalog: 
             self._selected_hid = loc 
             self.draw_selection(loc)
-            self._parent_window.planet_selected(self.get_system(loc).mainworld, loc )
+            self._parent_window.planet_selected(self.get_system(loc), loc )
         else:
             self._selected_hid = None 
             self._parent_window.select_none()
@@ -931,43 +940,72 @@ class Clicker(QGraphicsScene,ActionManager):
 
 
     def _get_heuristic(self, start:HexID, end:HexID)->float:
-        val =  abs(end - start)
+        val =  abs(end - start)*6
+
         return val
     
-    def _get_cost_between(self, start_id:HexID, end_id:HexID):
-        # only called on neighboring hexes 
-        cost = abs(end_id - start_id)
+    def _get_cost_between(self, start_id:HexID, end_id:HexID, ship:ShipSWN):
+        """
 
-        # if that one is unknown, it has no starport. Avoid! 
-        if end_id not in self._systems:
-            cost*= 7 # no starport
-            if start_id not in self._systems:
-                cost*=7 # penalize double-nothings a lot 
+        """
+        # called on any two hexes, really... 
+        cost = abs(end_id - start_id)*6/ship.drive_rating
+
+        max_fuel = ship.fuel_max
+        have_scoop = ship.has_fuel_scoop
+
+        last_system = self._system_catalog.get(start_id)
+        if last_system is None :
+            last_scoop = False 
+            last_has_station = False
         else:
-            # avoid ones with no starport
-            fuel = self.get_system(end_id).fuel_present()
+            last_scoop = last_system.fuel and have_scoop
+            last_has_station = last_system.starport is not None     
+        
+        next_system = self._system_catalog.get(end_id)
+        if next_system is None:
+            next_scoop = False
+            next_has_station = False
+        else:
+            next_scoop = next_system.fuel and have_scoop
+            next_has_station = last_system.starport is not None 
 
-            if fuel==0:
-                cost *= 4 # no fuel
-                
-                if start_id in self._systems:
-                    if self.get_system(start_id).fuel_present()==0:
-                        cost *= 7
+        # fly to a station and back to refuel 
+        # two days there and two days back 
+        penalty = 4.0/ship.drive_rating 
+        if last_has_station and next_has_station:
+            pass # both have fuel - no effect
+        elif last_has_station or next_has_station:
+            # one of the two have no fuel - but you have a scoop 
+            if max_fuel==1: # you have only space for one fuel, so you need to refuel
+                if (not last_has_station and last_scoop) or (not next_has_station and next_scoop):
+                    penalty += 3.0 # add a few days to fuel-scoop
                 else:
-                    cost *= 7
+                    penalty = 100000
+            
+        else: # two in a row without stations 
+            if max_fuel==1 :
+                if last_scoop and next_scoop:
+                    penalty += 6.0
+                else:
+                    penalty = 100000
+            elif max_fuel==2:
+                if last_scoop or next_scoop:
+                    penalty += 3.0
+                else:
+                    penalty = 100000 
+                
+        return cost + penalty
 
-            # and also penalize ones with bad fuel 
-            elif fuel<3:
-                cost *= 1.2
-        return cost
+       
     
-    def get_route_cost(self, hexIDs:'list[HexID]'):
+    def get_route_cost(self, hexIDs:'list[HexID]', ship_used:ShipSWN):
         cost = 0
         for i in range(len(hexIDs)-1):
-            cost += self._get_cost_between(hexIDs[i], hexIDs[i+1])
+            cost += self._get_cost_between(hexIDs[i], hexIDs[i+1], ship_used)
         return cost
     
-    def get_route_a_star(self, start_id:HexID, end_id:HexID)->'list[HexID]':
+    def get_route_a_star(self, start_id:HexID, end_id:HexID, ship_used:ShipSWN)->'list[HexID]':
         """
         Finds quickest route between two given HexIDs. Both IDs must be on the Hexmap.
         Always steps closer to the target
@@ -1015,9 +1053,9 @@ class Clicker(QGraphicsScene,ActionManager):
             if from_hid == end_id:
                 return reconstruct_path(cameFrom, from_hid)
 
-            for next_step in from_hid.neighbors:
+            for next_step in from_hid.in_range(ship_used.drive_rating, False):
                 # true cost to here plus the cost to the neighbor 
-                next_step_cost = min_cost_to_hex[from_hid] + self._get_cost_between(from_hid, next_step)
+                next_step_cost = min_cost_to_hex[from_hid] + self._get_cost_between(from_hid, next_step, ship_used)
 
                 use_this_step = False
                 if next_step not in min_cost_to_hex:
@@ -1029,7 +1067,5 @@ class Clicker(QGraphicsScene,ActionManager):
                     cameFrom[next_step] = from_hid
                     pred_cost_from_hex[next_step] = min_cost_to_hex[next_step] + self._get_heuristic(next_step, end_id)
                     add_to_openSet(next_step)
-
-
 
         return([])

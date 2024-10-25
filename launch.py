@@ -1,5 +1,4 @@
 #!/opt/homebrew/bin/python3.12
-import typing
 from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QDialog
 from PyQt5 import QtGui
 from PyQt5.QtCore import Qt
@@ -8,6 +7,7 @@ from PyQt5 import QtWidgets, QtGui, QtCore
 from qtdesigner.main_window import Ui_MainWindow as main_gui
 
 from traveller_utils.places.world import World, Government, star_hex
+from traveller_utils.places.system import System
 from traveller_utils.person import Person
 from traveller_utils.retailer import Retailer
 from traveller_utils.click_interface import Clicker
@@ -16,6 +16,7 @@ from traveller_utils.core import utils
 from traveller_utils.tables import fares
 from traveller_utils.clock import MultiHexCalendar, Time, Clock
 from traveller_utils.ships.ship import AIShip, Ship
+from traveller_utils.ships.starport import StarPort
 
 from qtdesigner.passengers import Ui_Form as passenger_widget_gui
 from qtdesigner.trade_goods import Ui_Form as trade_goods_widget_gui
@@ -407,17 +408,18 @@ class TradeWidget(QtWidgets.QWidget):
         self.buyer_table_entry.clear()
         self.ui.retailer_combo.clear()
 
-    def update_ui(self, world:World):        
-        self._world = world
-        if world is not None:
-            all_retails = world.retailers
+    def update_ui(self, port:StarPort):        
+        self._world = port
+        return 
+        if port is not None:
+            all_retails = port.re
 
         self.seller_list_entry.clear()
         self.buyer_table_entry.clear()
         self.ui.retailer_combo.clear()
 
         mod = 0
-        if world.starport_cat=="A":
+        if world.category=="A":
             mod = -6
         elif world.starport_cat=="B":
             mod = -4
@@ -600,26 +602,27 @@ class main_window(QMainWindow):
         self.scene.closeEvent(event)
 
         
-    def planet_selected(self, world:World, loc:HexID):
+    def planet_selected(self, world:System, loc:HexID):
         self._ship_widget.clear()
         while len(self.govs)>0:
             first = self.govs.pop()
             first.deleteLater()
             self._planet_widget.ui.formLayout_2.removeWidget(first)
         
-        self._planet_widget.update_ui(world, loc)
-        self._trade_widget.update_ui(world)
+        self._planet_widget.update_ui(world.mainworld, loc)
+        self._trade_widget.update_ui(world.starport)
 
         self._pass_widget.log_passengers(loc)
         self._notes_widget.set_text(world.notes())
 
-        these_ships = [self.scene.get_ship(sid) for sid in self.scene.get_ships_at(loc)]
-        for ship in these_ships:
-            world_routes_filter = list(filter(lambda entry:entry is not None, [self.scene.get_system(hid) for hid in ship.route]))
-            route_names = [entry.name for entry in world_routes_filter]
-            
-            self._ship_widget.add_ship(ship, route_names)
-        self._ship_widget.update_gui()
+        if False:
+            these_ships = [self.scene.get_ship(sid) for sid in self.scene.get_ships_at(loc)]
+            for ship in these_ships:
+                world_routes_filter = list(filter(lambda entry:entry is not None, [self.scene.get_system(hid) for hid in ship.route]))
+                route_names = [entry.name for entry in world_routes_filter]
+                
+                self._ship_widget.add_ship(ship, route_names)
+            self._ship_widget.update_gui()
 
         self.govs.append(GovWidget(self._planet_widget.ui.overview_page))
         self.govs[0].configure(world.government)

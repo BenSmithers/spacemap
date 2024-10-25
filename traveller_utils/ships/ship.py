@@ -71,6 +71,12 @@ class ShipSWN:
     @property 
     def has_fuel_scoop(self):
         return self._fuel_scoop
+    @property
+    def fuel_max(self):
+        return self._fuel_max
+    @property
+    def fuel(self):
+        return self._fuel
 
     def add_fuel(self):
         if self._fuel_max>self._fuel:
@@ -159,6 +165,9 @@ class ShipSWN:
                 if new_obj.name.lower()=="fuel bunkers":
                     self._fuel_max+=1 
 
+                if "drive-" in new_obj.name.lower():
+                    value = int(new_obj.name.lower().split("-")[0][0])
+                    self._drive_rating = value
             else:
                 raise TypeError("Unknown fitting type: {}".format(type(new_obj)))
         else:
@@ -227,6 +236,26 @@ class ShipSWN:
     
     def annual_maintenance(self):
         return self.cost()/10.0
+    
+    def get_route_cost(self, n_hexes):
+        n_jumps = int(n_hexes/self.drive_rating) # round down
+        # if it's not perfect, add one extra jump
+        if n_hexes%self.drive_rating != 0:
+            n_jumps+=1
+        
+        travel_time = n_hexes*6/self.drive_rating  # spike drill time
+        travel_time += n_jumps*2/self.drive_rating # refuel 
+        travel_time*=2  # return 
+
+        return travel_time*self.daily_operational
+    
+    @property
+    def daily_operational(self):
+        return (1./365)*(self.annual_maintenance() + 0.5*(self.min_crew + self.max_crew)*5.5e4)
+
+    @property
+    def drive_rating(self):
+        return self._drive_rating
 
     @classmethod
     def load_from_template(cls, template_name):
