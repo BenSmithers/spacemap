@@ -237,7 +237,7 @@ class ShipSWN:
     def annual_maintenance(self):
         return self.cost()/10.0
     
-    def get_route_cost(self, n_hexes):
+    def get_route_expenses(self, n_hexes):
         n_jumps = int(n_hexes/self.drive_rating) # round down
         # if it's not perfect, add one extra jump
         if n_hexes%self.drive_rating != 0:

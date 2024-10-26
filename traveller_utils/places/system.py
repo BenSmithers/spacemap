@@ -18,6 +18,12 @@ class System:
 
         self._fuel = False 
         self._gas_giants = False 
+        self._location_inter = SubHID(hID.xid, hID.yid,0,0)
+        self._regions[self._location_inter] = InFlight()
+
+    @property
+    def inflight(self):
+        return self._location_inter
 
     def get(self, subh:SubHID):
         if subh in self._regions:
@@ -35,6 +41,14 @@ class System:
     def mainworld(self)->World:
         return self._regions[self._mainworld]
     
+    def get_notable(self, of_note:SystemNote):
+        if of_note.value == SystemNote.MainPort.value:
+            return  self._starport
+        elif of_note.value == SystemNote.MainWorld.value:
+            return self._mainworld
+        else:
+            return 
+    
     def append(self, obj:PointOfInterest, of_note=SystemNote.Nothing):
         """
             Append a new region 
@@ -44,13 +58,13 @@ class System:
             self._fuel = True
 
         index= 1
-        location_inter = SubHID(self._system_location.xid, self._system_location.yid, index, 0)
+        interloc = SubHID(self._system_location.xid, self._system_location.yid, index, 0)
         location = SubHID(self._system_location.xid, self._system_location.yid, index, 1)
-        while location_inter in self._regions:
+        while interloc in self._regions:
             index +=1  
-            location_inter = SubHID(self._system_location.xid, self._system_location.yid, index, 0)
+            interloc = SubHID(self._system_location.xid, self._system_location.yid, index, 0)
             location = SubHID(self._system_location.xid, self._system_location.yid, index, 1)
-        self._regions[location_inter] = InterRegion()
+        self._regions[interloc] = InterRegion()
         self._regions[location] = obj
 
         if of_note.value==SystemNote.MainWorld.value:
@@ -89,7 +103,6 @@ def generate_system(modifier, location:HexID)->System:
 
     # create main world
     new_system = System(location, name)
-    new_system.append(InFlight())
 
     new_world = World(True, modifier)
     world_loc = new_system.append(new_world, SystemNote.MainWorld)

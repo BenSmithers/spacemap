@@ -116,7 +116,6 @@ class Market:
         profit = other_market.get_market_price(good_name, profitable_amt) - self.get_market_price(good_name, -profitable_amt)
         if profit <0:
             return 
-        print(profit)
         max_cargo = -1 
         max_margin = -1 
         ship_name = ""
@@ -124,7 +123,7 @@ class Market:
             this_ship = freighters[entry]
             # profit moving the ship's cargo worth minus the operational costs 
             # so if there isn't a lot of cargo here, it won't be economical to
-            margin = profit*min([this_ship.cargo_free(), profitable_amt ]) - this_ship.get_route_cost(other_market._linked_shid - self._linked_shid)
+            margin = profit*min([this_ship.cargo_free(), profitable_amt ]) - this_ship.get_route_expenses(other_market._linked_shid - self._linked_shid)
             if margin>max_margin:
                 ship_name = entry 
                 max_margin = margin 
@@ -136,5 +135,4 @@ class Market:
         new_route = TradeRoute([self._linked_shid.downsize(), other_market._linked_shid.downsize()], good_name, max_cargo)
         self.add_route(new_route)
         other_market.add_route(new_route)
-        print("Generated {} trade route".format(good_name))
         return new_route, freighters[ship_name]
