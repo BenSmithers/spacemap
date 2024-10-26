@@ -1,12 +1,11 @@
 from traveller_utils.name_gen import create_name
 from traveller_utils.places.world import World
-from traveller_utils.places.poi import PointOfInterest, GasGiant
+from traveller_utils.places.poi import PointOfInterest, GasGiant, InterRegion, InFlight
 from traveller_utils.core.utils import roll 
 from traveller_utils.tables import starports_str
 from traveller_utils.ships import StarPort
 from traveller_utils.enums import Bases, SystemNote
 from traveller_utils.core.coordinates import SubHID, HexID
-
 
 class System:
     def __init__(self, hID:HexID, name:str):
@@ -37,15 +36,21 @@ class System:
         return self._regions[self._mainworld]
     
     def append(self, obj:PointOfInterest, of_note=SystemNote.Nothing):
+        """
+            Append a new region 
+        """
         if isinstance(obj, GasGiant):
             self._gas_giants = True 
             self._fuel = True
 
-        index= 0
-        location = SubHID(self._system_location.xid, self._system_location.yid, index, 0)
-        while location in self._regions:
+        index= 1
+        location_inter = SubHID(self._system_location.xid, self._system_location.yid, index, 0)
+        location = SubHID(self._system_location.xid, self._system_location.yid, index, 1)
+        while location_inter in self._regions:
             index +=1  
-            location = SubHID(self._system_location.xid, self._system_location.yid, index, 0)
+            location_inter = SubHID(self._system_location.xid, self._system_location.yid, index, 0)
+            location = SubHID(self._system_location.xid, self._system_location.yid, index, 1)
+        self._regions[location_inter] = InterRegion()
         self._regions[location] = obj
 
         if of_note.value==SystemNote.MainWorld.value:
@@ -55,45 +60,40 @@ class System:
 
         return location
 
-    def insert(self, location:SubHID, obj,of_note=SystemNote.Nothing):
-        assert location.downsize()==self._system_location
+    def insert(self, region_number, obj, of_note=SystemNote.Nothing):
+        """
+            Insert an object into a region
+        """
+        test = SubHID(self._system_location.xid, self._system_location.yid, region_number, 0)
+        if test not in self._regions:
+            self._regions[test] = InterRegion()
+            location = SubHID(self._system_location.xid, self._system_location.yid, region_number, 1)
+        else: 
+            index = 1 
+            location = SubHID(self._system_location.xid, self._system_location.yid, region_number, index)
+            while location in self._regions:
+                index+=1 
+                location = SubHID(self._system_location.xid, self._system_location.yid, region_number, index)
         
-        if location in self._regions:
-            # take whatever is already there and push it into the next region (recursively) 
-            old_entry = self._regions[location]
-            self._regions[location] = obj 
-            new_location = SubHID(location.xid, location.yid, location.region +1, location.point)
-            
-            if self._starport==location:
-                call_with = SystemNote.MainPort
-            elif self._mainworld==location:
-                call_with = SystemNote.MainWorld
-            else:
-                call_with = SystemNote.Nothing
-            self.insert(new_location, old_entry, call_with)
-        else:
-            self._regions[location] = obj
-
+        self._regions[location] = obj 
+        
         if of_note.value==SystemNote.MainWorld.value:
             self._mainworld = location
         elif of_note.value==SystemNote.MainPort.value:
             self._starport = location 
-        
+        return location
 
-def generate_system(modifier, location:HexID):
+def generate_system(modifier, location:HexID)->System:
     
     name = create_name("planet")
 
     # create main world
     new_system = System(location, name)
-
+    new_system.append(InFlight())
 
     new_world = World(True, modifier)
     world_loc = new_system.append(new_world, SystemNote.MainWorld)
-
-    starport_loc = SubHID(world_loc.xid, world_loc.yid, world_loc.region, 1)
     
-
     # generate services 
 
     # build spaceport 
@@ -147,14 +147,12 @@ def generate_system(modifier, location:HexID):
         no_starport = True 
 
 
-    tas = False
     if scout_roll>scout_lim:
         services.append(Bases.Scout)
     if naval_roll>naval_lim:
         services.append(Bases.Naval)
     if tas_roll>tas_lim:
         services.append(Bases.TAS)
-        tas = True 
     if research_roll>res_lim:
         services.append(Bases.Research)
 
@@ -163,8 +161,7 @@ def generate_system(modifier, location:HexID):
         for entry in services:
             starport.add_service(entry)
         
-
-        new_system.insert(starport_loc, starport, SystemNote.MainPort)
+        starport_loc = new_system.insert(world_loc.region, starport, SystemNote.MainPort)
         starport.link_shid(starport_loc)
     # generate other worlds 
 
@@ -179,4 +176,6 @@ def generate_system(modifier, location:HexID):
         new_gas = GasGiant()
         new_system.append(new_gas)
     
+
+
     return new_system
