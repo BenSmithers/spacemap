@@ -7,6 +7,8 @@ from traveller_utils.places.trade_route import TradeRoute
 from traveller_utils.core import utils
 
 import numpy as np 
+from collections import deque
+
 
 class Catalog:
     token_type = int
@@ -234,6 +236,139 @@ class SystemCatalog(Catalog):
         dests = [np.random.choice(all_possible,size=1, p = total_weights)[0] for i in range(samples)]
 
         return dests 
+
+
+
+    def _get_heuristic(self, start:HexID, end:HexID)->float:
+        val =  abs(end - start)*6
+
+        return val
+    
+    def _get_cost_between(self, start_id:HexID, end_id:HexID, ship:ShipSWN):
+        """
+
+        """
+        # called on any two hexes, really... 
+        cost = abs(end_id - start_id)*6/ship.drive_rating
+
+        max_fuel = ship.fuel_max
+        have_scoop = ship.has_fuel_scoop
+
+        last_system = self.get(start_id)
+        if last_system is None :
+            last_scoop = False 
+            last_has_station = False
+        else:
+            last_scoop = last_system.fuel and have_scoop
+            last_has_station = last_system.starport is not None     
+        
+        next_system = self.get(end_id)
+        if next_system is None:
+            next_scoop = False
+            next_has_station = False
+        else:
+            next_scoop = next_system.fuel and have_scoop
+            next_has_station = last_system.starport is not None 
+
+        # fly to a station and back to refuel 
+        # two days there and two days back 
+        penalty = 4.0/ship.drive_rating 
+        if last_has_station and next_has_station:
+            pass # both have fuel - no effect
+        elif last_has_station or next_has_station:
+            # one of the two have no fuel - but you have a scoop 
+            if max_fuel==1: # you have only space for one fuel, so you need to refuel
+                if (not last_has_station and last_scoop) or (not next_has_station and next_scoop):
+                    penalty += 3.0 # add a few days to fuel-scoop
+                else:
+                    penalty = 100000
+            
+        else: # two in a row without stations 
+            if max_fuel==1 :
+                if last_scoop and next_scoop:
+                    penalty += 6.0
+                else:
+                    penalty = 100000
+            elif max_fuel==2:
+                if last_scoop or next_scoop:
+                    penalty += 3.0
+                else:
+                    penalty = 100000 
+                
+        return cost + penalty
+
+       
+    
+    def get_route_cost(self, hexIDs:'list[HexID]', ship_used:ShipSWN):
+        cost = 0
+        for i in range(len(hexIDs)-1):
+            cost += self._get_cost_between(hexIDs[i], hexIDs[i+1], ship_used)
+        return cost
+    
+    def get_route_a_star(self, start_id:HexID, end_id:HexID, ship_used:ShipSWN)->'list[HexID]':
+        """
+        Finds quickest route between two given HexIDs. Both IDs must be on the Hexmap.
+        Always steps closer to the target
+
+        Returns ordered list of HexIDs representing shortest found path between start and end (includes start and end)
+        """
+        # list of hexIDs, sorted by the heuristic calcualted from the destination
+        openSet = deque([start_id,])
+        sorted_costs = deque([])
+        cameFrom = {}
+
+        min_cost_to_hex = {}
+        min_cost_to_hex[start_id] = 0.
+
+        pred_cost_from_hex = {}
+        pred_cost_from_hex[start_id] = self._get_heuristic(start_id,end_id)
+
+
+        def reconstruct_path(cameFrom:'dict[HexID]', current:HexID)->'list[HexID]':
+            total_path = [current,]
+            while current in cameFrom.keys():
+                current = cameFrom[current]
+                total_path.append(current)
+            
+            return total_path[::-1]
+        
+        def add_to_openSet(which_id):
+            if len(openSet)==0:
+                openSet.append(which_id)
+            else:
+                # this could be a little faster with a binary search
+                iter = 0
+                
+                # openSet is ordered based off of which one we think is closest 
+                while pred_cost_from_hex[which_id] < pred_cost_from_hex[openSet[iter]]:
+                    iter += 1
+                    if iter==len(openSet):
+                        break
+
+                #sorted_costs.insert(iter, pred_cost_from_hex[neighbor])
+                openSet.insert(iter,which_id)
+
+        while len(openSet)!=0:
+            from_hid = openSet.pop()
+            if from_hid == end_id:
+                return reconstruct_path(cameFrom, from_hid)
+
+            for next_step in from_hid.in_range(ship_used.drive_rating, False):
+                # true cost to here plus the cost to the neighbor 
+                next_step_cost = min_cost_to_hex[from_hid] + self._get_cost_between(from_hid, next_step, ship_used)
+
+                use_this_step = False
+                if next_step not in min_cost_to_hex:
+                    use_this_step = True
+                elif next_step_cost < min_cost_to_hex[next_step]:
+                    use_this_step = True
+                if use_this_step:
+                    min_cost_to_hex[next_step] = next_step_cost
+                    cameFrom[next_step] = from_hid
+                    pred_cost_from_hex[next_step] = min_cost_to_hex[next_step] + self._get_heuristic(next_step, end_id)
+                    add_to_openSet(next_step)
+
+        return([])
 
 class TradeCat(Catalog):
     """
