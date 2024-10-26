@@ -3,6 +3,10 @@ from traveller_utils.places.world import World
 from traveller_utils.places.system import System
 from traveller_utils.ships import ShipSWN
 from traveller_utils.ships.starport import StarPort
+from traveller_utils.places.trade_route import TradeRoute
+from traveller_utils.core import utils
+
+import numpy as np 
 
 class Catalog:
     token_type = int
@@ -145,11 +149,19 @@ class ShipCatalog(Catalog):
         self.draw(old_loc)
         self.draw(dest)
 
-
 class SystemCatalog(Catalog):
     token_type=HexID
+    def __init__(self, draw_function: callable):
+        super().__init__(draw_function)
+        self._cummulative_wealths = []
+
+    def update(self, token, id):
+        self._cummulative_wealths = []
+        return super().update(token, id)
+    
     def register(self, system: System, location: HexID):
         self._entries[location] = system
+        self._cummulative_wealths = []
         
     def get(self, hid:HexID)->System:
         return super().get(hid)
@@ -175,6 +187,9 @@ class SystemCatalog(Catalog):
         self.update(this_system, hID)
 
     def expand_route(self, hid_route:'list[HexID]')->'list[SubHID]':
+        """
+            Takes a list of HexIDs and expands it out to include stops at each starport (or a gas giant)
+        """
         result = []
 
         for i, hexid in hid_route:
@@ -182,6 +197,131 @@ class SystemCatalog(Catalog):
 
             if i==0:
                 pass 
+        raise NotImplementedError()
+    
+    def sample_from_wealth(self):
+        # get all of the wealths and accumulate them. Only do this if it hasn't been done already
+        all_keys = list(self._entries.keys())
+        if len(self._cummulative_wealths)==0:
+            self._cummulative_wealths = [self.get(key).mainworld.wealth for key in all_keys]
+            self._cummulative_wealths = np.cumsum(self._cummulative_wealths).tolist()
         
 
+        sampled = np.random.rand()*self._cummulative_wealths[-1]
+        index = utils.get_loc(sampled, self._cummulative_wealths)[0]
+        return all_keys[index]    
     
+    def choose_dest(self, source:HexID, samples=1)->HexID:
+        """
+        Uses desireability of worlds around a given HexID to sample `samples` destinations 
+        Punishes distant destinations
+        """
+
+        max_dist = 6
+        all_possible = source.in_range(6)
+        all_possible = list(filter(lambda x:x in self, all_possible))
+        all_possible = list(filter(lambda entry:entry!=source, all_possible))
+
+        distance_weight = np.array([source.distance(entry)**2 for entry in all_possible])
+        desireability = np.array([self.get(hid).mainworld.desireability for hid in all_possible])
+        desireability += min(desireability)
+
+        total_weights = desireability.astype(float)**2 / distance_weight
+ 
+        total_weights+=np.min(total_weights)
+        total_weights /= np.sum(total_weights)
+
+        dests = [np.random.choice(all_possible,size=1, p = total_weights)[0] for i in range(samples)]
+
+        return dests 
+
+class TradeCat(Catalog):
+    """
+        Contains all of the trade routes, interfaces with a systems catalog to then access flow of wealth across the systems 
+
+        So, practically 
+    """
+    token_type=TradeRoute 
+    def __init__(self, draw_function: callable, systems:SystemCatalog):
+        Catalog.__init__(self, draw_function)
+        self._system_cat = systems
+
+        self._by_hid = {} # hexID -> list(route IDs)
+
+    def get_routes(self, superHID:SubHID)->'list[int]':
+        if isinstance(superHID, SubHID):
+            index = superHID.downsize()
+        else: 
+            index = superHID
+
+        if index in self._by_hid:
+            return self._by_hid[index]
+
+
+    def wealth_flow(self, hid:HexID):
+        """
+            Get all the routes starting/stopping here. 
+            For each one, get the prices for the starting and stopping system
+                purchase price * tonnage --> 
+
+            Returns the wealth flowing in or out of this system
+        """
+        related_routes = self.get_routes(hid)
+        market = self._system_cat.get(hid).starport
+        if related_routes is None:
+            return 0.0 
+
+        wealth_flow = 0.0
+        for routeid in related_routes:
+            route = self.get(routeid)
+            dtons = route.tons_per_month[hid]
+            cost = market.get_market_price(route.trade_good)
+            # negative because an outflow of goods is an inflow of cash
+            wealth_flow+= -1*cost*dtons
+
+        return wealth_flow
+
+
+    def register(self, route: TradeRoute):
+        rid = super().register(route)
+        for hid in  route.tons_per_month:
+            if hid in self._by_hid:
+                self._by_hid[hid].append(rid)
+            else:
+                self._by_hid[hid] = [rid, ]
+        
+        return rid 
+    
+    def get_route_level(self, route:'list[HexID]')->int:
+        """
+            Returns the "level" of a route 
+                level 1 means there is a fuel source for every jump
+                level 2 means there may be stops without fuel, but no two consequtively 
+                level 3 means there may be two consequtive stps without fuel, but not three
+                etc etc
+        """
+        max_without = 0
+        current = 0
+
+        # current will keep growing for each step as long as 
+        for hexID in route:
+            current += 1
+            without = False
+
+            if hexID not in self._system_cat:
+                without = True
+            else:
+                if self._system_cat.get(hexID).starport.category=="X" or self._system_cat.get(hexID).starport.category=="E":
+                    without = True
+
+            if current > max_without:
+                max_without = current
+
+            if not without:
+                current = 0 # reset it ! 
+        
+        # check one last time in case we got to the destination on the last step and still have no fuel (shouldn't happen, but w/e)
+        if current > max_without:
+            max_without = current
+        
+        return max_without

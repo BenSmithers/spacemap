@@ -49,7 +49,7 @@ class Terminal:
                     "low":[], 
                 }
 
-    def generate_passengers(self, steward_mod:int)->'dict[Person]':
+    def generate_passengers(self, steward_mod:int)->'dict[str, Person]':
         if self._generated:
             return self._passengers        
 
@@ -110,19 +110,6 @@ class Terminal:
         index = np.random.choice(range(len(weights)), p=weights)
         return available[index], scale*available[index].sample_amount()
 
-
-    def get_purchase_price(self, entry:TradeGoods, modifier=0):
-        """
-            Returns the purchase price of the given trade good on this world 
-            Returns -1 if the good is not available here 
-        """
-
-        return entry.sample_purchase_price(self._linked_world.category, modifier)
-
-        if any(entry.is_available(wc) for wc in self._category ):
-            return entry.sample_purchase_price(self.category, modifier)
-            #return min([entry.sample_purchase_price(wc, modifier) for wc in self.category])
-        return -1 
 
     def get_sale_price(self, entry:TradeGoods, modifier=0):
 

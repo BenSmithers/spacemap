@@ -15,7 +15,7 @@ from traveller_utils.core import utils
 from traveller_utils.ships.ship import ShipSWN
 from traveller_utils.places.market import find_maximum_sale
 from traveller_utils.places.trade_route import TradeRoute
-from traveller_utils.core.catalogs import ShipCatalog, SystemCatalog
+from traveller_utils.core.catalogs import ShipCatalog, SystemCatalog, TradeCat
 from collections import deque
 import numpy as np
 import os 
@@ -53,8 +53,7 @@ class Clicker(QGraphicsScene,ActionManager):
 
         self._ship_catalog = ShipCatalog(self.draw_ships_hex)
         self._system_catalog = SystemCatalog(self.draw_hex)
-
-        self._cummulative_wealths = []
+        self._trade_cat = TradeCat(self.draw_route, self._system_catalog)
 
         self._alt_select = None
         self._alt_route_sid = None
@@ -274,7 +273,7 @@ class Clicker(QGraphicsScene,ActionManager):
         n_gen = 0
         for berth_key in all_passengers.keys():
             n_gen+= len(all_passengers[berth_key])
-        destinations = self.choose_dest(hexID, n_gen)
+        destinations = self._system_catalog.choose_dest(hexID, n_gen)
 
         item = 0
         for berth_key in all_passengers.keys():
@@ -284,57 +283,8 @@ class Clicker(QGraphicsScene,ActionManager):
                 item += 1
 
         return all_passengers
-
-    def choose_dest(self, source:HexID, samples=1)->HexID:
-        """
-        Uses desireability of worlds around a given HexID to sample `samples` destinations 
-        Punishes distant destinations
-        """
-
-        max_dist = 6
-        all_possible = source.in_range(6)
-        all_possible = list(filter(lambda x:x in self._system_catalog, all_possible))
-        all_possible = list(filter(lambda entry:entry!=source, all_possible))
-
-        distance_weight = np.array([source.distance(entry)**2 for entry in all_possible])
-        desireability = np.array([self.get_system(hid).mainworld.desireability for hid in all_possible])
-        desireability += min(desireability)
-
-        total_weights = desireability.astype(float)**2 / distance_weight
- 
-        total_weights+=np.min(total_weights)
-        total_weights /= np.sum(total_weights)
-
-        dests = [np.random.choice(all_possible,size=1, p = total_weights)[0] for i in range(samples)]
-
-        return dests
     
 
-    def update_world(self, other:World, hid:HexID)->None:
-        """
-            Swaps out the world at hid with the world provided. We then redraw the world, 
-            and clear out the cummulative wealths list so that it's regenerated later
-        """
-        self._cummulative_wealths = []
-        self._system_catalog.update(other, hid)
-
-    def _sample_from_wealth(self)->SubHID:
-        """
-            samples a HexIDs based on system wealth
-
-            We first get all of the worlds' wealths, and save the cummulative sum. The sum of all wealths is used for sampling
-        """
-
-        # get all of the wealths and accumulate them. Only do this if it hasn't been done already
-        all_keys = list(self._system_catalog.keys())
-        if len(self._cummulative_wealths)==0:
-            self._cummulative_wealths = [self.get_world(key).wealth for key in all_keys]
-            self._cummulative_wealths = np.cumsum(self._cummulative_wealths).tolist()
-        
-
-        sampled = np.random.rand()*self._cummulative_wealths[-1]
-        index = utils.get_loc(sampled, self._cummulative_wealths)[0]
-        return all_keys[index]
                 
     def step_ai_ship(self, ship_id)->bool:
         """
@@ -367,7 +317,7 @@ class Clicker(QGraphicsScene,ActionManager):
             Then make a ship and queue its travel
         """
         if start_hex is None:
-            loc = self._sample_from_wealth()
+            loc = self._system_catalog.sample_from_wealth()
         else:
             assert isinstance(start_hex, HexID), "Received non-HexID start hex: {}".format(type(start_hex))
             loc = start_hex
@@ -376,7 +326,7 @@ class Clicker(QGraphicsScene,ActionManager):
             key_choice = choice(list( self._routes[loc] ))
             route = self._routes[loc][key_choice].route # route object to list! 
         else:
-            other = self._sample_from_wealth()
+            other = self._system_catalog.sample_from_wealth()
             route = self.get_route_a_star(loc, other)
 
         new_ship = AIShip.generate(route)
@@ -430,39 +380,12 @@ class Clicker(QGraphicsScene,ActionManager):
                         continue
 
                     route = self.get_route_a_star(system_key, other_key, ship_template)
+                    new_route.set_full_route(route)
 
-                    self.add_route(system_key, other_key,)
+                    self.add_route(system_key, other_key, new_route)
 
         self.draw_routes()
 
-    def add_route(self, start:HexID, end:HexID, route:TradeRoute):
-        """
-            Internally reggister the route from the given start and end hexid
-
-            note: the start and end aren't needed, right? 
-        """
-
-        if self._route_present(start, end):
-            return
-        else:
-            if start not in self._routes:
-                self._routes[start] = {}
-            if end not in self._routes:
-                self._routes[end] = {}
-            
-            # we do this so that it's symmetric
-            self._routes[start][end] = route
-            self._routes[end][start] = route
-            for i, hid in enumerate(route):
-                world = self.get_system(hid)
-                if i==0 or i==(len(route)-1):
-                    amt = 2
-                else:
-                    amt = 0.5
-                if world is not None:
-                    #world.iterate_ts()
-                    world.set_ts(world.trade_score + amt)
-                    self._systems[hid] = world
 
     def draw_route_to(self, start:HexID, to:HexID):
         """
@@ -903,40 +826,6 @@ class Clicker(QGraphicsScene,ActionManager):
         if event.key() == QtCore.Qt.Key_Minus or event.key()==QtCore.Qt.Key_PageDown or event.key()==QtCore.Qt.Key_BracketLeft:
             self.parent().scale( 0.95, 0.95 )
 
-    def get_route_level(self, route:'list[HexID]')->int:
-        """
-            Returns the "level" of a route 
-                level 1 means there is a fuel source for every jump
-                level 2 means there may be stops without fuel, but no two consequtively 
-                level 3 means there may be two consequtive stps without fuel, but not three
-                etc etc
-        """
-        max_without = 0
-        current = 0
-
-
-        # current will keep growing for each step as long as 
-        for hexID in route:
-            current += 1
-            without = False
-
-            if hexID not in self._systems:
-                without = True
-            else:
-                if self.get_system(hexID).starport_cat=="X" or self.get_system(hexID).starport_cat=="E":
-                    without = True
-
-            if current > max_without:
-                max_without = current
-
-            if not without:
-                current = 0 # reset it ! 
-        
-        # check one last time in case we got to the destination on the last step and still have no fuel (shouldn't happen, but w/e)
-        if current > max_without:
-            max_without = current
-        
-        return max_without
 
 
     def _get_heuristic(self, start:HexID, end:HexID)->float:

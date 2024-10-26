@@ -51,19 +51,22 @@ class Market:
                 if cat in tg.demand_mod.keys():
                     demand_factor += tg.demand_mod[cat] 
             if scale_factor!=0:
-                self._supply[tg.name] = scale_factor*tg.extract_base_tonnage()*self._linked_world._population/100000
+                self._supply[tg.name] = scale_factor*tg.extract_base_tonnage()*(self._linked_world._population/100000)**0.25
                 self._supply[tg.name] = max([self._supply[tg.name], 1])
 
             if demand_factor!=0:
-                self._demand[tg.name] = demand_factor*tg.extract_base_tonnage()*self._linked_world._population/100000
+                self._demand[tg.name] = demand_factor*tg.extract_base_tonnage()*(self._linked_world._population/100000)**0.25
                 self._demand[tg.name] = max([self._demand[tg.name], 1])        
 
     @property
     def supply(self):
         return self._supply
 
-    def link_shid(self, subhid:HexID):
+    def link_shid(self, subhid:SubHID):
         self._linked_shid = subhid
+
+    def linked_shid(self)->SubHID:
+        return self._linked_shid
 
     def get_market_price(self, good_name, fudge_supply=0):
         """
@@ -71,9 +74,8 @@ class Market:
         """
         tg = get_good(good_name)
         supply_diff = self._supply[tg.name] - self._demand[tg.name] + fudge_supply
-        for route in self.trade_routes:
-            if route.trade_good == good_name:
-                supply_diff += route.tons_per_month[self._linked_shid] 
+        for route in self.trade_routes[good_name]:                 
+            supply_diff += route.tons_per_month[self._linked_shid.downsize()] 
 
         tonnage = tg.extract_base_tonnage()
         flex = tg.demand_flexibility
@@ -83,7 +85,7 @@ class Market:
         return net_cost
     
     def add_route(self, which:TradeRoute):
-        pass
+        self._trade_routes[which.trade_good].append(which)
 
     @property
     def trade_routes(self)->'list[TradeRoute]':
@@ -109,9 +111,12 @@ class Market:
             return  
         
         # maximum amount that could feasibly be profitable 
-        profitable_amt = find_maximum_sale(self, other_market, good_name)
+        profitable_amt = 0.98*find_maximum_sale(self, other_market, good_name)
         # recalculate this...
-        profit = other_market.get_market_price(good_name, 0.5*profitable_amt) - self.get_market_price(good_name, -0.5*profitable_amt)
+        profit = other_market.get_market_price(good_name, profitable_amt) - self.get_market_price(good_name, -profitable_amt)
+        if profit <0:
+            return 
+        print(profit)
         max_cargo = -1 
         max_margin = -1 
         ship_name = ""
@@ -126,8 +131,10 @@ class Market:
                 max_cargo = min([this_ship.cargo_free(), profitable_amt ])
                 if profitable_amt>max_cargo:
                     max_cargo*=int(profitable_amt/max_cargo)
-
-        new_route = TradeRoute([self._linked_shid, other_market._linked_shid], good_name, max_cargo)
+        if ship_name=="":
+            return 
+        new_route = TradeRoute([self._linked_shid.downsize(), other_market._linked_shid.downsize()], good_name, max_cargo)
         self.add_route(new_route)
         other_market.add_route(new_route)
+        print("Generated {} trade route".format(good_name))
         return new_route, freighters[ship_name]

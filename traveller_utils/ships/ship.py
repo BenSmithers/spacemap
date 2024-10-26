@@ -166,7 +166,7 @@ class ShipSWN:
                     self._fuel_max+=1 
 
                 if "drive-" in new_obj.name.lower():
-                    value = int(new_obj.name.lower().split("-")[0][0])
+                    value = int(new_obj.name.lower().split("-")[1][0])
                     self._drive_rating = value
             else:
                 raise TypeError("Unknown fitting type: {}".format(type(new_obj)))
