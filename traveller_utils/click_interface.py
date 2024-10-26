@@ -71,7 +71,7 @@ class Clicker(QGraphicsScene,ActionManager):
         self._selected_sid = None
         self._selected_hid = None
 
-        if os.path.exists(WORLD_PATH):
+        if False:# os.path.exists(WORLD_PATH):
             _obj = open(WORLD_PATH, 'rt')
             data = json.load(_obj)
             _obj.close()
@@ -359,29 +359,41 @@ class Clicker(QGraphicsScene,ActionManager):
 
         """
 
-
+        print("... Finding Trade Routes")
         for system_key in self._system_catalog:
             this_world = self.get_system(system_key)
             market = this_world.starport
+            if market is None:
+                continue
 
-            in_range = system_key.in_range(6, False)
-            in_range = list(filter(lambda x:x in self._systems, in_range))
+            in_range = system_key.in_range(8, False)
+            in_range = list(filter(lambda x:x in self._system_catalog, in_range))
 
             for other_key in in_range:
                 other_system = self.get_system(other_key)
                 if other_system is None:
                     continue
                 other_market = other_system.starport
+                if other_market is None:
+                    continue
                         
                 for good_name in market.supply:
-                    new_route, ship_template = market.check_route(other_market, good_name)
-                    if new_route is None:
+                    result = market.check_route(other_market, good_name)
+                    if result is None:
                         continue
 
+                    new_route, ship_template = result
+
                     route = self._system_catalog.get_route_a_star(system_key, other_key, ship_template)
+                    if self._system_catalog.get_route_cost(route, ship_template)>100000:
+                        continue
+                    
+                    new_route.set_level(self._system_catalog.get_route_level(route))
                     new_route.set_full_route(route)
 
-                    self._trade_cat.add_route(system_key, other_key, new_route)
+                    #self._trade_cat.register(system_key, other_key, new_route)
+                    self._trade_cat.register(new_route)
+
 
         self.draw_routes()
 
@@ -418,9 +430,9 @@ class Clicker(QGraphicsScene,ActionManager):
         """
             draws all of the routes
         """
-        for route in self._routes.keys():
-            for destination in self._routes[route].keys():
-                self.draw_route(route, destination)
+        print("drawing routes")
+        for key in self._trade_cat:
+            self.draw_route(key)
 
     def all_connections(self, start)->'list[HexID]':
         if start in self._routes:
@@ -428,7 +440,13 @@ class Clicker(QGraphicsScene,ActionManager):
         else:
             return []
 
-    def draw_route(self, start, end, highlight=False):
+    def draw_route(self, route_id, highlight=False):
+        route = self._trade_cat.get(route_id)
+        tpm =list(route.tons_per_month.keys())
+        start = tpm[0]
+        end = tpm[1]
+
+
         if start not in self._drawn_routes:
             self._drawn_routes[start]={}
 
@@ -437,24 +455,20 @@ class Clicker(QGraphicsScene,ActionManager):
                 self.removeItem(self._drawn_routes[start][end])
                 self._drawn_routes[start][end] = None
         
-        if start not in self._routes:
-            return
-        if end not in self._routes[start]:
-            return
-
-        full_path = self._routes[start][end]
+    
+        full_path = route.full_route
         
-        shift = full_path.level-1
+        shift = route.level-1
 
         vertices = [hex_to_screen(hid) for hid in full_path]
         path = QtGui.QPainterPath()
         path.addPolygon(QtGui.QPolygonF(vertices))
-        self._pen.setStyle(1 if full_path.level==1 else 3)                
+        self._pen.setStyle(1 if route.level==1 else 3)                
         self._pen.setWidth(8 if highlight else 5)
         if highlight:
             self._pen.setColor(QtGui.QColor(255, 231, 71))
         else:
-            if full_path.level==1:
+            if route.level==1:
                 self._pen.setColor(QtGui.QColor(150,255,150))
             else:
                 
@@ -479,7 +493,7 @@ class Clicker(QGraphicsScene,ActionManager):
                     mod = 0 if this_val<extra_thresh else 2
 
                     new_system = generate_system(mod, loc)
-                    new_system.starport.link_shid(loc)
+                    #new_system.starport.link_shid(loc)
                     self._system_catalog.register(new_system, loc)
 
         

@@ -5,7 +5,7 @@ from traveller_utils.ships import ShipSWN
 from traveller_utils.ships.starport import StarPort
 from traveller_utils.places.trade_route import TradeRoute
 from traveller_utils.core import utils
-
+from traveller_utils.enums import SystemNote
 import numpy as np 
 from collections import deque
 
@@ -198,8 +198,15 @@ class SystemCatalog(Catalog):
             this_port = self.star_port(hexid)
 
             if i==0:
-                pass 
-        raise NotImplementedError()
+                result.append(this_port.linked_shid)
+                result.append(self.get(hexid).inflight)
+            else:
+                result.append(self.get(hexid).inflight)
+                result.append(self.get(hexid).get_notable(SystemNote.MainPort))
+                if i<len(hid_route)-1:
+                    result.append(self.get(hexid).inflight)
+             
+        return result
     
     def sample_from_wealth(self):
         # get all of the wealths and accumulate them. Only do this if it hasn't been done already
@@ -268,7 +275,7 @@ class SystemCatalog(Catalog):
             next_has_station = False
         else:
             next_scoop = next_system.fuel and have_scoop
-            next_has_station = last_system.starport is not None 
+            next_has_station = next_system.starport is not None 
 
         # fly to a station and back to refuel 
         # two days there and two days back 
@@ -369,6 +376,42 @@ class SystemCatalog(Catalog):
                     add_to_openSet(next_step)
 
         return([])
+    
+    def get_route_level(self, route:'list[HexID]')->int:
+        """
+            Returns the "level" of a route 
+                level 1 means there is a fuel source for every jump
+                level 2 means there may be stops without fuel, but no two consequtively 
+                level 3 means there may be two consequtive stps without fuel, but not three
+                etc etc
+        """
+        max_without = 0
+        current = 0
+
+        # current will keep growing for each step as long as 
+        for hexID in route:
+            current += 1
+            without = False
+
+            if hexID not in self:
+                without = True
+            else:
+                if self.get(hexID).starport is None:
+                    without = True
+                elif self.get(hexID).starport.category=="X" or self.get(hexID).starport.category=="E":
+                    without = True
+
+            if current > max_without:
+                max_without = current
+
+            if not without:
+                current = 0 # reset it ! 
+        
+        # check one last time in case we got to the destination on the last step and still have no fuel (shouldn't happen, but w/e)
+        if current > max_without:
+            max_without = current
+        
+        return max_without
 
 class TradeCat(Catalog):
     """
@@ -383,6 +426,9 @@ class TradeCat(Catalog):
 
         self._by_hid = {} # hexID -> list(route IDs)
 
+    def get(self, shipID) -> TradeRoute:
+        return super().get(shipID)
+
     def get_routes(self, superHID:SubHID)->'list[int]':
         if isinstance(superHID, SubHID):
             index = superHID.downsize()
@@ -391,7 +437,6 @@ class TradeCat(Catalog):
 
         if index in self._by_hid:
             return self._by_hid[index]
-
 
     def wealth_flow(self, hid:HexID):
         """
@@ -426,37 +471,3 @@ class TradeCat(Catalog):
                 self._by_hid[hid] = [rid, ]
         
         return rid 
-    
-    def get_route_level(self, route:'list[HexID]')->int:
-        """
-            Returns the "level" of a route 
-                level 1 means there is a fuel source for every jump
-                level 2 means there may be stops without fuel, but no two consequtively 
-                level 3 means there may be two consequtive stps without fuel, but not three
-                etc etc
-        """
-        max_without = 0
-        current = 0
-
-        # current will keep growing for each step as long as 
-        for hexID in route:
-            current += 1
-            without = False
-
-            if hexID not in self._system_cat:
-                without = True
-            else:
-                if self._system_cat.get(hexID).starport.category=="X" or self._system_cat.get(hexID).starport.category=="E":
-                    without = True
-
-            if current > max_without:
-                max_without = current
-
-            if not without:
-                current = 0 # reset it ! 
-        
-        # check one last time in case we got to the destination on the last step and still have no fuel (shouldn't happen, but w/e)
-        if current > max_without:
-            max_without = current
-        
-        return max_without

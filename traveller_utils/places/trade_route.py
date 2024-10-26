@@ -16,7 +16,15 @@ class TradeRoute:
         }
         self._full_route = []
 
+        self._level = 1
         self._trade_good_name = good_name
+
+    @property 
+    def level(self):
+        return self._level
+    
+    def set_level(self, value):
+        self._level = value
 
     def set_full_route(self, full_route):
         self._full_route = full_route
