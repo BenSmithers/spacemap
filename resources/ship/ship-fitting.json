@@ -347,7 +347,7 @@
         "power": 1,
         "powerMultiplier": true
     },
-    "spike drive-2 upgrade": {
+    "drive-2 upgrade": {
         "broken": false,
         "cost": 10000,
         "costMultiplier": true,

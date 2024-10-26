@@ -66,7 +66,7 @@ def sample_ship(ship_class, ship_category):
         elif ship_category==ShipCategory.Yacht:
             pass 
         elif ship_category==ShipCategory.Warship:
-            return ["corvette","patrol boat","heavy frigate"]
+            return random.choice(["corvette","patrol boat","heavy frigate"])
         else:
             raise ValueError("Unkown cat {}".format(ship_category))
 
@@ -91,7 +91,7 @@ def sample_ship(ship_class, ship_category):
             raise ValueError("Unkown cat {}".format(ship_category))
     elif ship_class==ShipClass.Capital:
         if ship_category==ShipCategory.Warship:
-            return ["carrier","battleship"]
+            return random.choice(["carrier","battleship"])
 
 
 class Fitting:
