@@ -268,11 +268,13 @@ class PassengerItem(QtGui.QStandardItem):
         return self._this_path.destination
     
 class SellerItem(QtGui.QStandardItem):
-    def __init__(self, item:str, price:float, qty):
+    def __init__(self, item:str, price, qty):
         if qty=="":
-            combined = "{} : ${:.2f} per unit".format(item, price)
+            combined = "{} : ${:.2f} per ton".format(item, price)
+        elif price=="":
+            combined = "{} : {} tons".format(item, int(qty))
         else:
-            combined = "{} : ${:.2f} per unit | {} units".format(item, price, qty)
+            combined = "{} : ${:.2f} per ton | {} tons".format(item, price, int(qty)    )
         super(SellerItem, self).__init__(combined)
         self._item = item
         self._price = price
@@ -388,112 +390,41 @@ class TradeWidget(QtWidgets.QWidget):
         self.ui=trade_goods_widget_gui()
         self.ui.setupUi(self)
         
-        self.ui.generate_retailer_button.clicked.connect(self.generate_retailer)
-        self.seller_list_entry = QtGui.QStandardItemModel()
-        self.buyer_table_entry = QtGui.QStandardItemModel()
-        self.ui.trade_good_table.setModel(self.seller_list_entry)
-        self.ui.trade_good_table.clicked[QtCore.QModelIndex].connect(self.trade_good_clicked)
+        self.market_price_entry = QtGui.QStandardItemModel()
+        self.demand_entry = QtGui.QStandardItemModel()
+        self.supply_entry = QtGui.QStandardItemModel()
 
-        self.ui.buyer_table.setModel(self.buyer_table_entry)
-        self.ui.buyer_table.clicked[QtCore.QModelIndex].connect(self.buyer_clicked)
-        self.ui.retailer_combo.currentIndexChanged.connect(self.retail_combo_updated)
-        self.ui.type_combo.currentIndexChanged.connect(self.retail_combo_updated)
+        self.ui.buyer_table.setModel(self.market_price_entry)
+        self.ui.demand_table.setModel(self.demand_entry)
+        self.ui.supply_table.setModel(self.supply_entry)
+        #self.ui.buyer_table.clicked[QtCore.QModelIndex].connect(self.buyer_clicked)
 
         self._world= None
 
 
     def clear(self):
         self._world = None
-        self.seller_list_entry.clear()
-        self.buyer_table_entry.clear()
-        self.ui.retailer_combo.clear()
+
 
     def update_ui(self, port:StarPort):        
         self._world = port
-        return 
-        if port is not None:
-            all_retails = port.re
+        self.market_price_entry.clear()
+        self.demand_entry.clear()
+        self.supply_entry.clear()
+    
 
-        self.seller_list_entry.clear()
-        self.buyer_table_entry.clear()
-        self.ui.retailer_combo.clear()
-
-        mod = 0
-        if world.category=="A":
-            mod = -6
-        elif world.starport_cat=="B":
-            mod = -4
-        elif world.starport_cat=="C":
-            mod = -2
-        elif world.starport_cat=="E":
-            mod +=4
-
-        add_string = "Finding a Retailer: CR {}+, 1D days (hours online)\n".format(8+mod)
-        add_string += "+1 per attempt each month "
-        self.ui.difficulty_lbl.setText(add_string)
-
-        if len(all_retails)==0:
-            return
-        for retailer in world.retailers:
-            self.ui.retailer_combo.addItem(retailer.name)
-
-        #chosen_retailer = all_retails[self.ui.retailer_combo.currentIndex()]
-
-        self.retail_combo_updated()
-
-    def retail_combo_updated(self):
-        index = self.ui.retailer_combo.currentIndex()
-        self.seller_list_entry.clear()
-        self.buyer_table_entry.clear()
-
-        if self._world is None:
-            return
-
-        if len(self._world.retailers)==0:
-            return
-
-        this_retail = self._world.retailers[index]
-        if not this_retail.generated:
-            this_retail.regenerate(self._world, self.ui.skill_spin.value())
-            
-        for entry in this_retail.sale_prices.keys():
-            if self.ui.type_combo.currentText()!="Any":
-                if self.ui.type_combo.currentText()=="Uncommon":
-                    if ("advanced" in entry.name.lower() or "Common" in entry.name or "illegal" in entry.name.lower()):
-                        continue
-                elif self.ui.type_combo.currentText() not in entry.name:
-                    continue
-            new_item = SellerItem(entry.name, this_retail.sale_prices[entry]["price"],this_retail.sale_prices[entry]["amount"] )
-            self.seller_list_entry.appendRow(new_item)
-
-        for entry in this_retail.purchase_prices.keys():
-            if self.ui.type_combo.currentText()!="Any":
-                if self.ui.type_combo.currentText()=="Uncommon":
-                    if ("advanced" in entry.name.lower() or "Common" in entry.name or "illegal" in entry.name.lower()):
-                        continue
-                elif self.ui.type_combo.currentText() not in entry.name:
-                    continue
-            new_item = SellerItem(entry.name, this_retail.purchase_prices[entry]["price"], "")
-            self.buyer_table_entry.appendRow(new_item)
-        
-
-    def generate_retailer(self):
-        if self._world is None:
-            raise ValueError("This should be unreachable")
-
-        print("generating retailer")
-
-        new_retailer = Retailer()
-        self._world._retailers.append(new_retailer)
-        new_retailer.regenerate(self._world, self.ui.skill_spin.value())
-
-        self.update_ui(self._world)
-
-    def trade_good_clicked(self, what):
-        item = self.seller_list_entry.itemFromIndex(what)
-
-    def buyer_clicked(self, what):
-        item = self.buyer_table_entry.itemFromIndex(what)
+        for key in port.supply:
+            if port.supply[key]<1:
+                continue
+            else:
+                self.supply_entry.appendRow(SellerItem(key, "", port.supply[key]))
+        for key in port._demand:
+            if port._demand[key]<1:
+                continue
+            else:
+                self.demand_entry.appendRow(SellerItem(key, "", port._demand[key]))
+        for key in port.supply:
+            self.market_price_entry.appendRow(SellerItem(key, port.get_market_price(key), ""))
 
 
                 
@@ -612,8 +543,8 @@ class main_window(QMainWindow):
         self._planet_widget.update_ui(world.mainworld, loc)
         self._trade_widget.update_ui(world.starport)
 
-        self._pass_widget.log_passengers(loc)
-        self._notes_widget.set_text(world.notes())
+        #self._pass_widget.log_passengers(loc)
+        #self._notes_widget.set_text(world.notes())
 
         if False:
             these_ships = [self.scene.get_ship(sid) for sid in self.scene.get_ships_at(loc)]
@@ -623,7 +554,7 @@ class main_window(QMainWindow):
                 
                 self._ship_widget.add_ship(ship, route_names)
             self._ship_widget.update_gui()
-
+        return
         self.govs.append(GovWidget(self._planet_widget.ui.overview_page))
         self.govs[0].configure(world.government)
 
