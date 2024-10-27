@@ -878,6 +878,9 @@ class MultiHexCalendar(QtWidgets.QWidget):
         self.skipto_button.setEnabled(False)
         self.skipto_button.setText("Skip To")
         self.layout.addWidget(self.skipto_button)
+        
+        spring = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        self.layout.addItem(spring)
 
         # Use the current time to choose which buttons to enable
         self.fill_days()

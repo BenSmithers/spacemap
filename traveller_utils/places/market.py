@@ -58,24 +58,36 @@ class Market:
                 self._demand[tg.name] = demand_factor*tg.extract_base_tonnage()*(self._linked_world._population/100000)**0.25
                 self._demand[tg.name] = max([self._demand[tg.name], 1])        
 
+    def available(self, tg_name):
+        return self.get_modified_supply(tg_name) > 0
+
     @property
     def supply(self):
-        return self._supply
+        supply_mod = {}
+        for tgname in self._supply.keys():
+            supply_mod[tgname] = self.get_modified_supply(tgname)
+        return supply_mod
 
     def link_shid(self, subhid:SubHID):
         self._linked_shid = subhid
 
     def linked_shid(self)->SubHID:
         return self._linked_shid
+    
+    def get_modified_supply(self, good_name):
+        tg = get_good(good_name)
+        supply_diff = self._supply[tg.name] - self._demand[tg.name]
+        for route in self.trade_routes[good_name]:                 
+            supply_diff += route.tons_per_month[self._linked_shid.downsize()] 
+        return supply_diff
+
 
     def get_market_price(self, good_name, fudge_supply=0):
         """
             We fudge the "supply" by the fudge supply value
         """
         tg = get_good(good_name)
-        supply_diff = self._supply[tg.name] - self._demand[tg.name] + fudge_supply
-        for route in self.trade_routes[good_name]:                 
-            supply_diff += route.tons_per_month[self._linked_shid.downsize()] 
+        supply_diff = self.get_modified_supply(good_name) + fudge_supply
 
         tonnage = tg.extract_base_tonnage()
         flex = tg.demand_flexibility

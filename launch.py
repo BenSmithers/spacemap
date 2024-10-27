@@ -272,7 +272,7 @@ class SellerItem(QtGui.QStandardItem):
         if qty=="":
             combined = "{} : ${:.2f} per ton".format(item, price)
         elif price=="":
-            combined = "{} : {} tons".format(item, int(qty))
+            combined = "{} : {} tons".format(item, qty)
         else:
             combined = "{} : ${:.2f} per ton | {} tons".format(item, price, int(qty)    )
         super(SellerItem, self).__init__(combined)
@@ -412,17 +412,24 @@ class TradeWidget(QtWidgets.QWidget):
         self.demand_entry.clear()
         self.supply_entry.clear()
     
+        if port is None:
+            return 
 
         for key in port.supply:
             if port.supply[key]<1:
                 continue
             else:
-                self.supply_entry.appendRow(SellerItem(key, "", port.supply[key]))
-        for key in port._demand:
-            if port._demand[key]<1:
-                continue
-            else:
-                self.demand_entry.appendRow(SellerItem(key, "", port._demand[key]))
+                self.supply_entry.appendRow(SellerItem(key, "", int(port.supply[key])))
+
+        for key in port.trade_routes:
+            for route in port.trade_routes[key]:
+            
+                linked_shid = port.linked_shid()
+                tons = route.tons_per_month[linked_shid.downsize()]
+                
+                
+                self.demand_entry.appendRow(SellerItem(key, "","{} {}".format("Importing" if tons>0 else "Exporting", abs(int(tons))) ))
+
         for key in port.supply:
             self.market_price_entry.appendRow(SellerItem(key, port.get_market_price(key), ""))
 
@@ -446,20 +453,30 @@ class PlanetWidget(QtWidgets.QWidget):
             dialog.set_ui_to_world(self._selected)
             dialog.exec_()
 
-    def update_ui(self, world:World, loc:HexID):
-        self._selected = world
+    def update_ui(self, thissys:System, loc:HexID):
+        self._selected = thissys
+
+        world = thissys.mainworld
+        starport = thissys.starport
+
 
         self.ui.size_desc.setText("{} g at surface".format(world.gravity))
         self.ui.pressure_desc.setText("{} atmospheres".format(world.pressure))
         self.ui.atmo_desc.setText(world.atmosphere_str)
         self.ui.hydro_desc.setText(world.hydro_str)
         self.ui.tmp_desc.setText(world.temperature_str)
-        self.ui.starport_desc.setText(world.starports_str)
+        if starport is None:
+            self.ui.starport_desc.setText("No Starport")
+            self.ui.services_desc.setText("")
+        else:
+            self.ui.starport_desc.setText(starport.category)
+            self.ui.services_desc.setText(", ".join([entry.name for entry in starport.services]))
+
         self.ui.code_lbl.setText(world.name)
         self.ui.code_lbl_2.setText(world.world_profile(loc))
         self.ui.pop_desc.setText(utils.number_add_comma(world._population))
         self.ui.tech_desc.setText(world.tech_level_str)
-        self.ui.services_desc.setText(", ".join([entry.name for entry in world.services]))
+        
         self.ui.trade_code_desc.setText(", ".join([entry.name for entry in world.category]).replace("_"," "))
 
         if world.liege_world is not None:
@@ -508,13 +525,13 @@ class main_window(QMainWindow):
         self._calendar_widget = MultiHexCalendar(self, now)
 
         self.ui.tabWidget.addTab(self._planet_widget, "Planet")
-        #self.ui.tabWidget.addTab(self._calendar_widget, "Calendar")
+        self.ui.tabWidget.addTab(self._calendar_widget, "Calendar")
         self.ui.tabWidget.addTab(self._pass_widget, "Passengers")
         self.ui.tabWidget.addTab(self._trade_widget, "Trade")
         self.ui.tabWidget.addTab(self._notes_widget, "Notes")
         self.ui.tabWidget.addTab(self._ship_widget, "Ships")
 
-        self.ui.verticalLayout.insertWidget(0, self._calendar_widget)
+        #self.ui.verticalLayout.insertWidget(0, self._calendar_widget)
 
         self.scene = Clicker( self.ui.map_view, self, Clock(now))
         # Allow the graphics view to follow the mouse when it isn't being clicked, and associate the clicker control with the ui 
@@ -533,15 +550,15 @@ class main_window(QMainWindow):
         self.scene.closeEvent(event)
 
         
-    def planet_selected(self, world:System, loc:HexID):
+    def planet_selected(self, system:System, loc:HexID):
         self._ship_widget.clear()
         while len(self.govs)>0:
             first = self.govs.pop()
             first.deleteLater()
             self._planet_widget.ui.formLayout_2.removeWidget(first)
         
-        self._planet_widget.update_ui(world.mainworld, loc)
-        self._trade_widget.update_ui(world.starport)
+        self._planet_widget.update_ui(system, loc)
+        self._trade_widget.update_ui(system.starport)
 
         #self._pass_widget.log_passengers(loc)
         #self._notes_widget.set_text(world.notes())

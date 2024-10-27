@@ -83,7 +83,7 @@
             "asteroid":1,
             "fluid_oceans":1,
             "ice_capped":1,
-            "high_pop":1
+            "high_pop":3
         }},
     "Common_Ore":{
         "flex":0.9,
@@ -202,6 +202,25 @@
             "asteroid":1,
             "ice_capped":1,
             "rich":2
+        }},
+    "Food":{
+        "flex":1.2,
+        "price":1000,
+        "available":["agricultural","garden", "low_pop","non_industrial","water_world"],
+        "tons":"10*1d",
+        "supply":{
+            "agricultural":5,
+            "garden":4,
+            "low_pop":2,
+            "non_industrial":2,
+            "water_world":3
+        },
+        "demand":{
+            "low_pop":1,
+            "high_pop":6,
+            "desert":1,
+            "industrial":1,
+            "rich":3
         }},
     "Live_Animlas":{
         "flex":0.7,

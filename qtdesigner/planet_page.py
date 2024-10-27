@@ -28,6 +28,8 @@ class Ui_Form(object):
         self.code_lbl_2.setMaximumSize(QtCore.QSize(16777215, 20))
         self.code_lbl_2.setAlignment(QtCore.Qt.AlignCenter)
         self.code_lbl_2.setObjectName("code_lbl_2")
+        self.code_lbl_2.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred, )
+        self.code_lbl_2.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
         self.verticalLayout.addWidget(self.code_lbl_2)
 
         self.edit_button = QtWidgets.QPushButton(Form)
@@ -82,6 +84,8 @@ class Ui_Form(object):
         self.formLayout_2.setWidget(5, QtWidgets.QFormLayout.LabelRole, self.hydro_lbl)
         self.hydro_desc = QtWidgets.QLabel(self.overview_page)
         self.hydro_desc.setObjectName("hydro_desc")
+        self.hydro_desc.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred, )
+        self.hydro_desc.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
         self.hydro_desc.setWordWrap(True)
         self.formLayout_2.setWidget(5, QtWidgets.QFormLayout.FieldRole, self.hydro_desc)
 
@@ -105,6 +109,8 @@ class Ui_Form(object):
         self.tech_desc = QtWidgets.QLabel(self.overview_page)
         self.tech_desc.setObjectName("tech_desc")
         self.tech_desc.setWordWrap(True)
+        self.tech_desc.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred, )
+        self.tech_desc.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
         self.formLayout_2.setWidget(7, QtWidgets.QFormLayout.FieldRole, self.tech_desc)
 
         self.trade_code_lbl = QtWidgets.QLabel(self.overview_page)
@@ -113,6 +119,8 @@ class Ui_Form(object):
         self.trade_code_desc = QtWidgets.QLabel(self.overview_page)
         self.trade_code_desc.setObjectName("trade_code_desc")
         self.trade_code_desc.setWordWrap(True)
+        self.trade_code_desc.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred, )
+        self.trade_code_desc.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
         self.formLayout_2.setWidget(8, QtWidgets.QFormLayout.FieldRole, self.trade_code_desc)
 
 
@@ -140,9 +148,13 @@ class Ui_Form(object):
         self.formLayout_2.setWidget(11, QtWidgets.QFormLayout.FieldRole, self.vassal_desc)        
 
 
+        spacerItem0 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        self.formLayout_2.addItem(spacerItem0)
+
         self.toolBox.addItem(self.overview_page, "")
 
         self.verticalLayout.addWidget(self.toolBox)
+
 
         self.retranslateUi(Form)
         self.toolBox.setCurrentIndex(0)

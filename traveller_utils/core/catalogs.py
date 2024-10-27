@@ -457,7 +457,7 @@ class TradeCat(Catalog):
             dtons = route.tons_per_month[hid]
             cost = market.get_market_price(route.trade_good)
             # negative because an outflow of goods is an inflow of cash
-            wealth_flow+= -1*cost*dtons
+            wealth_flow+= cost*dtons
 
         return wealth_flow
 

@@ -2,6 +2,8 @@ from traveller_utils.enums import WorldCategory, TradeGood, get_entry_by_name
 import json, os
 import numpy as np
 
+
+
 # total supply mod scales base price like so when purchasing
 purchase_scale = [ 
     300, 200, 175, 150,
@@ -24,6 +26,10 @@ for i in range(len(sale_scale)):
 _data = open(os.path.join(os.path.dirname(__file__),"..","resources","swon_trade_good_data.json"), 'rt')
 tg_data = json.load(_data)
 _data.close()
+
+supply_file = open(os.path.join(os.path.dirname(__file__),"..","resources","tg_data.json"), 'rt')
+supply_data = json.load(supply_file)
+supply_file.close()
 
 class Cargo:
     def __init__(self, **cargodict):
@@ -50,15 +56,21 @@ class TradeGoods:
             if json_entry["available"][0] == "all":
                 self._common = True
         if not self._common:
+            self._availble = []
+            for entry in supply_data.keys():
+                if supply_data[entry][name]>0:
+                    self._availble.append( get_entry_by_name(entry, WorldCategory))
             self._availble= [ get_entry_by_name(entry, WorldCategory) for entry in json_entry["available"] ]        
     
         self._demand_mod = { 
-            get_entry_by_name(entry, WorldCategory):json_entry["demand"][entry] for entry in json_entry["demand"]
+            get_entry_by_name(entry, WorldCategory): (supply_data[entry][name] if supply_data[entry][name]<0 else 0) for entry in supply_data.keys()
         }
 
         self._supply_mod = { 
-            get_entry_by_name(entry, WorldCategory):json_entry["supply"][entry] for entry in json_entry["supply"]
+            get_entry_by_name(entry, WorldCategory): (supply_data[entry][name] if supply_data[entry][name]>0 else 0) for entry in supply_data.keys()
         }
+
+
 
     @property
     def base_price(self):

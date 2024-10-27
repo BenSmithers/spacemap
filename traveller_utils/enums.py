@@ -113,6 +113,7 @@ class TradeGood(Enum):
     Illegal_Drugs = 33
     Illegal_Luxuries = 34
     Illegal_Weapons = 35
+    Food = 36
 
 class WorldCategory(Enum):
     Common=0
