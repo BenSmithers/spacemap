@@ -1,4 +1,5 @@
 from traveller_utils.core import HexID, SubHID
+from traveller_utils.core.core import Region
 from traveller_utils.places.world import World
 from traveller_utils.places.system import System
 from traveller_utils.ships import ShipSWN
@@ -55,6 +56,34 @@ class Catalog:
 
         self.draw(id)
 
+
+class RegionCatalog(Catalog):
+    token_type=Region
+    def __init__(self, draw_function: callable):
+        super().__init__(draw_function)
+        self._rid_from_hid = {}
+
+    def get(self, shipID) -> Region:
+        return super().get(shipID)
+    def update(self, token:Region, id):
+        """
+            Un-assign the old ones, reassign new ones 
+        """
+        old_token = self.get(id)
+        #for hid in old_token.hexIDs:
+        #    self._rid_from_hid[hid] = None
+        for hid in token.hexIDs:
+            self._rid_from_hid[hid] = id
+
+        return super().update(token, id)
+    def register(self, region: Region):
+        rid =  super().register(region)
+        for hid in region.hexIDs:
+            self._rid_from_hid[hid] = rid
+        return rid 
+    def get_rid(self, hid:HexID)->int:
+        if hid in self._rid_from_hid:
+            return self._rid_from_hid[hid]
 
 
 class ShipCatalog(Catalog):
@@ -277,6 +306,9 @@ class SystemCatalog(Catalog):
             next_scoop = next_system.fuel and have_scoop
             next_has_station = next_system.starport is not None 
 
+        if not (next_has_station or last_has_station):
+            return np.inf
+
         # fly to a station and back to refuel 
         # two days there and two days back 
         penalty = 4.0/ship.drive_rating 
@@ -285,10 +317,10 @@ class SystemCatalog(Catalog):
         elif last_has_station or next_has_station:
             # one of the two have no fuel - but you have a scoop 
             if max_fuel==1: # you have only space for one fuel, so you need to refuel
-                if (not last_has_station and last_scoop) or (not next_has_station and next_scoop):
+                if ((not last_has_station) and last_scoop) or ((not next_has_station) and next_scoop):
                     penalty += 3.0 # add a few days to fuel-scoop
                 else:
-                    penalty = 100000
+                    penalty = 10000
             
         else: # two in a row without stations 
             if max_fuel==1 :
@@ -300,7 +332,7 @@ class SystemCatalog(Catalog):
                 if last_scoop or next_scoop:
                     penalty += 3.0
                 else:
-                    penalty = 100000 
+                    penalty = 1000000 
                 
         return cost + penalty
 
@@ -459,7 +491,14 @@ class TradeCat(Catalog):
             # negative because an outflow of goods is an inflow of cash
             wealth_flow+= cost*dtons
 
-        return wealth_flow
+        return -1*wealth_flow
+
+    def all_connections(self, start:HexID):
+        if start not in self._by_hid:
+            return None 
+        
+        return self._by_hid[start]
+
 
 
     def register(self, route: TradeRoute):
@@ -469,5 +508,5 @@ class TradeCat(Catalog):
                 self._by_hid[hid].append(rid)
             else:
                 self._by_hid[hid] = [rid, ]
-        
+            this_syst = self._system_cat.get(hid).starport.add_route(route)
         return rid 

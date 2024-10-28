@@ -404,6 +404,9 @@ class TradeWidget(QtWidgets.QWidget):
 
     def clear(self):
         self._world = None
+        self.market_price_entry.clear()
+        self.demand_entry.clear()
+        self.supply_entry.clear()
 
 
     def update_ui(self, port:StarPort):        
@@ -545,6 +548,7 @@ class main_window(QMainWindow):
 
         self.govs = []
         self._previous = None
+        self._previous_reg = None
 
     def closeEvent(self, event):
         self.scene.closeEvent(event)
@@ -571,7 +575,7 @@ class main_window(QMainWindow):
                 
                 self._ship_widget.add_ship(ship, route_names)
             self._ship_widget.update_gui()
-        return
+        """
         self.govs.append(GovWidget(self._planet_widget.ui.overview_page))
         self.govs[0].configure(world.government)
 
@@ -583,23 +587,43 @@ class main_window(QMainWindow):
         for i, entry in enumerate(self.govs):
             self._planet_widget.ui.formLayout_2.setWidget(
                 i+12, QtWidgets.QFormLayout.SpanningRole, entry
-            )
+            )"""
+        
+        if self._previous_reg is not None:
+            self._previous_reg = self.scene.draw_region(self._previous_reg, False)
+        if system.mainworld is not None:
+            if system.mainworld.liege is None:
+                self._previous_reg=self.scene.regions.get_rid(loc)
+                self.scene.draw_region(self._previous_reg, True)
+            else:
+                self._previous_reg=None
+        else:
+            self._previous_reg
 
         if self._previous is not None:
             prev_con = self.scene.all_connections(self._previous)
-            for con in prev_con:
-                self.scene.draw_route(self._previous, con, False)
+            for rid in prev_con:
+                self.scene.draw_route(rid, False)
         
-        self._previous = loc
+        
         new_con = self.scene.all_connections(loc)
-        for con in new_con:
-            self.scene.draw_route(loc, con, True)
+        if new_con is not None:
+            self._previous = loc
+            for rid in new_con:
+                self.scene.draw_route(rid, True)
+        else:
+            self._previous = None
+
 
     def select_none(self):
         if self._previous is not None:
             prev_con = self.scene.all_connections(self._previous)
             for con in prev_con:
-                self.scene.draw_route(self._previous, con, False)
+                self.scene.draw_route(con, False)
+        if self._previous_reg is not None:
+            self.scene.draw_region(self._previous_reg, False)
+
+        self._previous_reg = None
         self._previous = None
 
         self._planet_widget.clear_ui()

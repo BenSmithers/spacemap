@@ -520,8 +520,13 @@ class World(PointOfInterest):
         return profile
     
 
+    def set_title(self, new_title):
+        self._title = new_title
+        
+
     def update_category(self):
-        self._title = wealth_tbl.access(self.wealth)
+        #self._title = wealth_tbl.access(self.wealth)
+
 
         self._category = []
         if self._atmosphere==0 and self._size==0 and self._hydro==0:

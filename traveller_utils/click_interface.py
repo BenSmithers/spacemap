@@ -4,7 +4,8 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QGraphicsScene, QGraphicsSceneMouseEvent, QMainWindow
 from traveller_utils.actions import ActionManager, unpack_event, MonthlyEvent
 
-from traveller_utils.enums import Title, Bases, WorldCategory
+from traveller_utils.enums import Title, Bases
+from traveller_utils.tables import wealth_tbl
 from traveller_utils.clock import minutes_in_day
 from traveller_utils.core.coordinates import HexID, DRAWSIZE, screen_to_hex, hex_to_screen, SubHID
 from traveller_utils.ships.ship import Ship, AIShip, AIShipMoveEvent
@@ -12,10 +13,7 @@ from traveller_utils.core.core import Hex, Region, Route
 from traveller_utils.places.world import World
 from traveller_utils.places.system import generate_system, System
 from traveller_utils.core import utils
-from traveller_utils.ships.ship import ShipSWN
-from traveller_utils.places.market import find_maximum_sale
-from traveller_utils.places.trade_route import TradeRoute
-from traveller_utils.core.catalogs import ShipCatalog, SystemCatalog, TradeCat
+from traveller_utils.core.catalogs import ShipCatalog, SystemCatalog, TradeCat, RegionCatalog
 import numpy as np
 import os 
 import json
@@ -41,7 +39,7 @@ class Clicker(QGraphicsScene,ActionManager):
 
         self._drawn_systems = {}
 
-        self._regions = {}
+        self._regions = RegionCatalog(self.draw_region)
         self._drawn_regions = {}
 
         self._routes = {}
@@ -101,12 +99,13 @@ class Clicker(QGraphicsScene,ActionManager):
         all_ts = []
         for hid in self._system_catalog:
             world = self.get_system(hid).mainworld
-            ts = world.wealth
+            #ts = world.wealth
+            ts = self._trade_cat.wealth_flow(hid)
             all_ts.append(ts)
 
         if False:
             import matplotlib.pyplot as plt 
-            plt.hist(all_ts, bins=np.arange(0, 20,1))
+            plt.hist(all_ts, bins=np.linspace(min(all_ts), max(all_ts), 100))
             plt.xlabel("Wealth Score")
             plt.ylabel("Count")
             plt.show()
@@ -140,6 +139,10 @@ class Clicker(QGraphicsScene,ActionManager):
     @property
     def systems(self)->SystemCatalog:
         return self._system_catalog
+    
+    @property
+    def regions(self)->RegionCatalog:
+        return self._regions
 
     def pack(self)->dict:
         return {
@@ -179,7 +182,7 @@ class Clicker(QGraphicsScene,ActionManager):
             self._regions[id_unpacked] = Region.unpack(packed["regions"][key])
             self.draw_region(id_unpacked)
             
-        for key in self._system_catalog.keys():
+        for key in self._system_catalog:
             world = self.get_world(key)
             if world._liege is not None:
                 world.set_liege(key, self.get_system(world.liege))
@@ -385,7 +388,8 @@ class Clicker(QGraphicsScene,ActionManager):
                     new_route, ship_template = result
 
                     route = self._system_catalog.get_route_a_star(system_key, other_key, ship_template)
-                    if self._system_catalog.get_route_cost(route, ship_template)>100000:
+                    if self._system_catalog.get_route_cost(route, ship_template)>100000.0:
+                        print("bad route? - {}".format(self._system_catalog.get_route_cost(route, ship_template)))
                         continue
                     
                     new_route.set_level(self._system_catalog.get_route_level(route))
@@ -393,6 +397,7 @@ class Clicker(QGraphicsScene,ActionManager):
 
                     #self._trade_cat.register(system_key, other_key, new_route)
                     self._trade_cat.register(new_route)
+                    
 
 
         self.draw_routes()
@@ -435,17 +440,13 @@ class Clicker(QGraphicsScene,ActionManager):
             self.draw_route(key)
 
     def all_connections(self, start)->'list[HexID]':
-        if start in self._routes:
-            return list(self._routes[start].keys())
-        else:
-            return []
+        return self._trade_cat.all_connections(start)
 
     def draw_route(self, route_id, highlight=False):
         route = self._trade_cat.get(route_id)
         tpm =list(route.tons_per_month.keys())
         start = tpm[0]
         end = tpm[1]
-
 
         if start not in self._drawn_routes:
             self._drawn_routes[start]={}
@@ -459,6 +460,7 @@ class Clicker(QGraphicsScene,ActionManager):
         full_path = route.full_route
         
         shift = route.level-1
+        shift = 1
 
         vertices = [hex_to_screen(hid) for hid in full_path]
         path = QtGui.QPainterPath()
@@ -476,7 +478,7 @@ class Clicker(QGraphicsScene,ActionManager):
             
         self._brush.setStyle(0)
         sid = self.addPath(path, self._pen, self._brush)
-        sid.setZValue(2)
+        sid.setZValue(3)
         self._drawn_routes[start][end]=sid
 
     def initialize_systems(self):
@@ -553,15 +555,16 @@ class Clicker(QGraphicsScene,ActionManager):
             new = Region(this_hex, system)
 
             ultimate_liege = self.get_ultimate_liege(system)
+            rid = self._regions.get_rid(ultimate_liege)
 
-            if ultimate_liege in self._regions:
-                original = self._regions[ultimate_liege]
-                self._regions[ultimate_liege] = original.merge(new)
+            if rid is not None:
+                original = self._regions.get(rid)
+                self._regions.update(original.merge(new), rid)
             else:
-                self._regions[ultimate_liege] = new
+                self._regions.register(new)
 
 
-        for rid in self._regions.keys():
+        for rid in self._regions:
             self.draw_region(rid)
 
 
@@ -574,9 +577,18 @@ class Clicker(QGraphicsScene,ActionManager):
             Title.Count:[],
             Title.Lord:[]
         }
-        for key in self._system_catalog:
+
+        
+        all_wealths = [[key, self._trade_cat.wealth_flow(key)] for key in self._system_catalog]
+        sorted(all_wealths, key=lambda x:x[1])
+        all_wealths = all_wealths[::-1]
+
+        # combine these 
+
+        for key, wealth in all_wealths:
             world = self.get_system(key).mainworld
             world.update_category()
+            world.set_title(wealth_tbl.access(wealth))
             by_title[world.title].append(key)
         """
             For each title, we assign each lower ranking house to an upper one. There are chances for each level that a given house has no liege 
@@ -585,7 +597,7 @@ class Clicker(QGraphicsScene,ActionManager):
         """
         max_dist = 3
         ordered_labels= [Title.Lord, Title.Count, Title.Duke, Title.King, Title.Emperor]
-        odds = [0.01, 0.08, 0.25, 0.40, 1.0]
+        odds = [0.005, 0.04, 0.25, 0.40, 1.0]
 
         for i, title in enumerate(ordered_labels):
             #if title==Title.Emperor:
@@ -622,24 +634,29 @@ class Clicker(QGraphicsScene,ActionManager):
                 this_world.set_liege(use[senior_index] , senior_world)
                 senior_world.add_vassal(system_id, this_world)
         
-        for system in self._system_catalog:
-            
+        for i, title in enumerate(ordered_labels[::-1]):
+            #if title==Title.Emperor:
+            #    continue
+            for system in by_title[title]:            
+                center = hex_to_screen(system)
+                this_hex = Hex(center)
 
-            center = hex_to_screen(system)
-            this_hex = Hex(center)
+                new = Region(this_hex, system)
 
-            new = Region(this_hex, system)
+                ultimate_liege = self.get_ultimate_liege(system)
+                rid = self._regions.get_rid(ultimate_liege)
 
-            ultimate_liege = self.get_ultimate_liege(system)
-
-            if ultimate_liege in self._regions:
-                original = self._regions[ultimate_liege]
-                self._regions[ultimate_liege] = original.merge(new)
-            else:
-                self._regions[ultimate_liege] = new
+                if rid is not None:
+                    original = self._regions.get(rid)
+                    merged = original.merge(new)
+                    self._regions.update(merged, rid)
 
 
-        for rid in self._regions.keys():
+                else:
+                    self._regions.register(new)
+
+
+        for rid in self._regions:
             self.draw_region(rid)
 
     def draw_all_hexes(self):
@@ -681,14 +698,10 @@ class Clicker(QGraphicsScene,ActionManager):
         
     def get_world(self, shi: SubHID)->World:
         return self._system_catalog.getworld(shi)
-        
-    def get_region(self, hex_id:HexID)->Region:
-        if hex_id in self._regions:
-            return self._regions[hex_id]
-        else:
-            return None
+
         
     def draw_hex(self, hex_id:HexID):
+        return
         if hex_id in  self._drawn_systems:
             for entry in self._drawn_systems[hex_id]:
                 self.removeItem(entry)
@@ -702,22 +715,27 @@ class Clicker(QGraphicsScene,ActionManager):
         sid.setZValue(0)
         self._drawn_systems[hex_id] = (sid,)
 
-    def draw_region(self, origin:HexID):
-        if origin in self._drawn_regions:
-            for entry in self._drawn_regions[origin]:
+    def draw_region(self, rid:int, highlight=False):
+        if rid in self._drawn_regions:
+            for entry in self._drawn_regions[rid]:
                 self.removeItem(entry)
 
-        this_region = self.get_region(origin)
+        this_region = self._regions.get(rid)
         if this_region is None:
-            del self._drawn_regions[origin]
+            del self._drawn_regions[rid]
             return 
             
         self._pen.setStyle(0)
-        self._brush.setStyle(1)
-        self._brush.setColor(QtGui.QColor(this_region.fill))
+        #if highlight:
+            #self._pen.setColor(QtGui.QColor(255, 20, 20))
+        self._brush.setStyle(6 if highlight else 1)
+        if highlight:
+            self._brush.setColor(QtGui.QColor(255, 50, 50))
+        else:
+            self._brush.setColor(QtGui.QColor(this_region.fill))
 
         sid = self.addPolygon(this_region, self._pen, self._brush)
-        self._drawn_regions[origin] = (sid, )
+        self._drawn_regions[rid] = (sid, )
 
     def draw_ship(self, ship_id):
         this_ship = self.get_ship(ship_id)

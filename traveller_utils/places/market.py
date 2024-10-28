@@ -142,9 +142,10 @@ class Market:
                 max_cargo = min([this_ship.cargo_free(), profitable_amt ])
                 if profitable_amt>max_cargo:
                     max_cargo*=int(profitable_amt/max_cargo)
+                    
         if ship_name=="":
             return 
         new_route = TradeRoute([self._linked_shid.downsize(), other_market._linked_shid.downsize()], good_name, max_cargo)
-        self.add_route(new_route)
-        other_market.add_route(new_route)
+        #self.add_route(new_route)
+        #other_market.add_route(new_route)
         return new_route, freighters[ship_name]
