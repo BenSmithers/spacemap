@@ -368,19 +368,25 @@ class Clicker(QGraphicsScene,ActionManager):
             market = this_world.starport
             if market is None:
                 continue
-
-            in_range = system_key.in_range(8, False)
-            in_range = list(filter(lambda x:x in self._system_catalog, in_range))
-
-            for other_key in in_range:
-                other_system = self.get_system(other_key)
-                if other_system is None:
+            for good_name in market.supply:
+                if "illegal" in good_name.lower():
                     continue
-                other_market = other_system.starport
-                if other_market is None:
+
+                modified_supply = market.get_modified_supply(good_name)
+                if modified_supply<1:
                     continue
-                        
-                for good_name in market.supply:
+
+                in_range = system_key.in_range(8, False)
+                in_range = list(filter(lambda x:x in self._system_catalog, in_range))
+
+                for other_key in in_range:
+                    other_system = self.get_system(other_key)
+                    if other_system is None:
+                        continue
+                    other_market = other_system.starport
+                    if other_market is None:
+                        continue
+
                     result = market.check_route(other_market, good_name)
                     if result is None:
                         continue
@@ -389,7 +395,7 @@ class Clicker(QGraphicsScene,ActionManager):
 
                     route = self._system_catalog.get_route_a_star(system_key, other_key, ship_template)
                     if self._system_catalog.get_route_cost(route, ship_template)>100000.0:
-                        print("bad route? - {}".format(self._system_catalog.get_route_cost(route, ship_template)))
+                        #print("bad route? - {}".format(self._system_catalog.get_route_cost(route, ship_template)))
                         continue
                     
                     new_route.set_level(self._system_catalog.get_route_level(route))
@@ -397,6 +403,10 @@ class Clicker(QGraphicsScene,ActionManager):
 
                     #self._trade_cat.register(system_key, other_key, new_route)
                     self._trade_cat.register(new_route)
+
+                    modified_supply = market.get_modified_supply(good_name)
+                    if modified_supply<1:
+                        break
                     
 
 
@@ -587,8 +597,10 @@ class Clicker(QGraphicsScene,ActionManager):
 
         for key, wealth in all_wealths:
             world = self.get_system(key).mainworld
+            world.set_wealth(wealth)
             world.update_category()
             world.set_title(wealth_tbl.access(wealth))
+            #self._system_catalog.update(world, key)
             by_title[world.title].append(key)
         """
             For each title, we assign each lower ranking house to an upper one. There are chances for each level that a given house has no liege 
@@ -677,6 +689,10 @@ class Clicker(QGraphicsScene,ActionManager):
         else:
             return self.get_ultimate_liege(liege)
 
+    def mouseDoubleClickEvent(self, event:QGraphicsSceneMouseEvent)->None:
+        loc =  screen_to_hex( event.scenePos() )
+        if loc in self._system_catalog:
+            self._parent_window.system_selected(self.get_system(loc), loc) 
 
     def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         loc =  screen_to_hex( event.scenePos() )

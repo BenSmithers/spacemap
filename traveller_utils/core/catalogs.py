@@ -6,7 +6,10 @@ from traveller_utils.ships import ShipSWN
 from traveller_utils.ships.starport import StarPort
 from traveller_utils.places.trade_route import TradeRoute
 from traveller_utils.core import utils
-from traveller_utils.enums import SystemNote
+from traveller_utils.enums import SystemNote, PLocationType
+from traveller_utils.person import Person
+from traveller_utils.tables import passenger_table
+
 import numpy as np 
 from collections import deque
 
@@ -237,6 +240,9 @@ class SystemCatalog(Catalog):
              
         return result
     
+    def reset_wealth(self):
+        self._cummulative_wealths = []
+
     def sample_from_wealth(self):
         # get all of the wealths and accumulate them. Only do this if it hasn't been done already
         all_keys = list(self._entries.keys())
@@ -509,4 +515,79 @@ class TradeCat(Catalog):
             else:
                 self._by_hid[hid] = [rid, ]
             this_syst = self._system_cat.get(hid).starport.add_route(route)
+        
+        # now actually add the routes to the world
+        stops = list(route.tons_per_month.keys())
+        start_world = self._system_cat.get(stops[0])
+        start_world.starport.add_route(route)
+        end_world = self._system_cat.get(stops[1])
+        end_world.starport.add_route(route)
+
         return rid 
+    
+"""
+
+"""
+class PassengerCatalog(Catalog):
+    token_type = Person
+    def __init__(self, draw_function: callable, trade_cat:TradeCat, systems_cat:SystemCatalog):
+        # main one is ( pid -> Person )
+        self._locations = {}  # pid -> hid 
+        self._location_types = {}  # pid -> hid/shipid/etc
+        self._persistent_pids = {} # hid -> { <low/mid/high> : [ pids ] }
+        self._
+        self._trade_cat = trade_cat
+        self._systems_cat = systems_cat
+
+        self._keys=["high", "middle", "basic", "low"]
+
+        super().__init__(draw_function)
+
+    def generate_empty(self):
+        return {key:[] for key in self._keys}
+    def get(self, pid)->Person:
+        return super().get(pid)
+    def register(self, person:Person):
+        return super().register(person)
+    def get_location(self, pid)->'tuple[SubHID, PLocationType]':
+        if pid in self._locations:
+            return self._locations[pid], self._location_types[pid]
+    def get_permanent_at(self, hid):
+        pass 
+
+    def sample_passengers(self, hid, steward_mod:int):
+        """
+            Samples a list of passengers here.
+
+            Numbers should depend on the flow of wealth here.
+            And then we should sample passengers based on the world tags. 
+        """
+        persistent_here = self.get_permanent_at(hid)
+
+        # from 0 to like, 4
+        desireability = self._systems_cat.get(hid).mainworld.title.value
+        categories = self._systems_cat.get(hid).mainworld.category
+        
+        empty_dict = self.generate_empty()
+        for key in persistent_here:
+           
+            mod = steward_mod+desireability
+            if key=="high":
+                mod -= 4
+            elif key=="mid":
+                mod-=2
+            elif key=="low":
+                mod+=2
+            
+            die_roll = utils.roll() + mod 
+            if die_roll<=0:
+                n_pass = 0
+            elif die_roll>len(passenger_table)-1:
+                n_pass = sum(np.random.randint(1,7,10))
+            else:
+                n_pass =  sum(np.random.randint(1,7,passenger_table[die_roll]))
+            
+            if n_pass>0:
+                empty_dict[key] += persistent_here[key]
+            
+            empty_dict[key] += [Person.generate(*categories) for i in range(n_pass - len(persistent_here[key]))]

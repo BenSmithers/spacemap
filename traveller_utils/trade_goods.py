@@ -55,19 +55,19 @@ class TradeGoods:
         if len(json_entry["available"])==1:
             if json_entry["available"][0] == "all":
                 self._common = True
-        if not self._common:
-            self._availble = []
-            for entry in supply_data.keys():
-                if supply_data[entry][name]>0:
-                    self._availble.append( get_entry_by_name(entry, WorldCategory))
-            self._availble= [ get_entry_by_name(entry, WorldCategory) for entry in json_entry["available"] ]        
-    
+
+        self._availble = []
+        for entry in supply_data["supply"].keys():
+            if supply_data["supply"][entry][name]>0:
+                self._availble.append( get_entry_by_name(entry, WorldCategory))
+        #self._availble= [ get_entry_by_name(entry, WorldCategory) for entry in json_entry["available"] ]        
+
         self._demand_mod = { 
-            get_entry_by_name(entry, WorldCategory): (supply_data[entry][name] if supply_data[entry][name]<0 else 0) for entry in supply_data.keys()
+            get_entry_by_name(entry, WorldCategory): supply_data["demand"][entry][name]  for entry in supply_data["demand"].keys()
         }
 
         self._supply_mod = { 
-            get_entry_by_name(entry, WorldCategory): (supply_data[entry][name] if supply_data[entry][name]>0 else 0) for entry in supply_data.keys()
+            get_entry_by_name(entry, WorldCategory): supply_data["supply"][entry][name]  for entry in supply_data["supply"].keys()
         }
 
 

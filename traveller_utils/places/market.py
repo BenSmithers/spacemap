@@ -124,8 +124,13 @@ class Market:
         
         # maximum amount that could feasibly be profitable 
         profitable_amt = 0.98*find_maximum_sale(self, other_market, good_name)
+        amount_present = self.get_modified_supply(good_name)
+
+        shippable = min([profitable_amt, amount_present])
+        if shippable<1:
+            return 
         # recalculate this...
-        profit = other_market.get_market_price(good_name, profitable_amt) - self.get_market_price(good_name, -profitable_amt)
+        profit = other_market.get_market_price(good_name, shippable) - self.get_market_price(good_name, -shippable)
         if profit <0:
             return 
         max_cargo = -1 
@@ -135,13 +140,13 @@ class Market:
             this_ship = freighters[entry]
             # profit moving the ship's cargo worth minus the operational costs 
             # so if there isn't a lot of cargo here, it won't be economical to
-            margin = profit*min([this_ship.cargo_free(), profitable_amt ]) - this_ship.get_route_expenses(other_market._linked_shid - self._linked_shid)
+            margin = profit*min([this_ship.cargo_free(), shippable ]) - this_ship.get_route_expenses(other_market._linked_shid - self._linked_shid)
             if margin>max_margin:
                 ship_name = entry 
                 max_margin = margin 
-                max_cargo = min([this_ship.cargo_free(), profitable_amt ])
-                if profitable_amt>max_cargo:
-                    max_cargo*=int(profitable_amt/max_cargo)
+                max_cargo = min([this_ship.cargo_free(), shippable ])
+                if shippable>max_cargo:
+                    max_cargo*=int(shippable/max_cargo)
                     
         if ship_name=="":
             return 

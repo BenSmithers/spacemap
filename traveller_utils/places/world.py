@@ -128,6 +128,7 @@ class World(PointOfInterest):
         self._government_raw=0
         self._government=Government(govs[0], False, self._government_raw)
         self._law_level=0
+        self._wealth = 0
         self._factions=[]
         self._starport_raw=0
         self._liege = None
@@ -182,6 +183,12 @@ class World(PointOfInterest):
             mod -=1
 
         return mod
+    
+    def set_wealth(self, new_wealth):
+        self._wealth = new_wealth
+    @property
+    def wealth(self):
+        return self._wealth
 
     @property
     def retailers(self):
@@ -197,54 +204,6 @@ class World(PointOfInterest):
     def set_liege(self, hid:HexID, which:'World'):
         self._liege = hid
         self._liege_name = which
-
-
-    @property
-    def wealth_str(self):
-        pass
-    
-    @property
-    def wealth(self):
-        score = int(self.trade_score / 5)
-        if self._population_raw>8:
-            score+=3
-        elif self._population_raw<3:
-            score-=3
-            
-        if self._starport_raw>8:
-            score+=3
-        if self._starport_raw>10:
-            score+=2
-
-        if self._tech_level>10:
-            score+=5
-        if self._tech_level>14:
-            score+=6
-
-        if self._tech_level<4:
-            score +=0
-        if self._tech_level<8:
-            score +=2
-
-        if self._hydro > 4 and self._hydro<10:
-            score += 2
-        if self._atmosphere==6 or self._atmosphere==7:
-            score += 2
-        if "tainted" in self.atmosphere_str:
-            score -=4
-        
-        if self._temperature>5 and self._temperature<10:
-            score += 2
-        if self._temperature<3 or self._temperature>12:
-            score -=4 
-        if self._tech_level>10:
-            score +=2 
-        if self._tech_level<9:
-            score -=4
-
-        score += len(self.services)
-
-        return max([score, 0])
         
 
     @property 
@@ -527,7 +486,6 @@ class World(PointOfInterest):
     def update_category(self):
         #self._title = wealth_tbl.access(self.wealth)
 
-
         self._category = []
         if self._atmosphere==0 and self._size==0 and self._hydro==0:
             self._category.append(WorldCategory.Asteroid)
@@ -591,6 +549,7 @@ class World(PointOfInterest):
         
         if len(self._category)==0:
             self._category=[WorldCategory.Common]
+                
     
     @property
     def gravity(self)->float:
