@@ -26,6 +26,7 @@ from qtdesigner.government import Ui_Form as gov_widget_gui
 from qtdesigner.notes_ui import Ui_Form as notes_widget
 from qtdesigner.editor_window import Ui_Form as editor_window
 from qtdesigner.ship import Ui_Form as ship_window
+from qtdesigner.system_window import Ui_Dialog as system_dialog
 
 from traveller_utils.tables import *
 
@@ -34,7 +35,14 @@ from random import randint
 import os 
 import sys
 
-
+class SystemDialog(QDialog):
+    def __init__(self, parent):
+        super(SystemDialog, self).__init__(parent)
+        self.ui = system_dialog()
+        self.ui.setupUi(self)
+        
+    def configure(self, syst:System):
+        pass
 
 class EditorDialog(QDialog):
     def __init__(self, parent):
@@ -419,10 +427,13 @@ class TradeWidget(QtWidgets.QWidget):
             return 
 
         for key in port.supply:
-            if port.supply[key]<1:
+            net_supply = int(port.supply[key])
+            
+
+            if net_supply<1:
                 continue
             else:
-                self.supply_entry.appendRow(SellerItem(key, "", int(port.supply[key])))
+                self.supply_entry.appendRow(SellerItem(key, "", int(net_supply)))
 
         for key in port.trade_routes:
             for route in port.trade_routes[key]:
@@ -553,6 +564,13 @@ class main_window(QMainWindow):
     def closeEvent(self, event):
         self.scene.closeEvent(event)
 
+    def system_selected(self, system:System, loc:HexID):
+        dialog = SystemDialog(self)
+        dialog.configure(system)
+        dialog.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+        
+        dialog.exec_()
+
         
     def planet_selected(self, system:System, loc:HexID):
         self._ship_widget.clear()
@@ -575,19 +593,20 @@ class main_window(QMainWindow):
                 
                 self._ship_widget.add_ship(ship, route_names)
             self._ship_widget.update_gui()
-        """
-        self.govs.append(GovWidget(self._planet_widget.ui.overview_page))
-        self.govs[0].configure(world.government)
 
-        for fact in world.factions:
+        self.govs.append(GovWidget(self._planet_widget.ui.overview_page))
+        self.govs[0].configure(system.mainworld.government)
+
+        for fact in system.mainworld.factions:
             new = GovWidget(self._planet_widget.ui.overview_page)
             new.configure(fact)
             self.govs.append(new)
 
         for i, entry in enumerate(self.govs):
             self._planet_widget.ui.formLayout_2.setWidget(
-                i+12, QtWidgets.QFormLayout.SpanningRole, entry
-            )"""
+                i+13, QtWidgets.QFormLayout.SpanningRole, entry
+            )
+        
         
         if self._previous_reg is not None:
             self._previous_reg = self.scene.draw_region(self._previous_reg, False)
