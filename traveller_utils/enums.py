@@ -1,10 +1,48 @@
 
 from enum import Enum
 
+"""
+Type of position ID for a person's location
+"""
+class PLocationType(Enum):
+    Planet = 1
+    Starport = 2
+    Transit = 3
+
+class Attribute(Enum):
+    Strength = 0
+    Dexterity = 1
+    Constitution = 2
+    Intelligence = 3
+    Wisdom = 4
+    Charisma = 5
+
+class Skill(Enum):
+    Administer = 0
+    Connect = 1
+    Exert = 2
+    Fix = 3
+    Heal =4 
+    Know =5
+    Lead = 6
+    Notice  =7
+    Perform = 8
+    Pilot = 9
+    Program = 10
+    Punch = 11
+    Shoot = 12
+    Sneak = 13
+    Stab = 14
+    Survive = 15
+    Talk = 16
+    Trade = 17
+    Work = 18
+
 class SystemNote(Enum):
     Nothing = 0
     MainWorld = 1
     MainPort = 2
+    GasGiant = 3
 
 class ShipClass(Enum):
     Fighter =0
