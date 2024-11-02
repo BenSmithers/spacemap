@@ -1,7 +1,8 @@
-from traveller_utils.core import HexID, SubHID
+from traveller_utils.core import HexID, SubHID, NonPhysical
 from traveller_utils.core.core import Region
 from traveller_utils.places.world import World
 from traveller_utils.places.system import System
+from traveller_utils.places.poi import PointOfInterest
 from traveller_utils.ships import ShipSWN
 from traveller_utils.ships.starport import StarPort
 from traveller_utils.places.trade_route import TradeRoute
@@ -119,7 +120,7 @@ class ShipCatalog(Catalog):
             self.draw(location)
 
     def register(self, ship:token_type, location:SubHID):
-        this_id  = Catalog.register(ship)
+        this_id  = super().register(ship)
         self.move(this_id, location)
         return this_id
 
@@ -138,6 +139,8 @@ class ShipCatalog(Catalog):
 
         if hid in use_dict:
             return use_dict[hid] 
+        
+        return []
         
     def draw(self, location):
         """
@@ -159,25 +162,30 @@ class ShipCatalog(Catalog):
             Updates internal maps to represent the new ship location
             Then call 
         """
+        print("Moving ship {} to {}".format(ship_id, dest))
         old_loc = self.get_loc(ship_id)
         
         # first, for the specific listings 
-        if ship_id in self._ships_at[old_loc]:
-            self._ships_at[old_loc].remove(ship_id)
+        if old_loc in self._ships_at:
+            if ship_id in self._ships_at[old_loc]:
+                self._ships_at[old_loc].remove(ship_id)
         if dest not in self._ships_at:
             self._ships_at[dest] = []
         self._ships_at[dest].append(ship_id)
 
 
         # now the general listings 
-        hid_old_loc = old_loc.downsize()
+        if old_loc is not None:
+            hid_old_loc = old_loc.downsize()
+            if hid_old_loc in self._ships_at_hid:
+                if ship_id in self._ships_at_hid[hid_old_loc]:
+                    self._ships_at_hid[hid_old_loc].remove(ship_id)  
+
         hid_dest= dest.downsize()
-        if ship_id in self._ships_at_hid[hid_old_loc]:
-            self._ships_at_hid[hid_old_loc].remove(ship_id)        
+      
         if hid_dest not in self._ships_at_hid:
             self._ships_at_hid[hid_dest] = []
         self._ships_at_hid[hid_dest].append(ship_id)
-
         self._ship_locations[ship_id] = dest
 
         self.draw(old_loc)
@@ -199,7 +207,7 @@ class SystemCatalog(Catalog):
         
     def get(self, hid:HexID)->System:
         return super().get(hid)
-    def getworld(self, subh:SubHID)->World:
+    def get_sub(self, subh:SubHID)->PointOfInterest:
         system = self.get(subh.downsize())
         return system.get(subh)
     
@@ -226,17 +234,21 @@ class SystemCatalog(Catalog):
         """
         result = []
 
-        for i, hexid in hid_route:
-            this_port = self.star_port(hexid)
-
+        for i, hexid in enumerate(hid_route):
             if i==0:
-                result.append(this_port.linked_shid)
                 result.append(self.get(hexid).inflight)
+                result.append(NonPhysical())
             else:
-                result.append(self.get(hexid).inflight)
-                result.append(self.get(hexid).get_notable(SystemNote.MainPort))
-                if i<len(hid_route)-1:
+                system = self.get(hexid) 
+                if system is None:
+                    result.append(NonPhysical())
+                else:
                     result.append(self.get(hexid).inflight)
+
+                    result.append(self.get(hexid).get_notable(SystemNote.MainPort))
+                    if i<len(hid_route)-1:
+                        result.append(self.get(hexid).inflight)
+                        result.append(NonPhysical())
              
         return result
     

@@ -4,7 +4,7 @@ from traveller_utils.name_gen import sample_adjective, sample_noun
 from traveller_utils.enums import get_entry_by_name, TradeGood
 from traveller_utils.enums import ShipClass, ShipCategory
 from traveller_utils.ships import Fitting, ShipDefense, ShipWeapon, hull_data, sample_ships
-
+from traveller_utils.core.coordinates import SubHID
 
 from PyQt5.QtWidgets import QGraphicsScene
 from copy import deepcopy
@@ -121,7 +121,8 @@ class ShipSWN:
                 double += 1
 
         return self._crew_max*double 
-
+    def refuel(self):
+        self._fuel = self._fuel_max
     def cargo(self):
         return self._cargo
     def add_cargo(self, tg:TradeGood, quantity):
@@ -279,6 +280,70 @@ class ShipSWN:
             self.add_fitting(item)
 
 
+
+def sample_ship(ship_class, ship_category):
+    """
+        returns a template name sampled from the given combination of ship size and purpose 
+    """
+    if ship_class == ShipClass.Fighter:
+        if ship_category==ShipCategory.Warship:
+            return random.choice(["Strike Fighter",
+                                  "Torpedo Fighter",
+                                  "Dog Fighter"])
+        elif ship_category==ShipCategory.Freight or  ship_category==ShipCategory.Ferry:
+            return "shuttle"
+        elif ship_category==ShipCategory.ResourceExtraction:
+            return ""
+        elif ship_category==ShipCategory.Research: 
+            pass
+        elif ship_category==ShipCategory.Yacht:
+            return "luxury shuttle" 
+        else:
+            raise ValueError("Unkown cat {}".format(ship_category))
+
+    elif ship_class==ShipClass.Frigate:
+        if ship_category==ShipCategory.Freight:
+            return "hauler"
+        elif ship_category==ShipCategory.ResourceExtraction:
+            return "poor miner"
+        elif ship_category==ShipCategory.Ferry:
+            return "free merchant"
+        elif ship_category==ShipCategory.Research: 
+            pass
+        elif ship_category==ShipCategory.Colony:
+            return "colony frigate"
+        elif ship_category==ShipCategory.Yacht:
+            pass 
+        elif ship_category==ShipCategory.Warship:
+            return random.choice(["corvette","patrol boat","heavy frigate"])
+        else:
+            raise ValueError("Unkown cat {}".format(ship_category))
+
+    elif ship_class==ShipClass.Cruiser:
+        if ship_category==ShipCategory.Freight:
+            return "bulk freighter"
+        elif ship_category==ShipCategory.ResourceExtraction:
+            return "freighter miner"
+        elif ship_category==ShipCategory.Ferry:
+            pass
+        elif ship_category==ShipCategory.Research: 
+            pass
+        elif ship_category==ShipCategory.Warship:
+            pass
+        elif ship_category==ShipCategory.Yacht:
+            pass 
+        elif ship_category==ShipCategory.Warship:
+            return "fleetCruiser"
+        elif ship_category==ShipCategory.Colony:
+            return "colonyCruiser"
+        else:
+            raise ValueError("Unkown cat {}".format(ship_category))
+    elif ship_class==ShipClass.Capital:
+        if ship_category==ShipCategory.Warship:
+            return random.choice(["carrier","battleship"])
+
+
+
 class Ship:
     def __init__(self, rate=0.183):
         """
@@ -357,10 +422,9 @@ class Ship:
     def icon(self):
         return self._icon
     
-class AIShip(Ship):
-    def __init__(self, route=[], rate=0.183,**kwargs):
-        super().__init__(rate)
-
+class AIShip(ShipSWN):
+    def __init__(self,shiphull, route=[],**kwargs):
+        super().__init__(shiphull)
         self._route = route[::-1]
         self._captain = Person.generate()
     
@@ -374,7 +438,7 @@ class AIShip(Ship):
         temp = super().unpack(pack)
         temp._captain = Person.unpack(pack["cpt"])
         return temp
-
+    
     def set_captain(self, who:Person):
         self._captain = who
     @property
@@ -384,20 +448,23 @@ class AIShip(Ship):
     def is_done(self):
         return len(self._route)==0
 
-    def step(self):
+    def step(self)->SubHID:
         if len(self._route)==0:
             return
         else:
             return self._route.pop()
-        
+
     @property
     def route(self):
         return self._route
+    
+    def set_route(self, route):
+        self._route = route[::-1]
 
 
     @classmethod
-    def generate(cls, route):
-        new = super().generate(route=route)
+    def generate(cls, route, shipclass, shipcat):
+        new = cls.load_from_template(sample_ship(shipclass, shipcat))
         new._route= deepcopy(route)[::-1]
         new.set_captain(Person.generate())
         return new

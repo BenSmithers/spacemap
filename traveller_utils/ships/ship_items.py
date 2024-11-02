@@ -32,68 +32,6 @@ _obj = open(hull_file, 'rt')
 sample_ships = json.load(_obj)
 _obj.close()
 
-def sample_ship(ship_class, ship_category):
-    """
-        returns a template name sampled from the given combination of ship size and purpose 
-    """
-    if ship_class == ShipClass.Fighter:
-        if ship_category==ShipCategory.Warship:
-            return random.choice(["Strike Fighter",
-                                  "Torpedo Fighter",
-                                  "Dog Fighter"])
-        elif ship_category==ShipCategory.Freight or  ship_category==ShipCategory.Ferry:
-            return "shuttle"
-        elif ship_category==ShipCategory.ResourceExtraction:
-            return ""
-        elif ship_category==ShipCategory.Research: 
-            pass
-        elif ship_category==ShipCategory.Yacht:
-            return "luxury shuttle" 
-        else:
-            raise ValueError("Unkown cat {}".format(ship_category))
-
-    elif ship_class==ShipClass.Frigate:
-        if ship_category==ShipCategory.Freight:
-            return "hauler"
-        elif ship_category==ShipCategory.ResourceExtraction:
-            return "poor miner"
-        elif ship_category==ShipCategory.Ferry:
-            return "free merchant"
-        elif ship_category==ShipCategory.Research: 
-            pass
-        elif ship_category==ShipCategory.Colony:
-            return "colony frigate"
-        elif ship_category==ShipCategory.Yacht:
-            pass 
-        elif ship_category==ShipCategory.Warship:
-            return random.choice(["corvette","patrol boat","heavy frigate"])
-        else:
-            raise ValueError("Unkown cat {}".format(ship_category))
-
-    elif ship_class==ShipClass.Cruiser:
-        if ship_category==ShipCategory.Freight:
-            return "bulk freighter"
-        elif ship_category==ShipCategory.ResourceExtraction:
-            return "freighter miner"
-        elif ship_category==ShipCategory.Ferry:
-            pass
-        elif ship_category==ShipCategory.Research: 
-            pass
-        elif ship_category==ShipCategory.Warship:
-            pass
-        elif ship_category==ShipCategory.Yacht:
-            pass 
-        elif ship_category==ShipCategory.Warship:
-            return "fleetCruiser"
-        elif ship_category==ShipCategory.Colony:
-            return "colonyCruiser"
-        else:
-            raise ValueError("Unkown cat {}".format(ship_category))
-    elif ship_class==ShipClass.Capital:
-        if ship_category==ShipCategory.Warship:
-            return random.choice(["carrier","battleship"])
-
-
 class Fitting:
     cost_mult = {
         ShipClass.Fighter:1,

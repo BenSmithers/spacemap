@@ -1,6 +1,6 @@
 from traveller_utils.name_gen import create_name
 from traveller_utils.places.world import World
-from traveller_utils.places.poi import PointOfInterest, GasGiant, InterRegion, InFlight
+from traveller_utils.places.poi import PointOfInterest, GasGiant, InterRegion, InFlight, SystemEdge
 from traveller_utils.core.utils import roll 
 from traveller_utils.tables import starports_str
 from traveller_utils.ships import StarPort
@@ -19,11 +19,18 @@ class System:
         self._fuel = False 
         self._gas_giants = False 
         self._location_inter = SubHID(hID.xid, hID.yid,0,0)
+        self._location_edge = SubHID(hID.xid, hID.yid, 1, 0)
+        self._gas_giant_loc = None
         self._regions[self._location_inter] = InFlight()
+        self._regions[self._location_edge] = SystemEdge()
 
     @property
     def inflight(self):
         return self._location_inter
+    
+    @property
+    def systemedge(self):
+        return self._location_edge
 
     def get(self, subh:SubHID):
         if subh in self._regions:
@@ -72,6 +79,8 @@ class System:
         elif of_note.value==SystemNote.MainPort.value:
             self._starport = location 
 
+        if isinstance(obj, GasGiant):
+            self._gas_giant_loc = location
         return location
 
     def insert(self, region_number, obj, of_note=SystemNote.Nothing):
@@ -188,6 +197,7 @@ def generate_system(modifier, location:HexID)->System:
     for i in range(n_giants):
         new_gas = GasGiant()
         new_system.append(new_gas)
+        
     
 
 

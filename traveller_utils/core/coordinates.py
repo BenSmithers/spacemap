@@ -1,4 +1,5 @@
 from PyQt5.QtCore import QPointF
+import numpy as np
 from math import sqrt
 
 RTHREE = sqrt(3)
@@ -32,7 +33,7 @@ class HexID:
     def zid(self)->int:
         return self._zid
     def __hash__(self):
-        return hash((self._xid, self._yid))
+        return hash(str(self))
     def __str__(self) -> str:
         return "{}-{}".format(self._xid, self._yid)
     def __eq__(self, other):
@@ -79,6 +80,7 @@ class HexID:
     def distance(self, other):
         return self - other 
 
+
 class SubHID(HexID):
     def __init__(self, xid: int, yid: int, region:int, point:int):
         super().__init__(xid, yid)
@@ -109,9 +111,20 @@ class SubHID(HexID):
         return HexID(self.xid, self.yid)
 
     def __hash__(self):
-        return hash((self._xid, self._yid, self._region, self._point))
+        return hash(str(self))
     def __str__(self) -> str:
         return "{}-{}-{}-{}".format(self._xid, self._yid, self._region, self._point)
+
+class NonPhysical(SubHID):
+    def __init__(self):
+        super().__init__(np.nan, np.nan, np.nan, np.nan)
+    def __str__(self) -> str:
+        return "NonPhys_Coord"
+    def __eq__(self, other):
+        return False
+    def __hash__(self):
+        return hash("SPAAAAAAACE")
+
 
 # magic numbers for unit conversion
 M = (3.0 / 2.0, 0.0, RTHREE/2.0, RTHREE, # F0-F3

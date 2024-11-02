@@ -76,6 +76,8 @@ class InterRegion(PointOfInterest):
     pass 
 class InFlight(PointOfInterest):
     pass
+class SystemEdge(PointOfInterest):
+    pass
 
 class GasGiant(Situation):
     def __init__(self, **kwargs):

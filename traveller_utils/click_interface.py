@@ -4,16 +4,19 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QGraphicsScene, QGraphicsSceneMouseEvent, QMainWindow
 from traveller_utils.actions import ActionManager, unpack_event, MonthlyEvent
 
-from traveller_utils.enums import Title, Bases
+from traveller_utils.enums import Title, Bases, ShipCategory, ShipClass, SystemNote
 from traveller_utils.tables import wealth_tbl
 from traveller_utils.clock import minutes_in_day
-from traveller_utils.core.coordinates import HexID, DRAWSIZE, screen_to_hex, hex_to_screen, SubHID
-from traveller_utils.ships.ship import Ship, AIShip, AIShipMoveEvent
+from traveller_utils.core.coordinates import HexID, DRAWSIZE, screen_to_hex, hex_to_screen, SubHID, NonPhysical
+from traveller_utils.ships.ship import Ship, AIShip, AIShipMoveEvent, sample_ship
 from traveller_utils.core.core import Hex, Region, Route
 from traveller_utils.places.world import World
+from traveller_utils.places.poi import PointOfInterest, InFlight
 from traveller_utils.places.system import generate_system, System
 from traveller_utils.core import utils
 from traveller_utils.core.catalogs import ShipCatalog, SystemCatalog, TradeCat, RegionCatalog
+
+
 import numpy as np
 import os 
 import json
@@ -78,10 +81,10 @@ class Clicker(QGraphicsScene,ActionManager):
             self.initialize_systems()
             self.initialize_routes()
             self.initialize_regions()
-            n_ships = 60
+            n_ships = 1
 
-            #for i in range(n_ships):
-            #    self._initialize_ship()
+            for i in range(n_ships):
+                self._initialize_ship()
 
         self.draw_all_hexes()
 
@@ -112,6 +115,8 @@ class Clicker(QGraphicsScene,ActionManager):
 
 
     def update_prices(self):
+        print("One month has passed")
+        return
         for hid in self._system_catalog:
             world = self.get_world(hid)
             # clear out the passenger lists
@@ -301,13 +306,43 @@ class Clicker(QGraphicsScene,ActionManager):
         if this_ship is None:
             return 0
         else:
-            next_step = this_ship.step()
-            self._ship_catalog.move(ship_id, next_step)    
+            moving_from = self._ship_catalog.get_loc(ship_id)
+            next_step = this_ship.step()            
+            self._ship_catalog.move(ship_id, next_step)
+
             if this_ship.is_done(): # no more steps after this 
                 self._ship_catalog.delete(ship_id)    
                 self._initialize_ship()    
                 return 1 
             else:
+                new_event = AIShipMoveEvent(
+                    ship_id
+                )
+                
+                """
+                    Station->Inflight 8 hours (refuel) 
+                    InFlight->NonPhysical  48 hours
+                    NonPhysical->Inflight  6 days per hex
+                    InFlight->Starport  48 hours
+                """
+                                    
+                if isinstance(next_step, NonPhysical):
+                    time_minutes = 2*24*60/this_ship.drive_rating # time to fly to the edge of system
+                elif isinstance(moving_from, NonPhysical):
+                    # six days per hex
+                    # TODO actually make this per hex and not per-jump
+                    time_minutes = 6*24*60/this_ship.drive_rating
+                else:
+                    next_place = self.get_sub(next_step)
+                    if isinstance(next_place, InFlight):
+                        time_minutes = 8*60 
+                        this_ship.refuel()
+                    else:
+                        time_minutes = 2*24*60/this_ship.drive_rating
+
+                next_time = self.clock.time +  Time(minute=int(time_minutes))
+                self.add_event(new_event, next_time)
+
                 return 0
             
     def _initialize_ship(self, start_hex=None):
@@ -318,41 +353,48 @@ class Clicker(QGraphicsScene,ActionManager):
 
             Then make a ship and queue its travel
         """
+
+        new_ship = AIShip.generate([], ShipClass.Frigate, ShipCategory.Freight)
+
         if start_hex is None:
             loc = self._system_catalog.sample_from_wealth()
         else:
             assert isinstance(start_hex, HexID), "Received non-HexID start hex: {}".format(type(start_hex))
             loc = start_hex
+        
+        while True:
+            print("looping")
+            loc = self._system_catalog.sample_from_wealth()
+            if loc is None:
+                raise ValueError()
+            if self._system_catalog.get(loc) is None:
+                continue
+            starport = self._system_catalog.get(loc).get_notable(SystemNote.MainPort)
+            if starport is None:
+                continue
+            else:
+                break
 
-        if loc in self._routes:
-            key_choice = choice(list( self._routes[loc] ))
-            route = self._routes[loc][key_choice].route # route object to list! 
-        else:
-            other = self._system_catalog.sample_from_wealth()
-            route = self._system_catalog.get_route_a_star(loc, other)
 
-        new_ship = AIShip.generate(route)
-        if "freighter" in new_ship.description.lower():
-            scale = 4
-            samples = 1
-            if "medium" in new_ship.description:
-                scale = 6
-                samples = 2
-            elif "large" in new_ship.description:
-                scale = 12
-                samples = 3 
-            for i in range(samples):
-                cargo, quantity = self.get_system(loc).sample_cargo(scale)
-                new_ship.add_cargo(cargo, quantity)
-            
+        ## TODO sample routes from the known routes
 
-        sid = self._ship_catalog.register(new_ship, loc)
+        other = self._system_catalog.sample_from_wealth()
+        route = self._system_catalog.get_route_a_star(loc, other, new_ship)
+
+        expanded = self._system_catalog.expand_route(route)
+
+        new_ship.set_route(expanded)
+
+
+        print(self._system_catalog.get(loc).get_notable(SystemNote.MainPort))
+        sid = self._ship_catalog.register(new_ship, self._system_catalog.get(loc).get_notable(SystemNote.MainPort))
         move = AIShipMoveEvent(
-            recurring = Time(minute=int(minutes_in_day/new_ship.rate)),
-            n_events = len(route),
             ship_id=sid
         )
-        next_time = self.clock.time +  Time(minute=int(60*np.random.randint(-100,120) +minutes_in_day/new_ship.rate))
+        
+        time_minutes = 60*np.random.randint(1,240)
+
+        next_time = self.clock.time +  Time(minute=time_minutes)
         self.add_event(move, next_time)
 
 
@@ -712,8 +754,8 @@ class Clicker(QGraphicsScene,ActionManager):
     def get_system(self, hex_id:HexID)->System:
         return self._system_catalog.get(hex_id)
         
-    def get_world(self, shi: SubHID)->World:
-        return self._system_catalog.getworld(shi)
+    def get_sub(self, shi: SubHID)->PointOfInterest:
+        return self._system_catalog.get_sub(shi)
 
         
     def draw_hex(self, hex_id:HexID):
@@ -738,7 +780,8 @@ class Clicker(QGraphicsScene,ActionManager):
 
         this_region = self._regions.get(rid)
         if this_region is None:
-            del self._drawn_regions[rid]
+            if rid in self._drawn_regions:
+                del self._drawn_regions[rid]
             return 
             
         self._pen.setStyle(0)
@@ -760,11 +803,14 @@ class Clicker(QGraphicsScene,ActionManager):
         self.draw_ships_hex(loc)
 
     def draw_ships_hex(self, loc):
+        if loc is None:
+            return
         if loc in self._ship_sids:
             self.removeItem(self._ship_sids[loc])
             del self._ship_sids[loc]
 
         all_ships = self._ship_catalog.get_at(loc)
+
 
         names = ["one", "two", "three", "four", "more"]
         index = len(all_ships)-1
