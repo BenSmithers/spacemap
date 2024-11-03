@@ -81,7 +81,7 @@ class Clicker(QGraphicsScene,ActionManager):
             self.initialize_systems()
             self.initialize_routes()
             self.initialize_regions()
-            n_ships = 1
+            n_ships = 60
 
             for i in range(n_ships):
                 self._initialize_ship()
@@ -307,14 +307,16 @@ class Clicker(QGraphicsScene,ActionManager):
             return 0
         else:
             moving_from = self._ship_catalog.get_loc(ship_id)
-            next_step = this_ship.step()            
-            self._ship_catalog.move(ship_id, next_step)
+            next_step = this_ship.step()      
+            
 
-            if this_ship.is_done(): # no more steps after this 
+            if this_ship.is_done() or (next_step is None): # no more steps after this 
                 self._ship_catalog.delete(ship_id)    
                 self._initialize_ship()    
                 return 1 
             else:
+                self._ship_catalog.move(ship_id, next_step)
+
                 new_event = AIShipMoveEvent(
                     ship_id
                 )
@@ -357,14 +359,13 @@ class Clicker(QGraphicsScene,ActionManager):
         new_ship = AIShip.generate([], ShipClass.Frigate, ShipCategory.Freight)
 
         if start_hex is None:
-            loc = self._system_catalog.sample_from_wealth()
+            loc = self._trade_cat.sample_from_wealth()
         else:
             assert isinstance(start_hex, HexID), "Received non-HexID start hex: {}".format(type(start_hex))
             loc = start_hex
         
         while True:
-            print("looping")
-            loc = self._system_catalog.sample_from_wealth()
+            loc = self._trade_cat.sample_from_wealth()
             if loc is None:
                 raise ValueError()
             if self._system_catalog.get(loc) is None:
@@ -376,17 +377,23 @@ class Clicker(QGraphicsScene,ActionManager):
                 break
 
 
-        ## TODO sample routes from the known routes
+        all_routes = self._trade_cat.all_connections(loc)
+        if len(all_routes)==0:
+            other = self._trade_cat.sample_from_wealth()
+            while self._system_catalog.get(other).starport is None:
+                other = self._trade_cat.sample_from_wealth()
 
-        other = self._system_catalog.sample_from_wealth()
-        route = self._system_catalog.get_route_a_star(loc, other, new_ship)
+            route = self._system_catalog.get_route_a_star(loc, other, new_ship)
+        else:
+            route = self._trade_cat.get( choice(all_routes) ).full_route
+
+        
 
         expanded = self._system_catalog.expand_route(route)
 
         new_ship.set_route(expanded)
 
 
-        print(self._system_catalog.get(loc).get_notable(SystemNote.MainPort))
         sid = self._ship_catalog.register(new_ship, self._system_catalog.get(loc).get_notable(SystemNote.MainPort))
         move = AIShipMoveEvent(
             ship_id=sid

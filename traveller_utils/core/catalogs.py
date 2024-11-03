@@ -162,7 +162,6 @@ class ShipCatalog(Catalog):
             Updates internal maps to represent the new ship location
             Then call 
         """
-        print("Moving ship {} to {}".format(ship_id, dest))
         old_loc = self.get_loc(ship_id)
         
         # first, for the specific listings 
@@ -259,7 +258,8 @@ class SystemCatalog(Catalog):
         # get all of the wealths and accumulate them. Only do this if it hasn't been done already
         all_keys = list(self._entries.keys())
         if len(self._cummulative_wealths)==0:
-            self._cummulative_wealths = [self.get(key).mainworld.wealth for key in all_keys]
+            # we add that fraction of an index because if an entry has 0 wealth, it kinda breaks
+            self._cummulative_wealths = [self.get(key).mainworld.wealth+0.01*i for i, key in enumerate(all_keys)]
             self._cummulative_wealths = np.cumsum(self._cummulative_wealths).tolist()
         
 
@@ -476,8 +476,17 @@ class TradeCat(Catalog):
 
         self._by_hid = {} # hexID -> list(route IDs)
 
-    def get(self, shipID) -> TradeRoute:
-        return super().get(shipID)
+    def get(self, route_id) -> TradeRoute:
+        return super().get(route_id)
+
+    def sample_from_wealth(self):
+        all_keys = list([key for key in self._system_cat])
+        self._cummulative_wealths = [ len(self.get_routes(key))+1 for key in all_keys]
+        self._cummulative_wealths = np.cumsum(self._cummulative_wealths).tolist()
+
+        sampled = np.random.rand()*self._cummulative_wealths[-1]
+        index = utils.get_loc(sampled, self._cummulative_wealths)[0]
+        return all_keys[index]
 
     def get_routes(self, superHID:SubHID)->'list[int]':
         if isinstance(superHID, SubHID):
@@ -487,6 +496,7 @@ class TradeCat(Catalog):
 
         if index in self._by_hid:
             return self._by_hid[index]
+        return []
 
     def wealth_flow(self, hid:HexID):
         """
@@ -513,7 +523,7 @@ class TradeCat(Catalog):
 
     def all_connections(self, start:HexID):
         if start not in self._by_hid:
-            return None 
+            return [] 
         
         return self._by_hid[start]
 
