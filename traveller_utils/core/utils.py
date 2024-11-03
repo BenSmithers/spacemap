@@ -161,7 +161,7 @@ def get_loc(x:float, domain:list,closest=False):
     upper_bin = lower_bin+1
 
     while not (domain[lower_bin]<=x and domain[upper_bin]>=x):
-        if abs(max_abs-min_abs)<=1:
+        if abs(max_abs-min_abs)<1:
             print("{} in {}".format(x, domain))
             raise Exception("Uh Oh")
 

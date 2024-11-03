@@ -150,7 +150,7 @@ class Time:
             raise TypeError("Expected {} for months, got {}".format(int, type(months)))
         self._month = months + self._month
 
-        while self._month >= months_in_year:
+        while self._month > months_in_year:
             self._year += 1
             self._month -= months_in_year
 
@@ -162,7 +162,7 @@ class Time:
             raise TypeError("Expected {} for days, got {}".format(int, type(days)))
         self._day += days
 
-        while self._day >= (days_in_month):
+        while self._day > days_in_month:
             self._month_step( 1 )
             self._day-= days_in_month
 
@@ -279,11 +279,11 @@ class Time:
             new._hour += hours_in_day
             new._day -= 1
         new._day -= other.day
-        while new.day <0:
+        while new.day <1:
             new._day += days_in_month
             new._month -= 1
         new._month -= other.month
-        while new._month <0 :
+        while new._month <1 :
             new._month += months_in_year
             new._year -= 1
         new._year -= other.year
@@ -402,7 +402,7 @@ class Clock:
         self._lunar_offset = 3 
         self._lunar_length = 28
 
-        self._holidays = { "Winter_Solstice":Time(month=0),
+        self._holidays = { "Winter_Solstice":Time(month=0, hour=8),
                     "Spring_Equinox":Time(month=3),
                     "Summer_Solstice":Time(month=6),
                     "Autumnal_Equinox":Time(month=9) }
@@ -591,6 +591,8 @@ class Clock:
             raise TypeError("Expected object of type {}, got {}.".format(Time, type(new_time)))
 
         if new_time < self._time:
+            print(new_time.hour, new_time.minute)
+            print(self._time.hour, self._time.minute)
             raise ValueError("{} is in the past. It's {}".format(new_time, self._time))
 
         lapse = new_time - self._time
@@ -978,6 +980,7 @@ class MultiHexCalendar(QtWidgets.QWidget):
             int(chop[1]),
             int(chop[2])
         )
+        print("selected ",this_time)
         self.day_selected(this_time)
         self.fill_days()
         

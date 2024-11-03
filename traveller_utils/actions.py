@@ -347,7 +347,7 @@ class ActionManager(object):
             elif time > self.queue[-1][0]:
                 self._queue.append([time,event])
             else:
-                index = 0
+                index = 1
                 while time > self.queue[index][0]:
                     index+=1
 
@@ -376,7 +376,7 @@ class ActionManager(object):
 
     def skip_to_time(self, time):
         if len(self.queue)!=0:
-            while self.queue[0][0]<time:
+            while self.queue[0][0]<time or self.queue[0][0]==time:
                 # moves time up to the next event, does the action (if there is one), and pops the event from the queue
                 self.skip_to_next_event()
 
