@@ -24,6 +24,16 @@ class System:
         self._regions[self._location_inter] = InFlight()
         self._regions[self._location_edge] = SystemEdge()
 
+    def locations(self):
+        """
+            Return the main thing ID for each location (no Inflight or systemedge or interregion)
+        """
+        rvals = []
+        for key in self._regions:
+            what = self.get(key)
+            if not isinstance(what, (InFlight, SystemEdge, InterRegion)):
+                rvals.append(key)
+        return rvals
     @property
     def inflight(self):
         return self._location_inter
@@ -110,11 +120,25 @@ def generate_system(modifier, location:HexID)->System:
     
     name = create_name("planet")
 
+    n_others = roll()-2 
+
     # create main world
     new_system = System(location, name)
 
     new_world = World(True, modifier)
-    world_loc = new_system.append(new_world, SystemNote.MainWorld)
+    ogname = new_world.name
+
+    badlands=[ World(True, modifier-2, new_world) for i in range(n_others)]
+    badlands.append(new_world)
+
+    badlands=sorted(badlands, key=lambda x:-x._temperature)
+    is_original = [entry.name==ogname for entry in badlands]
+    for i, entry in enumerate(badlands):
+        entry._name = "{} {}".format(name, i+1)
+        if is_original[i]:
+            new_system.append(entry, SystemNote.MainWorld )
+        else:
+            new_system.append(entry )
     
     # generate services 
 
@@ -183,7 +207,7 @@ def generate_system(modifier, location:HexID)->System:
         for entry in services:
             starport.add_service(entry)
         
-        starport_loc = new_system.insert(world_loc.region, starport, SystemNote.MainPort)
+        starport_loc = new_system.insert(new_system._mainworld.region, starport, SystemNote.MainPort)
         starport.link_shid(starport_loc)
     # generate other worlds 
 

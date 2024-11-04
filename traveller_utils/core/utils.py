@@ -91,11 +91,10 @@ class IconLib:
         else:
             return self._pixmaps[name].scaledToWidth(int(width))
 
-def roll1d(rng=None, mod=0):
-    if rng is None:
-        return np.random.randint(1,7) + mod
-    else:
-        return rng.randint(1,7) + mod 
+
+def roll1d( mod=0):
+    return np.random.randint(1,7) + mod
+
 
 def roll( mod=0):
     return np.random.randint(1,7)+np.random.randint(1,7)+mod

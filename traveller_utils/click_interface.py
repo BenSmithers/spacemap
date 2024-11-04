@@ -4,7 +4,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QGraphicsScene, QGraphicsSceneMouseEvent, QMainWindow
 from traveller_utils.actions import ActionManager, unpack_event, MonthlyEvent
 
-from traveller_utils.enums import Title, Bases, ShipCategory, ShipClass, SystemNote
+from traveller_utils.enums import Title, Bases, ShipCategory, ShipClass, SystemNote, WorldCategory
 from traveller_utils.tables import wealth_tbl
 from traveller_utils.clock import minutes_in_day
 from traveller_utils.core.coordinates import HexID, DRAWSIZE, screen_to_hex, hex_to_screen, SubHID, NonPhysical
@@ -112,6 +112,7 @@ class Clicker(QGraphicsScene,ActionManager):
             plt.xlabel("Wealth Score")
             plt.ylabel("Count")
             plt.show()
+
 
 
     def update_prices(self):
@@ -842,6 +843,10 @@ class Clicker(QGraphicsScene,ActionManager):
 
         this_system = self.get_system(hex_id)
         this_world = this_system.mainworld
+        
+        amber = WorldCategory.amber_zone in this_world.category
+        red = WorldCategory.red_zone in this_world.category
+
         this_starport = this_system.starport
         
         if this_world is None:
@@ -855,10 +860,18 @@ class Clicker(QGraphicsScene,ActionManager):
 
         center = hex_to_screen(hex_id)
         this_hex = Hex(center)
-        self._pen.setColor(QtGui.QColor(150,150,150))
+        if red:
+            self._pen.setColor(QtGui.QColor(255,10,10))
+        elif amber:
+            self._pen.setColor(QtGui.QColor(247, 184, 47))
+        else:
+            self._pen.setColor(QtGui.QColor(150,150,150))
         self._pen.setStyle(1)
         self._brush.setStyle(0)
         sid = self.addPolygon(this_hex, self._pen, self._brush)
+
+        if red or amber:
+            sid.setZValue(20)
         
         self._brush.setStyle(1)
         self._pen.setStyle(0)

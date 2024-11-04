@@ -32,7 +32,9 @@ class WorldWidget(QWidget):
         super(WorldWidget, self).__init__(parent)
         self.ui = world_widget_gui()
         self.ui.setupUi(self)
-
+        self.parent=parent
+        self.ui.name_lbl.setText(world._name)
+        self.ui.desc_layout.setText(world.world_profile(""))
         self.ui.size_desc.setText("{} g at surface".format(world.gravity))
         self.ui.pressure_desc.setText("{} atmospheres".format(world.pressure))
         self.ui.atmo_desc.setText(world.atmosphere_str)
@@ -44,7 +46,7 @@ class WorldWidget(QWidget):
         self.ui.pop_desc.setText(utils.number_add_comma(world._population))
         self.ui.tech_desc.setText(world.tech_level_str)
         self.ui.tech_desc.setMinimumSize(self.ui.tech_desc.sizeHint())
-        self.ui.world_image.setPixmap(utils.pmap.access(world.get_image_name(), 0.8*DRAWSIZE))
+        self.ui.world_image.setPixmap(self.parent.pmap.access(world.get_image_name(), 0.8*DRAWSIZE))
         
 
 class SystemDialog(QDialog):
@@ -52,10 +54,22 @@ class SystemDialog(QDialog):
         super(SystemDialog, self).__init__(parent)
         self.ui = system_dialog()
         self.ui.setupUi(self)
+
+        self.pmap = utils.IconLib(os.path.join(os.path.dirname(__file__), "images","planets"))
+        self.icon_map = utils.IconLib(os.path.join(os.path.dirname(__file__),"images","icons"), ext="svg")
+
         self.widgs = []
 
     def configure(self, syst:System):
-        new_one = WorldWidget(self, syst.mainworld)
+        if syst.mainworld.liege is None:
+            self.ui.system_label.setText("The Seat of the {} {}".format(syst._name, syst.mainworld.title.name))
+        else:
+            self.ui.system_label.setText("The {} System".format(syst._name))
+        for subid in syst.locations():
+            what = syst.get(subid)
+            if isinstance(what, World):
+                new_one = WorldWidget(self, what)
+                self.ui.horizontalLayout_2.addWidget(new_one)
 
 
 class EditorDialog(QDialog):

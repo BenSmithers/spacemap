@@ -278,18 +278,35 @@ class World(PointOfInterest):
         if len(world_tag)==0:
             self._tags=[ choice(list(WorldTag)) for i in range(2) ]
         
-        self._size = roll(mod=-2)
-
-        self._atmosphere = roll(-7+self._size)
-        if self._atmosphere<0:
-            self._atmosphere =0
-        self._pressure = -1 
-
         atmo_t_mods=[
             0,0, -2,-2,-1,-1, 0,0,1,1,2,6,6,2,-1,2,2
         ]
+        if other_world is not None:
+            self._size = roll1d()-2
+            if roll1d()>3:
+                self._size = roll1d() + 4
+            self._atmosphere = roll1d()-7 +self._size
+            if self._atmosphere<0:
+                self._atmosphere = 0
+            if roll1d()>3:
+                self._atmosphere=len(atmo_t_mods)-roll1d()
 
-        self._temperature = roll(atmo_t_mods[self._atmosphere]) 
+            self._temperature = roll1d(atmo_t_mods[self._atmosphere])-2
+            if roll1d()>3:
+                self._temperature = roll1d()+ 8
+            
+
+        else:
+            self._size = roll(mod=-2)
+
+            self._atmosphere = roll(-7+self._size)
+            if self._atmosphere<0:
+                self._atmosphere =0
+            self._pressure = -1 
+
+            
+            self._temperature = roll(atmo_t_mods[self._atmosphere]) 
+            
         self._biosphere = roll()
         self._population_raw = roll(-2) + modifier
         
@@ -378,8 +395,10 @@ class World(PointOfInterest):
         else:
             self._tech_level = np.random.randint(1,7)+ self._get_tl_mod()
             self._tech_level = min([15, self._tech_level])
+
+        if isinstance(other_world, World):
+                self._law_level = min([self._tech_level, other_world._tech_level])
         
-        self._tech_level = self._tech_level
         
         self._category =[WorldCategory.Common,]
 
@@ -578,7 +597,11 @@ class World(PointOfInterest):
             -1, 8.2, 
             0.3, -1
         ]
-        self._pressure = pressures[self._atmosphere]
+        
+        if self._atmosphere>=len(pressures):
+            self._pressure = pressures[-1]
+        else:
+            self._pressure = pressures[self._atmosphere]
 
         if self._pressure==-1:
             self._pressure = np.random.rand()*2

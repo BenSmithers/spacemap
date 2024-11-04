@@ -23,7 +23,7 @@ class Ui_Form(object):
         self.world_image = QtWidgets.QLabel(Form)
         self.world_image.setMaximumSize(QtCore.QSize(100, 100))
         self.world_image.setText("")
-        self.world_image.setPixmap(QtGui.QPixmap("../../spacemap/images/planets/RClassD1.png"))
+        #self.world_image.setPixmap(QtGui.QPixmap("../../spacemap/images/planets/RClassD1.png"))
         self.world_image.setScaledContents(True)
         self.world_image.setObjectName("world_image")
         self.titleLayout.addWidget(self.world_image)
