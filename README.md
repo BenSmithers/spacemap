@@ -16,16 +16,24 @@ A reference/utility map for Traveller or Stars Without Number games. Uses the tr
 
 # Modifications Needed
 
-Ship movement changes. 
-    - should keep track of ship movement within a hex (from region to region)
-    - ships should be in metaspace while travelling, rather than waiting at one hex and teleporting to the next 
-    - When two ships/fleets pass between the same region, an interaction between them should be decided 
-    - *fleets* should move around and be composed of ships. 
-    - ships shouldn't be deleted after arriving somewhere, they instead should just decide on a new destination. The destination should be based on where it expects to sell its goods for the most profit. 
-    - sufficiently damaged fleets someties will return to a friendly port to repair. Military ones will always do so, and this is free. Privately owned ships instead must pay. 
-    - Fleets keep track of their owner's finances. 
-    - A station's category decides the maximum Credits/day worth of work can be done. Ships need regular maintenance, and so this is a soft cap on the number of ships a sector can support 
-    - Update the route-finding to be able to make larger steps depending on the drive rating. Cost should be number of days to get somewhere and dependent on drive rating, fuel bunkers, and fuel scoops. The route will be mapped out on the HexID level, and then intermediate steps will be inserted added after that
+Lots of planned features
+- ~~should keep track of ship movement within a hex (from region to region)~~
+- ~~ships should be in metaspace while travelling, rather than waiting at one hex and teleporting to the next~~
+- When two ships/fleets pass between the same region, an interaction between them should be decided 
+- *fleets* should move around and be composed of ships. 
+- ships shouldn't be deleted after arriving somewhere, they instead should just decide on a new destination. The destination should be based on where it expects to sell its goods for the most profit. 
+- sufficiently damaged fleets someties will return to a friendly port to repair. Military ones will always do so, and this is free. Privately owned ships instead must pay. 
+- Fleets keep track of their owner's finances. 
+- A station's category decides the maximum Credits/day worth of work can be done. Ships need regular maintenance, and so this is a soft cap on the number of ships a sector can support 
+- ~~Update the route-finding to be able to make larger steps depending on the drive rating. Cost should be number of days to get somewhere and dependent on drive rating, fuel bunkers, and fuel scoops. The route will be mapped out on the HexID level, and then intermediate steps will be inserted added after that~~
+- Add buttons for quicky stepping days/months. Add text log of events. (ship arrives somewhere).
+- Add station names
+- Add special stations
+- Fix the gui to show ships
+- Implement the "system" gui so that you can see all of the planets and where ships are
+- People should be generated, should be able to be tracked as crew, could be made persistent
+- People should have tracked skills. Skills could improve 
+- Need a new Person catalog to track people
 
 Starports are now separate from planets, but really be interlinked. I think the starport should have an associated planet that it draws desireability/tags from. 
 A `Terminal` will be some entity, also tied to a planet, from which passengers and trade goods are drawn. 
