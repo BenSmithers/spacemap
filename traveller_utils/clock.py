@@ -880,6 +880,45 @@ class MultiHexCalendar(QtWidgets.QWidget):
         self.skipto_button.setEnabled(False)
         self.skipto_button.setText("Skip To")
         self.layout.addWidget(self.skipto_button)
+
+        self.skip_layout = QtWidgets.QHBoxLayout()
+        
+
+
+        self.skiptype = QtWidgets.QComboBox(self)
+        self.skiptype.setObjectName("skiptype")
+        self.skiptype.addItem("Minute")
+        self.skiptype.addItem("Hour")
+        self.skiptype.addItem("Day")
+        self.skiptype.addItem("Month")
+        self.skiptype.setMaximumSize(2*self.skiptype.sizeHint())
+        #self.setMaximumSize(self.sizeHint())
+        self.skiptype.addItem("Year")
+        self.skiptype.setSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
+        
+
+        self.step_skip = QtWidgets.QPushButton(self)
+        self.step_skip.setObjectName("step_skip")
+        self.step_skip.setFixedSize(50,25)
+        self.step_skip.setText("Skip")
+        self.step_skip.setMinimumSize(self.step_skip.sizeHint())
+        self.step_skip_x5 = QtWidgets.QPushButton(self)
+        self.step_skip_x5.setObjectName("step_skip_x5")
+        self.step_skip_x5.setFixedSize(50,25)
+        self.step_skip_x5.setText("Skip x5")
+        self.step_skip_x5.setMinimumSize(self.step_skip_x5.sizeHint())
+        self.step_skip_x10 = QtWidgets.QPushButton(self)
+        self.step_skip_x10.setObjectName("step_skip_x10")
+        self.step_skip_x10.setFixedSize(50,25)
+        self.step_skip_x10.setText("Skip x10")
+        self.step_skip_x10.setMinimumSize(self.step_skip_x10.sizeHint())
+
+
+        self.skip_layout.addWidget(self.skiptype,0,QtCore.Qt.AlignmentFlag.AlignTop)
+        self.skip_layout.addWidget(self.step_skip,4,QtCore.Qt.AlignmentFlag.AlignTop)
+        self.skip_layout.addWidget(self.step_skip_x5,4,QtCore.Qt.AlignmentFlag.AlignTop)
+        self.skip_layout.addWidget(self.step_skip_x10,4,QtCore.Qt.AlignmentFlag.AlignTop)
+        self.layout.addItem(self.skip_layout)
         
         spring = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.layout.addItem(spring)
@@ -892,6 +931,9 @@ class MultiHexCalendar(QtWidgets.QWidget):
         self.rightButton.clicked.connect(self.add_year)
         self.leftButtonMon.clicked.connect(self.leftMon)
         self.rightButtonMon.clicked.connect(self.rightMon)
+        self.step_skip.clicked.connect(self.skip_x1)
+        self.step_skip_x5.clicked.connect(self.skip_x5)
+        self.step_skip_x10.clicked.connect(self.skip_x10)
 
         self.skipto_button.clicked.connect(self.skip_to_selected)
 
@@ -899,6 +941,38 @@ class MultiHexCalendar(QtWidgets.QWidget):
         # this is the only way I know how to set up a emit - receive signal system. Used the same technique from the MultiThreading 
         # so it'll go //calendar.signals.signal.connect( function )//
         self.signals = Signaler()
+
+    def _get_skip(self, scale):
+        if self.skiptype.currentIndex()==0:
+            return Time(scale)
+        elif self.skiptype.currentIndex()==1:
+            return Time(hour=scale)
+        elif self.skiptype.currentIndex()==2:
+            return Time(day=scale)
+        elif self.skiptype.currentIndex()==3:
+            return Time(month=scale)
+        else:
+            return Time(year=scale)
+    def skip_x1(self):
+        self.set_time(self.true_time + self._get_skip(1))
+        self.post_skip()
+        self.signals.signal.emit(self.true_time)
+    def skip_x5(self):
+        self.set_time(self.true_time + self._get_skip(5))
+        self.post_skip()
+        self.signals.signal.emit(self.true_time)
+    def skip_x10(self):
+        self.set_time(self.true_time + self._get_skip(10))
+        self.post_skip()
+        self.signals.signal.emit(self.true_time)
+
+    def post_skip(self):
+        if self.selected_time is None:
+            self.selected_time = self.true_time
+        if self.selected_time <self.true_time or self.selected_time==self.true_time:
+            self.skipto_button.setEnabled(False)
+        else:
+            self.skipto_button.setEnabled(True)
 
     def skip_to_selected(self):
         if self.selected_time is None:

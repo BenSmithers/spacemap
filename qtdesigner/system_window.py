@@ -28,21 +28,24 @@ class Ui_Dialog(object):
         self.verticalLayout.addWidget(self.system_label)
         self.horizontalLayout = QtWidgets.QHBoxLayout()
         self.horizontalLayout.setObjectName("horizontalLayout")
-        self.toolBox = QtWidgets.QToolBox(Dialog)
-        self.toolBox.setMaximumSize(QtCore.QSize(200, 16777215))
-        self.toolBox.setObjectName("toolBox")
-        self.page = QtWidgets.QWidget()
-        self.page.setGeometry(QtCore.QRect(0, 0, 200, 345))
-        self.page.setObjectName("page")
-        self.toolBox.addItem(self.page, "")
-        self.page_2 = QtWidgets.QWidget()
-        self.page_2.setGeometry(QtCore.QRect(0, 0, 200, 345))
-        self.page_2.setObjectName("page_2")
-        self.toolBox.addItem(self.page_2, "")
-        self.horizontalLayout.addWidget(self.toolBox)
-        self.graphicsView = QtWidgets.QGraphicsView(Dialog)
-        self.graphicsView.setObjectName("graphicsView")
-        self.horizontalLayout.addWidget(self.graphicsView)
+        self.scrollArea = QtWidgets.QScrollArea(Dialog)
+        self.scrollArea.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        self.scrollArea.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
+        self.scrollArea.setWidgetResizable(True)
+        self.scrollArea.setObjectName("scrollArea")
+        self.system_layout = QtWidgets.QWidget()
+        self.system_layout.setGeometry(QtCore.QRect(0, 0, 731, 396))
+        self.system_layout.setObjectName("system_layout")
+        self.horizontalLayout_2 = QtWidgets.QHBoxLayout(self.system_layout)
+        self.horizontalLayout_2.setObjectName("horizontalLayout_2")
+        
+        #self.calendarWidget = QtWidgets.QCalendarWidget(self.system_layout)
+        #self.calendarWidget.setObjectName("calendarWidget")
+        #self.horizontalLayout_2.addWidget(self.calendarWidget)
+
+
+        self.scrollArea.setWidget(self.system_layout)
+        self.horizontalLayout.addWidget(self.scrollArea)
         self.verticalLayout.addLayout(self.horizontalLayout)
         self.diagButtonBox = QtWidgets.QDialogButtonBox(Dialog)
         self.diagButtonBox.setOrientation(QtCore.Qt.Horizontal)
@@ -51,7 +54,6 @@ class Ui_Dialog(object):
         self.verticalLayout.addWidget(self.diagButtonBox)
 
         self.retranslateUi(Dialog)
-        self.toolBox.setCurrentIndex(1)
         self.diagButtonBox.accepted.connect(Dialog.accept) # type: ignore
         self.diagButtonBox.rejected.connect(Dialog.reject) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(Dialog)
@@ -60,5 +62,3 @@ class Ui_Dialog(object):
         _translate = QtCore.QCoreApplication.translate
         Dialog.setWindowTitle(_translate("Dialog", "Dialog"))
         self.system_label.setText(_translate("Dialog", "The Template Name System"))
-        self.toolBox.setItemText(self.toolBox.indexOf(self.page), _translate("Dialog", "Page 1"))
-        self.toolBox.setItemText(self.toolBox.indexOf(self.page_2), _translate("Dialog", "Page 2"))

@@ -33,6 +33,7 @@ class Ui_MainWindow(object):
         #self.tabWidget.addTab(self.pass_tab, "")
         self.verticalLayout.addWidget(self.tabWidget)
         self.map_view = QtWidgets.QGraphicsView(self.centralwidget)
+        #self.map_view.setBackgroundBrush(QtGui.QBrush(QtCore.Qt.black))
         self.map_view.setObjectName("map_view")
         self.horizontalLayout.addWidget(self.map_view)
         MainWindow.setCentralWidget(self.centralwidget)

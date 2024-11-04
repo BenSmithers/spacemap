@@ -547,9 +547,11 @@ class World(PointOfInterest):
         if self._hydro>9:
             self._category.append(WorldCategory.Water_World)
         
+
         if len(self._category)==0:
             self._category=[WorldCategory.Common]
-                
+        if self._government.civil_war:
+            self._category.append(WorldCategory.amber_zone)
     
     @property
     def gravity(self)->float:
