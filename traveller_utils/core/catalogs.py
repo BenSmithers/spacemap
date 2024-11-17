@@ -334,19 +334,19 @@ class SystemCatalog(Catalog):
             pass # both have fuel - no effect
         elif last_has_station or next_has_station:
             # one of the two have no fuel - but you have a scoop 
-            if max_fuel==1: # you have only space for one fuel, so you need to refuel
+            if max_fuel==2: # you have only space for one fuel, so you need to refuel
                 if ((not last_has_station) and last_scoop) or ((not next_has_station) and next_scoop):
                     penalty += 3.0 # add a few days to fuel-scoop
                 else:
-                    penalty = 10000
+                    penalty = 100000
             
         else: # two in a row without stations 
-            if max_fuel==1 :
+            if max_fuel==2 :
                 if last_scoop and next_scoop:
                     penalty += 6.0
                 else:
                     penalty = 100000
-            elif max_fuel==2:
+            elif max_fuel==3:
                 if last_scoop or next_scoop:
                     penalty += 3.0
                 else:
