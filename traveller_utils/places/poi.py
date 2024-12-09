@@ -39,7 +39,7 @@ def make_point_of_interest():
         ]
 
     situation=[
-            ["Sysdtems breaking down", "Foreign sabotage attempt", "black market for the elite","vault for dangerous pretech", "suply base for pirates"],
+            ["Systems breaking down", "Foreign sabotage attempt", "black market for the elite","vault for dangerous pretech", "suply base for pirates"],
             ["Life support is threatened","base needs a new asteroid","Dug out something nasty","Fighting another asteroid","hit a priceless vein of ore"],
             ["something dark has awoken", "criminals trying to take over","moon plague breaking out","desperate for vital supplies","rich but badly-protected"],
             ["Trying to stop it awakening","Meddling with strange tech","Impending tech calamity","a terrible secret is unearthed","fighting outside interlopers"],
@@ -83,6 +83,7 @@ class GasGiant(Situation):
     def __init__(self, **kwargs):
         super().__init__(**kwargs) 
         self._scoopable = True
+        self._image_name = "ClassJ{}".format(randint(1, 4))
 
     @classmethod
     def generate(cls):

@@ -6,6 +6,7 @@ import numpy as np
 
 from traveller_utils.trade_goods import TradeGoods
 from traveller_utils.core.coordinates import HexID
+from traveller_utils.enums import Skill, Attribute, WorldCategory
 
 names_fn = os.path.join(os.path.dirname(__file__), "..","resources", "names.json")
 _obj = open(names_fn,'rt')
@@ -56,6 +57,13 @@ class Person:
         self._persistent = False
 
         self._image_name = ""
+
+        self._skills = {
+            attr.name:-1 for attr in Skill
+        }
+        self._attrs = {
+            attr.name:0 for attr in Attribute
+        }
 
     @property
     def destination(self):
@@ -134,7 +142,7 @@ class Person:
         return self._image_name
 
     @classmethod
-    def generate(cls, key="Random"):
+    def generate(cls, key="Random", *worldcat):
         newp = cls()
         newp._sex =  "male" if random.randint(0,1) else "female"
 

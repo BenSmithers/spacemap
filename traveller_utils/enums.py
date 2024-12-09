@@ -68,14 +68,14 @@ class Title(Enum):
         3 - up to one hundred billion 
         4 - up to one hundred trillion??
     """
-    Lord = 0
+    Baron = 0
     Count = 1
     Duke = 2
     King = 3
     Emperor = 4
 
 class LandTitle(Enum):
-    Holding = 0
+    Barony = 0
     County = 1
     Duchy = 2
     Kingdom = 3
