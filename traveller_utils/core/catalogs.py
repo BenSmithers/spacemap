@@ -536,14 +536,10 @@ class TradeCat(Catalog):
                 self._by_hid[hid].append(rid)
             else:
                 self._by_hid[hid] = [rid, ]
-            this_syst = self._system_cat.get(hid).starport.add_route(route)
+            
+            self._system_cat.get(hid).starport.add_route(route)
         
         # now actually add the routes to the world
-        stops = list(route.tons_per_month.keys())
-        start_world = self._system_cat.get(stops[0])
-        start_world.starport.add_route(route)
-        end_world = self._system_cat.get(stops[1])
-        end_world.starport.add_route(route)
 
         return rid 
     
