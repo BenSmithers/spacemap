@@ -6,7 +6,7 @@ from traveller_utils.places.world import World
 from traveller_utils.places.terminal import Terminal
 from traveller_utils.places.market import Market
 
-class StarPort(ShipSWN, Terminal, Market):
+class StarPort(ShipSWN, Market):
     def __init__(self, starport_class, linked_world:World):
         
         station_template = "station{}Class".format(starport_class.upper())

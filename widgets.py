@@ -327,6 +327,7 @@ class GovWidget(QtWidgets.QWidget):
         add = " Faction" if gov.is_faction else ""
         self.ui.name_lbl.setText(gov.gov_type+add)
         self.ui.name_lbl.setMinimumSize(self.ui.name_lbl.sizeHint())
+        #self.ui.groupbox.setTitle(gov.gov_type+add)
         self.ui.desc_desc.setText(gov.description)
         self.ui.desc_desc.setMinimumSize(self.ui.desc_desc.sizeHint())
         self.ui.contraband_desc.setText(", ".join([str(entry.name) for entry in gov.contraband]))
@@ -468,12 +469,13 @@ class TradeWidget(QtWidgets.QWidget):
             else:
                 self.supply_entry.appendRow(SellerItem(key, "", int(net_supply)))
 
+
         for key in port.trade_routes:
-            for route in port.trade_routes[key]:
-            
+            for route in port.trade_routes[key]:     
                 linked_shid = port.linked_shid()
                 tons = route.tons_per_month[linked_shid.downsize()]
-                
+                if tons>0 and key not in port.supply:
+                    self.supply_entry.appendRow(SellerItem(key, "", int(tons)))
                 
                 self.demand_entry.appendRow(SellerItem(key, "","{} {}".format("Importing" if tons>0 else "Exporting", abs(int(tons))) ))
 

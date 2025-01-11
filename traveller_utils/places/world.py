@@ -152,7 +152,7 @@ class World(PointOfInterest):
             "low":[], 
         }
         self._category =[WorldCategory.Common,]
-        self._title = Title.Lord
+        self._title = Title.Baron
 
         if generate:
             self.populate(modifier=modifier, other_world=other_world)

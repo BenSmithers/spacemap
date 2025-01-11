@@ -635,7 +635,7 @@ class Clicker(QGraphicsScene,ActionManager):
             Title.King:[],
             Title.Duke:[],
             Title.Count:[],
-            Title.Lord:[]
+            Title.Baron:[]
         }
 
         
@@ -658,7 +658,7 @@ class Clicker(QGraphicsScene,ActionManager):
             So, each Duke is assigned to its nearest king
         """
         max_dist = 3
-        ordered_labels= [Title.Lord, Title.Count, Title.Duke, Title.King, Title.Emperor]
+        ordered_labels= [Title.Baron, Title.Count, Title.Duke, Title.King, Title.Emperor]
         odds = [0.005, 0.04, 0.25, 0.40, 1.0]
 
         for i, title in enumerate(ordered_labels):

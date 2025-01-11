@@ -147,7 +147,7 @@ for ik, key in enumerate(tech_levels):
 
 
 wealth_tbl = Table()
-wealth_tbl.add_entry(-1e10, Title.Lord)
+wealth_tbl.add_entry(-1e10, Title.Baron)
 wealth_tbl.add_entry(0, Title.Count)
 wealth_tbl.add_entry(1e7, Title.Duke)
 wealth_tbl.add_entry(2.5e7, Title.King)
