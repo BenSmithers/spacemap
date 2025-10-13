@@ -1,4 +1,5 @@
 from random import randint
+from traveller_utils.core.coordinates import SubHID
 
 def get_origin():
     value = randint(1,8)
@@ -57,8 +58,13 @@ def make_point_of_interest():
     return points[first], occupiers[first][second].lower(), situation[first][third].lower()
 
 class PointOfInterest:
+    @property
+    def name(self):
+        return self._name 
+        
     def __init__(self, **kwargs):
         self._scoopable = False
+        self._name = "A Point of Interest"
 
 
 class Situation(PointOfInterest):
@@ -73,15 +79,31 @@ class Situation(PointOfInterest):
         return new
 
 class InterRegion(PointOfInterest):
-    pass 
+    def __init__(self, parent, **kwargs):
+        super().__init__(**kwargs) 
+        self._name = "Between regions at "
+        self._parent = parent
+    @property
+    def parent(self)->SubHID:
+        return self._parent
+
+
+
 class InFlight(PointOfInterest):
-    pass
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs) 
+        self._name = "Between planets"
+
 class SystemEdge(PointOfInterest):
-    pass
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs) 
+        self._name = "At the edge of the system"
+
 
 class GasGiant(Situation):
     def __init__(self, **kwargs):
         super().__init__(**kwargs) 
+        self._name = "A gas giant"
         self._scoopable = True
         self._image_name = "ClassJ{}".format(randint(1, 4))
 

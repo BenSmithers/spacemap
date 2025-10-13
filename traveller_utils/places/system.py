@@ -54,6 +54,7 @@ class System:
     def starport(self)->StarPort:
         if self._starport is not  None:
             return self._regions[self._starport]
+        return None
     @property
     def mainworld(self)->World:
         return self._regions[self._mainworld]
@@ -81,7 +82,7 @@ class System:
             index +=1  
             interloc = SubHID(self._system_location.xid, self._system_location.yid, index, 0)
             location = SubHID(self._system_location.xid, self._system_location.yid, index, 1)
-        self._regions[interloc] = InterRegion()
+        self._regions[interloc] = InterRegion(location)
         self._regions[location] = obj
 
         if of_note.value==SystemNote.MainWorld.value:
@@ -99,8 +100,8 @@ class System:
         """
         test = SubHID(self._system_location.xid, self._system_location.yid, region_number, 0)
         if test not in self._regions:
-            self._regions[test] = InterRegion()
             location = SubHID(self._system_location.xid, self._system_location.yid, region_number, 1)
+            self._regions[test] = InterRegion(location)
         else: 
             index = 1 
             location = SubHID(self._system_location.xid, self._system_location.yid, region_number, index)
@@ -134,6 +135,7 @@ def generate_system(modifier, location:HexID)->System:
     badlands=sorted(badlands, key=lambda x:-x._temperature)
     is_original = [entry.name==ogname for entry in badlands]
     for i, entry in enumerate(badlands):
+        entry._tech_level = min([entry._tech_level, new_world.tech_level])
         entry._name = "{} {}".format(name, i+1)
         if is_original[i]:
             new_system.append(entry, SystemNote.MainWorld )
