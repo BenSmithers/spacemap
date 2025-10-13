@@ -326,7 +326,7 @@ class World(PointOfInterest):
             self._hydro= min([10, max([self._hydro, 0])])
 
         if isinstance(other_world, World):
-            self._population_raw = min([self._population_raw-3, other_world._population_raw])
+            self._population_raw = min([self._population_raw, other_world._population_raw-2])
             self._hydro = min([self._hydro, other_world._hydro])
 
             
@@ -393,18 +393,17 @@ class World(PointOfInterest):
         if self._population_raw==0:
             self._tech_level=0
         else:
-            self._tech_level = np.random.randint(1,7)+ self._get_tl_mod()
+            self._tech_level = np.random.randint(1,13)+ self._get_tl_mod()
             self._tech_level = min([15, self._tech_level])
+            self._tech_level = max([0, self._tech_level])
 
         if isinstance(other_world, World):
-                self._law_level = min([self._tech_level, other_world._tech_level])
+            self._law_level = min([self._tech_level, other_world._tech_level])
         
         
         self._category =[WorldCategory.Common,]
 
         self.update_category()
-
-        
 
     @property
     def services(self):
@@ -517,7 +516,7 @@ class World(PointOfInterest):
         if self._population_raw==0:
             self._category.append(WorldCategory.Barren)
 
-        if self._hydro==2 and self._atmosphere>2:
+        if self._atmosphere>2 and self._temperature>7:
             self._category.append(WorldCategory.Desert)
         
         if self._atmosphere>9 and self._hydro>0:
@@ -526,7 +525,8 @@ class World(PointOfInterest):
         if self._atmosphere==5 or self._atmosphere==6 or self._atmosphere==8:
             if self._size>=6 and self._size<=8:
                     if self._hydro>4 and self._hydro<8:
-                        self._category.append(WorldCategory.Garden)
+                        if self._temperature>6 and self._temperature<9:
+                            self._category.append(WorldCategory.Garden)
         
         if self._population_raw>=9:
             self._category.append(WorldCategory.High_Pop)
@@ -534,10 +534,10 @@ class World(PointOfInterest):
         if self._tech_level>11:
             self._category.append(WorldCategory.High_Tech)
 
-        if self._hydro>1 and self._atmosphere<2:
+        if self._hydro>1 and self._atmosphere<2 and self._temperature<9:
             self._category.append(WorldCategory.Ice_Capped)
 
-        if self._population_raw>8:
+        if self._population_raw>8 and self._tech_level > 3:
             if self._atmosphere<3 or self._atmosphere==4 or self._atmosphere==7 or self._atmosphere==9:
                 self._category.append(WorldCategory.Industrial)
         
@@ -556,7 +556,8 @@ class World(PointOfInterest):
                 if self._atmosphere==6 or self._atmosphere==8:
                     if self._population_raw<9:
                         self._category.append(WorldCategory.Rich)
-        else:
+
+        if self._tech_level <=3 or self._population<6:
             self._category.append(WorldCategory.Non_Industrial)
         
         if self._hydro<4:
