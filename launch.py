@@ -5,7 +5,7 @@ from PyQt5 import QtWidgets, QtGui, QtCore
 
 from qtdesigner.main_window import Ui_MainWindow as main_gui
 
-from traveller_utils.places.system import System
+from traveller_utils.places.system import System, InterRegion
 from traveller_utils.click_interface import Clicker
 from traveller_utils.core.coordinates import HexID, DRAWSIZE
 from traveller_utils.clock import MultiHexCalendar, Time, Clock
@@ -79,7 +79,26 @@ class main_window(QMainWindow):
         #self._pass_widget.log_passengers(loc)
         #self._notes_widget.set_text(world.notes())
 
+        ship_cat = self.scene.ships
+        these_ships = ship_cat.get_at(loc)
+        for this_shipid in these_ships:
+            this_ship = ship_cat.get(this_shipid)
+            sub_loc = ship_cat.get_loc(this_shipid)
+
+            sub_location = self.scene.get_sub(sub_loc)
+                        
+            if isinstance(sub_loc, InterRegion):
+                parent = sub_location.parent
+                     
+                location = "In flight over {}".format(parent.name)
+            else:
+                location = "At {}".format(sub_location.name)
+            self._ship_widget.add_ship(this_ship, location)
+        self._ship_widget.update_gui()
+
+
         if False:
+            
             these_ships = [self.scene.get_ship(sid) for sid in self.scene.get_ships_at(loc)]
             for ship in these_ships:
                 world_routes_filter = list(filter(lambda entry:entry is not None, [self.scene.get_system(hid) for hid in ship.route]))

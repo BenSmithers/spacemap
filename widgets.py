@@ -216,26 +216,26 @@ class ManyShipDialog(QDialog):
         self.ui.comboBox.currentIndexChanged.connect(self.update_gui)
 
         self._ships = []
-        self._routes = []
+        self._locations = []
 
         self._cummulative_text = ""
         self._last_text = ""
 
-    def add_ship(self, ship:AIShip, route_names):
+    def add_ship(self, ship:AIShip, location_str):
         self._ships.append(ship)
-        self._routes.append(route_names)
+        self._locations.append(location_str)
 
         self.ui.comboBox.addItem(ship.name)
         
         if self._cummulative_text == "":
-            self._cummulative_text = "There is {}".format(ship.description.lower())
+            self._cummulative_text = "There is {}".format(ship.shiphull.lower())
             self.ui.textBox.setText(self._cummulative_text)
         else:
             if self._last_text=="":
-                self._last_text = ship.description.lower() 
+                self._last_text = ship.shiphull.lower()
             else:
                 self._cummulative_text += ", {}".format(self._last_text)
-                self._last_text = ship.description.lower()
+                self._last_text = ship.shiphull.lower()
 
             self.ui.textBox.setText(self._cummulative_text + " and " + self._last_text)
         
@@ -254,7 +254,7 @@ class ManyShipDialog(QDialog):
         self._cummulative_text = ""
         self._last_text = ""
         self._ships = []
-        self._routes = []
+        self._locations=[]
 
 
     def update_gui(self):
@@ -264,23 +264,21 @@ class ManyShipDialog(QDialog):
         index = self.ui.comboBox.currentIndex()
 
         ship = self._ships[index]
-        route_names = self._routes[index]
         
-
+        self.ui.route.setText(self._locations[index])
         pixname = ship.captain.image_name
         pix = self.people_pixes.access(pixname, 100)
         self.person_widget.update_gui(ship.captain, pix)
 
-        self.ui.speed_lbl.setText(  str(1./ship.rate ))
+        self.ui.speed_lbl.setText(  "Drive Rating "+ str(ship.drive_rating ))
         self.ui.desc.setText(ship.description)
-
-        route_str = "\n".join(route_names)
-        self.ui.route.setText(route_str)
 
         cargo = ship.cargo()
         cargo_str = "\n".join(["{} tons of {}".format(cargo[key], str(key.name)) for key in cargo ])
         cargo_str = cargo_str.replace("_", " ")
         self.ui.cargo.setText(cargo_str)    
+        
+        
 
 class PassengerItem(QtGui.QStandardItem):
     """

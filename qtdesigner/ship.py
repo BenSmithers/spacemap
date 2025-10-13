@@ -36,12 +36,14 @@ class Ui_Form(object):
         self.desc = QtWidgets.QLabel(self.tab)
         self.desc.setObjectName("desc")
         self.formLayout.setWidget(0, QtWidgets.QFormLayout.SpanningRole, self.desc)
+        
         self.route_lbl = QtWidgets.QLabel(self.tab)
         self.route_lbl.setObjectName("route_lbl")
         self.formLayout.setWidget(2, QtWidgets.QFormLayout.LabelRole, self.route_lbl)
-        self.route = QtWidgets.QTextBrowser(self.tab)
+        self.route = QtWidgets.QLabel(self.tab)
         self.route.setObjectName("route")
         self.formLayout.setWidget(2, QtWidgets.QFormLayout.FieldRole, self.route)
+
         self.carg_lbl = QtWidgets.QLabel(self.tab)
         self.carg_lbl.setObjectName("carg_lbl")
         self.formLayout.setWidget(3, QtWidgets.QFormLayout.LabelRole, self.carg_lbl)
@@ -69,12 +71,8 @@ class Ui_Form(object):
         _translate = QtCore.QCoreApplication.translate
         Form.setWindowTitle(_translate("Form", "Form"))
         self.desc.setText(_translate("Form", "A medium freighter ship"))
-        self.route_lbl.setText(_translate("Form", "Route:"))
-        self.route.setHtml(_translate("Form", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
-"<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
-"p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'Sans Serif\'; font-size:9pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"> </p></body></html>"))
+        self.route_lbl.setText(_translate("Form", "Location:"))
+
         self.carg_lbl.setText(_translate("Form", "Cargo:"))
         self.speed_lbl.setText(_translate("Form", "Speed"))
         self.speed.setText(_translate("Form", "N days / hex"))
