@@ -9,6 +9,8 @@ from traveller_utils.core.coordinates import SubHID
 from PyQt5.QtWidgets import QGraphicsScene
 from copy import deepcopy
 
+from enum import Enum
+
 import random 
 import os 
 import json 
@@ -53,9 +55,11 @@ class ShipSWN:
         self._base_mass = data_entry["mass"]
         self._max_hardpoints = data_entry["hardpoints"]
         self._template = ""
+        self._name = ""
 
         self._description = ""
         self._system_drive = False 
+        self._funds = 0
 
         self._fittings = []
         self._defense = []
@@ -67,6 +71,25 @@ class ShipSWN:
         self._fuel_max = 1
 
         self._cargo = {}
+
+    def change_funds(self, delta):
+        self._funds = self._funds + float(delta)
+        if self._funds<0:
+            self._funds = 0
+
+    def empty_cargo(self):
+        self._cargo = {}
+
+    @property
+    def funds(self):
+        return self._funds
+
+    @property
+    def name(self):
+        if self._name == "":
+            return "The Nameless"
+        else:
+            return self._name 
 
     @property 
     def has_fuel_scoop(self):
@@ -268,6 +291,11 @@ class ShipSWN:
         new_ship._template = template_name
             
         return new_ship
+    
+    @property
+    def description(self):
+        return self._description
+    
     def _load_template(self, template_dict):
         self._description = template_dict["description"]
         for entry in template_dict["items"]:
@@ -360,11 +388,12 @@ class Ship:
 
     def cargo(self):
         return self._cargo
-    def add_cargo(self, tg:TradeGood, quantity):
+    def add_cargo(self, tg:str, quantity):
         if tg in self._cargo.keys():
             self._cargo[tg]+=quantity
         else:
             self._cargo[tg] = quantity
+
 
     def pack(self):
         packed_cargo = {
@@ -467,6 +496,7 @@ class AIShip(ShipSWN):
         new = cls.load_from_template(sample_ship(shipclass, shipcat))
         new._route= deepcopy(route)[::-1]
         new.set_captain(Person.generate())
+        new._name = "The {} {}".format(sample_adjective(), sample_noun())
         return new
     
 

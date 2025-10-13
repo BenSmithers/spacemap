@@ -1,5 +1,6 @@
 from traveller_utils.ships import ShipSWN
 from traveller_utils.ships.ship_items import sample_ships
+from traveller_utils.name_gen import sample_adjective, sample_noun
 from traveller_utils.core.utils import roll 
 from traveller_utils.places.world import World
 
@@ -22,6 +23,9 @@ class StarPort(ShipSWN, Market):
         self._services = []
 
         self._category = starport_class.upper()
+
+        linked_world.name
+        self._name = linked_world.name + "'s" + " {} Starbase".format(sample_adjective())
     @property
     def category(self):
         return self._category
