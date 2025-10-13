@@ -5,7 +5,7 @@ from traveller_utils.core.coordinates import SubHID, HexID
 from traveller_utils.trade_goods import ALL_GOODS, TradeGoods, get_good
 
 from math import exp, log
-
+from random import choice 
 import numpy as np 
 
 def find_maximum_sale(market_one:'Market', market_two:'Market', good_name):
@@ -61,6 +61,11 @@ class Market:
     def available(self, tg_name):
         return self.get_modified_supply(tg_name) > 0
 
+
+    def sample_good(self):
+        tg_name = choice( list(filter(lambda x: self.available(x), self._supply.keys() )))
+        return tg_name
+
     @property
     def supply(self):
         supply_mod = {}
@@ -77,7 +82,7 @@ class Market:
     def get_modified_supply(self, good_name):
         tg = get_good(good_name)
         supply_diff = self._supply[tg.name] - self._demand[tg.name]
-        for route in self.trade_routes[good_name]:                 
+        for route in self.trade_routes[good_name]:    
             supply_diff += route.tons_per_month[self._linked_shid.downsize()] 
         return supply_diff
 
