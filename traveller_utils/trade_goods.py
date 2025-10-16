@@ -52,6 +52,11 @@ class TradeGoods:
         self._amount_string = json_entry["tons"]
         self._common = False
         self._availble = []
+        split= self._amount_string.split("*")
+
+        self._split0 = int(split[0])
+        self._split1 = int(split[1].split("d")[0])
+
         if len(json_entry["available"])==1:
             if json_entry["available"][0] == "all":
                 self._common = True
@@ -98,19 +103,12 @@ class TradeGoods:
     def __hash__(self) -> int:
         return self.name.__hash__()
 
-    def extract_base_tonnage(self):
-        split= self._amount_string.split("*")
-
-        factor = int(split[0])
-
-        return factor*int(split[1].split("d")[0])*3.5
+    def extract_base_tonnage(self): 
+        return self._split0*self._split1*3.5
 
     def sample_amount(self):
-        split= self._amount_string.split("*")
-
-        factor = int(split[0])
-        die_roll = np.random.randint(1,7,int(split[1].split("d")[0]))
-        return factor*np.sum(die_roll)
+        die_roll = np.random.randint(1,7,self._split1)
+        return self._split0*np.sum(die_roll)
 
     def is_available(self, wc:WorldCategory)->bool:
         """

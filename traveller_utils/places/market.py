@@ -86,6 +86,7 @@ class Market:
             supply_diff += route.tons_per_month[self._linked_shid.downsize()] 
         return supply_diff
 
+    
 
     def get_market_price(self, good_name, fudge_supply=0):
         """
@@ -125,7 +126,7 @@ class Market:
         # max profit per good shipped - maximum 
         profit = other_market.get_market_price(good_name) - self.get_market_price(good_name)
         if profit<0 or available<1:
-            return  
+            return  None, None
         
         # maximum amount that could feasibly be profitable 
         profitable_amt = 0.98*find_maximum_sale(self, other_market, good_name)
@@ -133,11 +134,11 @@ class Market:
 
         shippable = min([profitable_amt, amount_present])
         if shippable<1:
-            return 
+            return None, None
         # recalculate this...
         profit = other_market.get_market_price(good_name, shippable) - self.get_market_price(good_name, -shippable)
         if profit <0:
-            return 
+            return None, None
         max_cargo = -1 
         max_margin = -1 
         ship_name = ""
@@ -154,7 +155,7 @@ class Market:
                     max_cargo*=int(shippable/max_cargo)
                     
         if ship_name=="":
-            return 
+            return None, None
         new_route = TradeRoute([self._linked_shid.downsize(), other_market._linked_shid.downsize()], good_name, max_cargo)
         #self.add_route(new_route)
         #other_market.add_route(new_route)

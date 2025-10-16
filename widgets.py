@@ -274,7 +274,7 @@ class ManyShipDialog(QDialog):
         self.ui.desc.setText(ship.description)
 
         cargo = ship.cargo()
-        cargo_str = "\n".join(["{} tons of {}".format(cargo[key], str(key.name)) for key in cargo ])
+        cargo_str = "\n".join(["{} tons of {}".format(cargo[key], str(key)) for key in cargo ])
         cargo_str = cargo_str.replace("_", " ")
         self.ui.cargo.setText(cargo_str)    
         

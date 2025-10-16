@@ -52,7 +52,7 @@ class HexID:
         ]
         return nb
 
-    def in_range(self, dist:int, include_self=True):
+    def in_range(self, dist:int, include_self=True)->'list[HexID]':
         """
             returns all hexIDs in a given range
         """

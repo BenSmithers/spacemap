@@ -5,6 +5,7 @@ from traveller_utils.enums import get_entry_by_name, TradeGood
 from traveller_utils.enums import ShipClass, ShipCategory
 from traveller_utils.ships import Fitting, ShipDefense, ShipWeapon, hull_data, sample_ships
 from traveller_utils.core.coordinates import SubHID
+from traveller_utils.clock import Time
 
 from PyQt5.QtWidgets import QGraphicsScene
 from copy import deepcopy
@@ -48,6 +49,8 @@ class ShipSWN:
         self._base_cost = data_entry["cost"]
         self._base_armor = data_entry["armor"]
         self._base_hp = data_entry["hp"]
+        self._max_hp = self._base_hp
+        self._hp = self._max_hp
         self._crew_min = data_entry["crew_min"]
         self._crew_max = data_entry["crew_max"]
         self._base_ac = data_entry["ac"]
@@ -59,7 +62,7 @@ class ShipSWN:
 
         self._description = ""
         self._system_drive = False 
-        self._funds = 0
+        self._funds = 3000 # start off with some seed funds
 
         self._fittings = []
         self._defense = []
@@ -69,8 +72,23 @@ class ShipSWN:
         self._drive_rating = 1 
         self._fuel = 1
         self._fuel_max = 1
+        self._await_repair = 0
+
+        self._last_maintenance = Time()
 
         self._cargo = {}
+
+
+    @property
+    def can_afford_maintenance(self):
+        return self.funds > self.annual_maintenance()
+
+    def last_maintenance(self)->Time:
+        return self._last_maintenance
+    
+    def maintain(self, now:Time):
+        self._last_maintenance = now 
+        self.change_funds( self.annual_maintenance() )
 
     def change_funds(self, delta):
         self._funds = self._funds + float(delta)
@@ -102,6 +120,7 @@ class ShipSWN:
         return self._fuel
 
     def add_fuel(self):
+        print(self.name, "bought fuel")
         if self._fuel_max>self._fuel:
             self._fuel += 1
 
@@ -146,6 +165,10 @@ class ShipSWN:
         return self._crew_max*double 
     def refuel(self):
         self._fuel = self._fuel_max
+    def spend_fuel(self):
+        self._fuel -= 1 
+        if self._fuel < 0:
+            self._fuel = 0
     def cargo(self):
         return self._cargo
     def add_cargo(self, tg:TradeGood, quantity):
@@ -277,6 +300,27 @@ class ShipSWN:
     def daily_operational(self):
         return (1./365)*(self.annual_maintenance() + 0.5*(self.min_crew + self.max_crew)*5.5e4)
 
+    def damage(self, hploss):
+        self._hp = self._hp - hploss
+        
+    @property
+    def hp(self):
+        return self._hp
+    
+    def repair(self):
+        self._hp += self._await_repair 
+        self._hp = min([self._hp, self._max_hp])
+        self._await_repair = 0
+    @property 
+    def is_repairing(self):
+        return self._await_repair>0
+    def await_repairs(self, nhp):
+        self._await_repair = nhp 
+    
+    @property 
+    def max_hp(self):
+        return self._max_hp
+
     @property
     def drive_rating(self):
         return self._drive_rating
@@ -289,6 +333,7 @@ class ShipSWN:
         new_ship = cls(hulltype)
         new_ship._load_template(template_dict)
         new_ship._template = template_name
+        
             
         return new_ship
     
@@ -306,7 +351,6 @@ class ShipSWN:
             elif entry["type"]=="shipDefense":
                 item =ShipDefense(entry["name"], self.shipclass)
             self.add_fitting(item)
-
 
 
 def sample_ship(ship_class, ship_category):
@@ -456,7 +500,15 @@ class AIShip(ShipSWN):
         super().__init__(shiphull)
         self._route = route[::-1]
         self._captain = Person.generate()
+        self._next_sid = None 
     
+    @property
+    def next_sid(self)->SubHID:
+        return self._next_sid
+    def set_next_sid(self, this_sid:SubHID):
+        self._next_sid = this_sid
+    def clear_next_sid(self):
+        self._next_sid = None
     def pack(self):
         inter = Ship.pack(self)
         inter["route"] = [entry.pack() for entry in self._route]

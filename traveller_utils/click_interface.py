@@ -12,7 +12,7 @@ from traveller_utils.ships.ship import Ship, AIShip, AIShipMoveEvent, sample_shi
 from traveller_utils.ships.starport import StarPort
 from traveller_utils.core.core import Hex, Region, Route
 from traveller_utils.places.world import World
-from traveller_utils.places.poi import PointOfInterest, InFlight
+from traveller_utils.places.poi import PointOfInterest, InFlight, InterRegion, GasGiant, SystemEdge
 from traveller_utils.places.system import generate_system, System
 from traveller_utils.core import utils
 from traveller_utils.core.catalogs import ShipCatalog, SystemCatalog, TradeCat, RegionCatalog
@@ -40,7 +40,7 @@ class Clicker(QGraphicsScene,ActionManager):
 
         self.pmap = utils.IconLib(os.path.join(os.path.dirname(__file__), "..","images","planets"))
         self.icon_map = utils.IconLib(os.path.join(os.path.dirname(__file__),"..","images","icons"), ext="svg")
-
+        self._shiproute = None
 
         self._drawn_systems = {}
 
@@ -304,10 +304,11 @@ class Clicker(QGraphicsScene,ActionManager):
         counter = 0 
         all_routes = self._trade_cat.all_connections(loc)
         bad_routes = False 
+        
         while profit==0:
             profit = 0
             tg_name = ""
-            if len(all_routes)==0 or bad_routes:
+            if True : # len(all_routes)==0 or bad_routes:
                 other = self._trade_cat.sample_from_wealth()
                 while self._system_catalog.get(other).starport is None:
                     other = self._trade_cat.sample_from_wealth()
@@ -321,16 +322,19 @@ class Clicker(QGraphicsScene,ActionManager):
                     continue
                 route = sample.full_route
 
+            route = route[1:]
+            
 
             if not sample_good:
-                print("no sampling...")
                 return route
 
             sp = self._system_catalog.get(loc).starport
 
-            if counter > 3:
+            if counter > 5:
                 print("Too many failed attempts?")
                 return route, None
+            if len(route)==0:
+                continue
             if sp is not None:
                 # target destination guaranteed to have a starport 
                 destination_market = self._system_catalog.get(route[-1]).starport
@@ -405,115 +409,190 @@ class Clicker(QGraphicsScene,ActionManager):
         if this_ship is None:
             return 0
         else:
-            moving_from = self._ship_catalog.get_loc(ship_id)
-            next_step = this_ship.step()      
-
-            ships_here = self._ship_catalog.get_at(moving_from)
-
-            source_poi = self._system_catalog.get_sub(moving_from)
             
+            if this_ship.is_repairing:
+                this_ship.repair()
 
-            # if the ship is at a starport, buy fuel! 
-            if isinstance(source_poi, StarPort):
-                while (this_ship.fuel < this_ship.fuel_max and this_ship.funds >= 500):
-                    this_ship.change_funds(-500)
-                    this_ship.add_fuel()
-                    print("bought fuel ",this_ship.funds)
-                if this_ship.funds<500:
-                    print("not really enough money...")
-                if this_ship.fuel<1:
-                    # no more fuel, no more funds... 
-                    return  
+            sid_target = this_ship.next_sid
+            ship_location = self._ship_catalog.get_loc(ship_id)
+            if isinstance(ship_location, NonPhysical):
+                next_step = self._system_catalog.get(this_ship.step()).systemedge
             else:
-                print(source_poi)
- 
-            if this_ship.is_done() or (next_step is None): # no more steps after this 
-                """
-                    clear the cargo, choose an affordable cargo, travel, and sell the cargo
-                """
-                sp = self._system_catalog.get(moving_from.downsize()).starport
-                if sp is not None:
-                    cargo  =this_ship.cargo()
-                    for key in cargo:
-                        print("{} sold {} for {}".format(this_ship.name, key, sp.get_market_price(key)*cargo[key]))
-                        this_ship.change_funds( sp.get_market_price(key)*cargo[key] )
-                    this_ship.empty_cargo()
+                next_step = sid_target
 
-                route, trade_good = self.sample_ship_route(moving_from.downsize(), this_ship, True)
-                if trade_good is not None:
-                    if sp is not None:
-                        n_buy = min([ int(this_ship.funds / sp.get_market_price(trade_good)), this_ship.cargo_free(), int(sp.get_modified_supply(trade_good)) ])
+            if next_step is not None:   
+                self._ship_catalog.move(ship_id, next_step)
+                this_location = self._system_catalog.get_sub(next_step)
+            else:
+                # there is no next step?
+                raise NotImplementedError("Ship had no next step")
+                return 
+                this_location = self._system_catalog.get_sub(next_step)
+            
+            
+            if this_location is None:
+                print("in metaspace")
+            else:
+                print("Just moved to {}".format(this_location.name))
+            
+            this_ship.clear_next_sid()
+            at_system_edge = isinstance(this_location, SystemEdge)
+            at_station = isinstance(this_location, StarPort)
+            in_flight = isinstance(this_location, InFlight)
+            between_region = isinstance(this_location, InterRegion)
+            at_gas_giant = isinstance(this_location, GasGiant)
+            at_world = isinstance(this_location, World)
+            in_metaspace = isinstance(next_step, NonPhysical)
+            need_fuel = this_ship.fuel < this_ship.fuel_max
+            need_repair = this_ship.hp < this_ship.max_hp
+
+            has_arrived = len(this_ship.route)==0 # what if it wasn't going to a station?? 
+
+            this_system = self._system_catalog.get( next_step.downsize() )
+
+            if in_metaspace:
+                target_sid = None
+                evt_time = self.clock.time +  Time(minute=int(6*24*60 / this_ship.drive_rating)) # needs to reflect the actual time 
+            elif at_station:
+                minutes= 0
+                if need_fuel:                    
+                    # subtract funds, set timer, increase fuel 
+                    while (this_ship.funds>500 and this_ship.fuel < this_ship.fuel_max):
+                        this_ship.change_funds(-500)
+                        this_ship.add_fuel()
+                        minutes += 60 # one hour for fueling
+                if need_repair:
+                    can_afford_repairs = this_ship.funds > 10000 # need to change
+                    minutes += int(2*60*(this_ship.max_hp - this_ship.hp)) # two hours per hp repaired? 
+                    # subtract funds, set timer, set health
+                    this_ship.change_funds(-10000)
+                    this_ship.await_repairs(this_ship.max_hp - this_ship.hp) # 
+
+                if has_arrived:
+                    # sell cargo, choose destination, buy supplies
+                    cargo = this_ship.cargo()
+                    for tg_name in cargo:
+                        print("Selling {} {} for {}".format(cargo[tg_name], tg_name, this_location.get_market_price(tg_name)*cargo[tg_name]))
+                        this_ship.change_funds( this_location.get_market_price(tg_name)*cargo[tg_name] )
+                    this_ship.empty_cargo() 
+
+                    route, good = self.sample_ship_route(next_step.downsize(), this_ship, True)
+                    
+                    if good is not None:
+                        n_buy = min([ int(this_ship.funds / this_location.get_market_price(good)), this_ship.cargo_free(), int(this_location.get_modified_supply(good)) ])
+                        print("Buying {} {}".format(n_buy, good))
+                        this_ship.add_cargo(
+                            good, n_buy
+                        )
+                        this_ship.change_funds(
+                            -1*n_buy*this_location.get_market_price(good)
+                        )
                     else:
-                        n_buy = 0
-                    this_ship.change_funds( -n_buy*sp.get_market_price(trade_good) )
-                    this_ship.add_cargo(trade_good, n_buy)
-                    print("{} bought {} {}, going to {}".format(
-                        this_ship.name, n_buy, trade_good, self._system_catalog.get(route[-1]).mainworld.name
-                    ))
+                        print("Things were too expensive... going elsewhere")
+                    this_ship.set_route(route)
+
+                    # ship should spend two days here to load/unload cargo
+                    target_sid = this_system.inflight 
+                    evt_time =  self.clock.time +  Time(minute=2*24*60) 
 
                 else:
-                    print("{} only has {}, and can't afford anything".format(this_ship.name, this_ship.funds))
+                    # more route to go! 
+                    if this_ship.fuel > 0:
+                        target_sid = this_system.inflight 
+                        evt_time =  self.clock.time +  Time(minute=minutes)
+                    else:
+                        # no fuel left and no money to buy fuel..., but not at destination
+                        print("At a station, does not have fuel and couldn't afford fuel - ship can't do anything now?")
+                        return  
+            elif at_gas_giant:
+                if need_fuel:
+                    while (this_ship.fuel < this_ship.fuel_max):
+                        
+                        this_ship.add_fuel()
+                        minutes += 24*60 # one hour for fueling
+                    target_sid = this_system.inflight 
+                    evt_time =  self.clock.time +  Time(minute=minutes)
+                else: # leave this place...
+                    if this_ship.fuel>0:
+                        target_sid = this_system.inflight
+                        evt_time =  self.clock.time +  Time(minute=30)
+                    else:
+                        print("At a gas giant, does not have fuel - ship can't do anything now?")
+                        return  
 
-                expanded = self._system_catalog.expand_route(route)
-                this_ship.set_route(expanded)
-
-                move = AIShipMoveEvent(
-                    ship_id=ship_id
-                )
-                next_time  = self.clock.time + Time(day= np.random.randint(1, 8))
-                self.add_event(move, next_time)
-                return 0 
-
-            else:
-                next_poi = self._system_catalog.get_sub(next_step)
-                """
-                    Station->Inflight 8 hours (refuel) 
-                    InFlight->NonPhysical  48 hours
-                    NonPhysical->Inflight  6 days per hex
-                    InFlight->Starport  48 hours
-                """
-                fuel_cost = 0                
-                if isinstance(next_step, NonPhysical):
-                    time_minutes = 2*24*60/this_ship.drive_rating # time to fly to the edge of system
-                    fuel_cost = 1
-                elif isinstance(moving_from, NonPhysical):
-                    # six days per hex
-                    # TODO actually make this per hex and not per-jump
-                    time_minutes = 6*24*60/this_ship.drive_rating
+            else: # not at a refuelling location 
+                
+                can_scoop = this_system.fuel and this_ship.has_fuel_scoop 
+                can_refuel = (this_system.get_notable(SystemNote.MainPort) is not None) and (this_ship.funds > 500)
+                can_repair = (this_ship.funds > 10000) and  (this_system.get_notable(SystemNote.MainPort) is not None)
+                
+                # we're not at a destination, we're in transit. 
+                # so, we need to decied what the goal is 
+                # Generally it's good to refill if you can, and prioritize fuel scooping 
+                give_up = False
+                if need_fuel and can_scoop:
+                    goal_sid = this_system.get_notable(SystemNote.GasGiant)
+                elif need_fuel and can_refuel:
+                    goal_sid = this_system.get_notable(SystemNote.MainPort)
+                elif this_ship.fuel ==0 and (not can_refuel):
+                    goal_sid = this_system.get_notable(SystemNote.MainWorld) 
+                    print("Ship is stranded")
+                    this_ship.set_route([]) 
+                    give_up= True
+                elif has_arrived:
+                    goal_sid = this_system.get_notable(SystemNote.MainPort)
                 else:
-                    if isinstance(next_poi, InFlight):
-                        time_minutes = 8*60 
-                    
+                    goal_sid = this_system.systemedge
+
+                target_sid = None                 
+
+                if (need_fuel and can_refuel) or (need_repair and can_repair) or has_arrived or (need_fuel and can_scoop) or give_up:
+                    if at_system_edge:
+                        target_sid = this_system.inflight
+                        evt_time = self.clock.time +  Time(minute=30)
+                    elif in_flight:
+                        target_sid = goal_sid 
+                        evt_time = self.clock.time +  Time(minute=int(48*60/this_ship.drive_rating))
+                    elif between_region:
+                        target_sid = goal_sid
+                        evt_time = self.clock.time +  Time(minute=int(6*60/this_ship.drive_rating) )
+                    elif at_world and give_up:
+                        # ship will wait here for ever now 
+                        return
                     else:
-                        time_minutes = 2*24*60/this_ship.drive_rating
-
-                if fuel_cost > this_ship.fuel:
-                    # can't jump!! 
-                    print("no fuel? can't jump {} and {}".format(fuel_cost, this_ship.fuel))
-                    starport_loc = self._system_catalog.get(moving_from.downsize()).get_notable(SystemNote.MainPort) 
-                    if starport_loc is not None: # change route to the nearest starport 
-                        this_ship.set_route([starport_loc])
+                        # very confusing? 
+                        print("Neither at the edge, or in flight, or between regions")
+                        target_sid = goal_sid
+                        evt_time = self.clock.time +  Time(minute=int(6*60/this_ship.drive_rating) )
+                elif at_system_edge and this_ship.fuel>0: # we're ready to jump now. Spend the fuel 
+                    target_sid = NonPhysical()  
+                    evt_time = self.clock.time +  Time(minute=30)
+                    this_ship.spend_fuel()
+                elif this_ship.fuel > 0:
+                    # we have fuel to jump, but can't afford more.
+                    if in_flight:
+                        target_sid = this_system.systemedge
+                        evt_time = self.clock.time +  Time(minute=int(48*60/this_ship.drive_rating))
                     else:
-                        # no fuel, no starport... go to the main world and hope for the best.
-                        this_ship.set_route([ 
-                            self._system_catalog.get(moving_from.downsize()).get_notable(SystemNote.MainWorld)
-                        ]) 
-                    time_minutes = 2*24*60/this_ship.drive_rating
-                else:                
-                    self._ship_catalog.move(ship_id, next_step)
+                        target_sid = this_system.inflight
+                        evt_time = self.clock.time +  Time(minute=int(6*60/this_ship.drive_rating))
+
+                elif this_ship.fuel==0 and (not can_refuel):
+                    pass # concerning; switch ship to passive and do monthly checks? Fly ship to station
+                else:
+                    raise NotImplementedError("Unreachable location?")
                     
-                    if fuel_cost>0:
-                        print("spend fuel")
-                        this_ship.spend_fuel()
+            this_ship.set_next_sid(target_sid)
+            next_event = AIShipMoveEvent(
+                ship_id
+            )   
+            self.add_event(
+                next_event,
+                evt_time 
+            )
 
-                new_event = AIShipMoveEvent(
-                    ship_id
-                )
-                print(moving_from, next_step)
-                next_time = self.clock.time +  Time(minute=int(time_minutes))
-                self.add_event(new_event, next_time)
 
-                return 0
+            return 0
             
     def _initialize_ship(self, start_hex=None):
         """
@@ -551,9 +630,9 @@ class Clicker(QGraphicsScene,ActionManager):
             new_ship.add_cargo(this_good, amount)
 
         route = self.sample_ship_route(loc, new_ship, False)
-        expanded = self._system_catalog.expand_route(route)
-        new_ship.set_route(expanded)
-        
+        #expanded = self._system_catalog.expand_route(route)
+        new_ship.set_route(route)
+        new_ship.set_next_sid(self._system_catalog.get(loc).inflight)
         sid = self._ship_catalog.register(new_ship, self._system_catalog.get(loc).get_notable(SystemNote.MainPort))
         move = AIShipMoveEvent(
             ship_id=sid
@@ -660,6 +739,25 @@ class Clicker(QGraphicsScene,ActionManager):
 
     def all_connections(self, start)->'list[HexID]':
         return self._trade_cat.all_connections(start)
+
+    def draw_ship_path(self, ship_id):
+        route = self._ship_catalog.get(ship_id).route 
+        
+        if not (self._shiproute is None):
+            self.removeItem(self._shiproute)
+        
+        vertices = [hex_to_screen(hid) for hid in route]
+        path = QtGui.QPainterPath()
+        path.addPolygon(QtGui.QPolygonF(vertices))
+        self._pen.setStyle(1)                
+        self._pen.setWidth(8)
+        self._pen.setColor(QtGui.QColor(50, 50, 50))
+            
+        self._brush.setStyle(0)
+        sid = self.addPath(path, self._pen, self._brush)
+
+        sid.setZValue(30)
+        self._shiproute = sid 
 
     def draw_route(self, route_id, highlight=False):
         route = self._trade_cat.get(route_id)

@@ -64,6 +64,8 @@ class System:
             return  self._starport
         elif of_note.value == SystemNote.MainWorld.value:
             return self._mainworld
+        elif of_note.value == SystemNote.GasGiant.value:
+            return self._gas_giant_loc
         else:
             return 
     

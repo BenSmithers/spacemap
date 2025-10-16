@@ -3,9 +3,11 @@ from traveller_utils.core.core import Region
 from traveller_utils.places.world import World
 from traveller_utils.places.system import System
 from traveller_utils.places.poi import PointOfInterest
-from traveller_utils.ships import ShipSWN
+from traveller_utils.ships import ShipSWN, AIShip
 from traveller_utils.ships.starport import StarPort
 from traveller_utils.places.trade_route import TradeRoute
+from traveller_utils.trade_goods import get_good
+
 from traveller_utils.core import utils
 from traveller_utils.enums import SystemNote, PLocationType
 from traveller_utils.person import Person
@@ -13,14 +15,38 @@ from traveller_utils.tables import passenger_table
 
 import numpy as np 
 from collections import deque
+from random import choice
 
 
 class Catalog:
-    token_type = int
+    token_type = PointOfInterest
+    key_type = HexID
     def __init__(self, draw_function:callable):
         self._entries = {}
 
         self._function = draw_function
+
+    def pack(self)->dict:
+        """
+            Pack all of the objects in the catalog and return a serializable-dictionary 
+        """
+        
+        serializable= []
+        for key in self._entries:
+            serializable.append([
+                key.pack(), self._entries[key].pack()
+            ])
+        return {
+            "base_catalog":serializable
+        }
+    
+    @classmethod
+    def unpack(cls, packed, draw_function:callable):
+        new = cls(draw_function)
+        
+        for pair in packed:
+            new._entries[ cls.key_type.unpack(pair[0]), cls.token_type.unpack(pair[1]) ]
+        return new 
 
     def __in__(self, what):
         return what in self._entries
@@ -63,13 +89,30 @@ class Catalog:
 
 class RegionCatalog(Catalog):
     token_type=Region
+    key_type = HexID
     def __init__(self, draw_function: callable):
         super().__init__(draw_function)
         self._rid_from_hid = {}
 
-    def get(self, shipID) -> Region:
+    def pack(self):
+        prepack = super().pack()
+        rid_converter = []
+        for key in self._rid_from_hid:
+            rid_converter.append(
+                [key.pack(), self._rid_from_hid[key]]
+            )
+        prepack["rid_conversion"] = rid_converter
+        return prepack
+    
+    @classmethod
+    def unpack(cls, packed, draw_function):
+        new_catalog = super().unpack(packed, draw_function)
+        for pair in packed["rid_conversion"]:
+            new_catalog._rid_from_hid[cls.key_type.unpack(pair[0]), pair[1]]
+
+    def get(self, shipID) -> token_type:
         return super().get(shipID)
-    def update(self, token:Region, id):
+    def update(self, token:token_type, id):
         """
             Un-assign the old ones, reassign new ones 
         """
@@ -80,18 +123,19 @@ class RegionCatalog(Catalog):
             self._rid_from_hid[hid] = id
 
         return super().update(token, id)
-    def register(self, region: Region):
+    def register(self, region: token_type):
         rid =  super().register(region)
         for hid in region.hexIDs:
             self._rid_from_hid[hid] = rid
         return rid 
-    def get_rid(self, hid:HexID)->int:
+    def get_rid(self, hid:key_type)->int:
         if hid in self._rid_from_hid:
             return self._rid_from_hid[hid]
 
 
 class ShipCatalog(Catalog):
-    token_type = int
+    token_type = ShipSWN
+    key_type=int
     def __init__(self, draw_function:callable):
         Catalog.__init__(self, draw_function)
         self._ship_locations = {} #ship_id -> SubHID
@@ -100,6 +144,9 @@ class ShipCatalog(Catalog):
 
         self._function = draw_function
 
+    def get(self, shipID)->AIShip:
+        return super().get(shipID)
+    
     def delete(self, id):
         location = self.get_loc(id)
         
@@ -129,7 +176,7 @@ class ShipCatalog(Catalog):
         if shipID in self._ship_locations:
             return self._ship_locations[shipID]
 
-    def get_at(self, hid:HexID)->list:
+    def get_at(self, hid:SubHID)->list:
         if isinstance(hid, SubHID):
             use_dict =self._ships_at
         elif isinstance(hid, HexID):
@@ -208,7 +255,10 @@ class SystemCatalog(Catalog):
         return super().get(hid)
     def get_sub(self, subh:SubHID)->PointOfInterest:
         system = self.get(subh.downsize())
-        return system.get(subh)
+        if system is None:
+            return None 
+        else:
+            return system.get(subh)
     
     def has_fuel(self, hID:HexID):
         this_system = self.get(hID)
@@ -312,6 +362,7 @@ class SystemCatalog(Catalog):
         if last_system is None :
             last_scoop = False 
             last_has_station = False
+            penalty = np.inf
         else:
             last_scoop = last_system.fuel and have_scoop
             last_has_station = last_system.starport is not None     
@@ -320,6 +371,7 @@ class SystemCatalog(Catalog):
         if next_system is None:
             next_scoop = False
             next_has_station = False
+            penalty = np.inf
         else:
             next_scoop = next_system.fuel and have_scoop
             next_has_station = next_system.starport is not None 
@@ -338,19 +390,19 @@ class SystemCatalog(Catalog):
                 if ((not last_has_station) and last_scoop) or ((not next_has_station) and next_scoop):
                     penalty += 3.0 # add a few days to fuel-scoop
                 else:
-                    penalty = 100000
+                    penalty = np.inf
             
         else: # two in a row without stations 
             if max_fuel==2 :
                 if last_scoop and next_scoop:
                     penalty += 6.0
                 else:
-                    penalty = 100000
+                    penalty = np.inf
             elif max_fuel==3:
                 if last_scoop or next_scoop:
                     penalty += 3.0
                 else:
-                    penalty = 1000000 
+                    penalty = np.inf 
                 
         return cost + penalty
 
@@ -412,6 +464,10 @@ class SystemCatalog(Catalog):
 
             for next_step in from_hid.in_range(ship_used.drive_rating, False):
                 # true cost to here plus the cost to the neighbor 
+                if next_step not in self._entries: # consider world-less systems as non-existant 
+                    continue
+                if (self.get(next_step).starport is None) and (ship_used.fuel_max<2): # consider starport-less systems as non-existant
+                    continue
                 next_step_cost = min_cost_to_hex[from_hid] + self._get_cost_between(from_hid, next_step, ship_used)
 
                 use_this_step = False
