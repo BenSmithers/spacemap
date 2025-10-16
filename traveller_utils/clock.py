@@ -91,6 +91,14 @@ class Time:
 
         self._day_shift = 2
 
+        while self._day > days_in_month:
+            self._day -= days_in_month
+            self._month += 1
+        while self._month>=months_in_year:
+            self._month -= months_in_year 
+            self._year += 1 
+
+
     @classmethod
     def copy(cls, other:'Time'):
         return Time(
@@ -139,7 +147,6 @@ class Time:
         """
         if type(self._month )!=int:
             raise TypeError("That's not right... month is type {}".format(type(self._month)))
-        
         return( month_list[self._month] )
 
     def _month_step(self, months):
@@ -258,7 +265,7 @@ class Time:
         while new._hour>= hours_in_day:
             new._hour -= hours_in_day
             new._day  += 1
-        while new._day>= days_in_month:
+        while new._day> days_in_month:
             new._day -=  days_in_month
             new._month += 1
         while new._month>= months_in_year:
@@ -279,11 +286,11 @@ class Time:
             new._hour += hours_in_day
             new._day -= 1
         new._day -= other.day
-        while new.day <1:
+        while new.day <0:
             new._day += days_in_month
             new._month -= 1
         new._month -= other.month
-        while new._month <1 :
+        while new._month <0 :
             new._month += months_in_year
             new._year -= 1
         new._year -= other.year
@@ -1027,7 +1034,6 @@ class MultiHexCalendar(QtWidgets.QWidget):
     def day_selected(self, which_time:Time):
         self.selected_time = which_time 
         self.skipto_button.setText("Skip to "+self.selected_time.month_year())        
-        
 
         if self.selected_time <self.true_time or self.selected_time==self.true_time:
             self.skipto_button.setEnabled(False)
@@ -1054,7 +1060,6 @@ class MultiHexCalendar(QtWidgets.QWidget):
             int(chop[1]),
             int(chop[2])
         )
-        print("selected ",this_time)
         self.day_selected(this_time)
         self.fill_days()
         
