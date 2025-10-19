@@ -13,6 +13,8 @@ from PyQt5 import QtWidgets, QtCore
 from math import pi, floor
 from math import cos, sin, sqrt
 
+from PyQt5.QtCore import pyqtSlot, pyqtSignal
+
 from numpy import arcsin, arccos
 
 degrees = pi/180.
@@ -764,9 +766,6 @@ class Clock:
     def __str__(self):
         return("{}\nThe moon is {}".format(self.get_local_time(0), self.get_moon_phase()) )
 
-# utility for signaling 
-class Signaler(QtCore.QObject):
-    signal = QtCore.pyqtSignal(Time)
 
 class MultiHexCalendar(QtWidgets.QWidget):
     """
@@ -775,6 +774,9 @@ class MultiHexCalendar(QtWidgets.QWidget):
 
     As it is, this doesn't really *do* anything. Later, I'll set it up so that this emits a signal when a day-button is pressed. The signal it emits should include the day the button has on it
     """
+
+    signals = pyqtSignal(Time)
+
     def __init__(self, parent, time):
         """
         Initializes the widget. 
@@ -947,7 +949,6 @@ class MultiHexCalendar(QtWidgets.QWidget):
         # create a signal which is emitted when a button is pressed
         # this is the only way I know how to set up a emit - receive signal system. Used the same technique from the MultiThreading 
         # so it'll go //calendar.signals.signal.connect( function )//
-        self.signals = Signaler()
 
     def _get_skip(self, scale):
         if self.skiptype.currentIndex()==0:
@@ -963,15 +964,15 @@ class MultiHexCalendar(QtWidgets.QWidget):
     def skip_x1(self):
         self.set_time(self.true_time + self._get_skip(1))
         self.post_skip()
-        self.signals.signal.emit(self.true_time)
+        self.signals.emit(self.true_time)
     def skip_x5(self):
         self.set_time(self.true_time + self._get_skip(5))
         self.post_skip()
-        self.signals.signal.emit(self.true_time)
+        self.signals.emit(self.true_time)
     def skip_x10(self):
         self.set_time(self.true_time + self._get_skip(10))
         self.post_skip()
-        self.signals.signal.emit(self.true_time)
+        self.signals.emit(self.true_time)
 
     def post_skip(self):
         if self.selected_time is None:
@@ -981,11 +982,15 @@ class MultiHexCalendar(QtWidgets.QWidget):
         else:
             self.skipto_button.setEnabled(True)
 
+    @pyqtSlot(Time)
+    def update_time(self, new_time:Time):
+        self.set_time(new_time)
+        self.selected_time = None 
+
     def skip_to_selected(self):
         if self.selected_time is None:
             return 
-
-
+        
         self.set_time(self.selected_time)
         self.selected_time = None 
 

@@ -47,7 +47,8 @@ class main_window(QMainWindow):
         self.ui.map_view.setScene( self.scene )
         self.ui.map_view.setMouseTracking(True)
 
-
+        self.scene.time_update.connect(self._calendar_widget.update_time)
+        self._calendar_widget.signals.connect(self.scene.skip_to_time)
 
         self.export_image()
 
@@ -67,6 +68,7 @@ class main_window(QMainWindow):
 
         
     def planet_selected(self, system:System, loc:HexID):
+        print(loc)
         self._ship_widget.clear()
         while len(self.govs)>0:
             first = self.govs.pop()
@@ -95,7 +97,8 @@ class main_window(QMainWindow):
                 location = "At {}".format(sub_location.name)
             self._ship_widget.add_ship(this_ship, location)
         self._ship_widget.update_gui()
-
+        if len(these_ships)!=0:
+            self.scene.draw_ship_path(this_shipid)
 
         if False:
             

@@ -3,6 +3,7 @@ from collections import deque
 from traveller_utils.clock import Time, Clock
 from traveller_utils.core.utils import all_subclasses
 
+from PyQt5.QtCore import pyqtSlot, pyqtSignal
 from PyQt5.QtWidgets import QGraphicsScene
 
 class actionDrawTypes(Enum):
@@ -201,6 +202,7 @@ class ActionManager(object):
 
     This is made on launch before the map is loaded, so it doesn't do anything until the map is loaded. 
     """
+    time_update = pyqtSignal(Time)
     def __init__(self, clock:Clock):
         self._queue = []
 
@@ -373,7 +375,9 @@ class ActionManager(object):
 
     def skip_by_time(self, time):
         self.skip_to_time(self.clock.time + time)
+        self.time_update.emit(self.clock.time + time)
 
+    @pyqtSlot(Time)
     def skip_to_time(self, time):
         if len(self.queue)!=0:
             while self.queue[0][0]<time or self.queue[0][0]==time:
