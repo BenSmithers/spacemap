@@ -1,6 +1,7 @@
 from PyQt5 import QtGui, QtCore
 from PyQt5.QtCore import Qt
 
+from PyQt5.QtCore import pyqtSlot, pyqtSignal
 from PyQt5.QtWidgets import QGraphicsScene, QGraphicsSceneMouseEvent, QMainWindow
 from traveller_utils.actions import ActionManager, unpack_event, MonthlyEvent
 
@@ -83,14 +84,12 @@ class Clicker(QGraphicsScene,ActionManager):
             self.initialize_systems()
             self.initialize_routes()
             self.initialize_regions()
-            n_ships = 1
+            n_ships = 30
 
             for i in range(n_ships):
                 self._initialize_ship()
 
         self.draw_all_hexes()
-
-        self._parent_window._calendar_widget.signals.signal.connect(self.skip_to_time)
 
         self.update()        
 
@@ -105,20 +104,33 @@ class Clicker(QGraphicsScene,ActionManager):
         for hid in self._system_catalog:
             world = self.get_system(hid).mainworld
             #ts = world.wealth
-            ts = self._trade_cat.wealth_flow(hid)
+            ts = self._trade_cat.wealth_flow(hid)*(world.tech_level+1)**2
             all_ts.append(ts)
 
         if False:
             import matplotlib.pyplot as plt 
-            plt.hist(all_ts, bins=np.linspace(min(all_ts), max(all_ts), 100))
+            from math import log10
+            plt.hist(all_ts, bins=np.logspace(-4, log10(max(all_ts)), 100))
             plt.xlabel("Wealth Score")
+            plt.yscale('log')
             plt.ylabel("Count")
+            plt.xscale('log')
             plt.show()
 
+        self._timer = QtCore.QTimer(self)
+        self._timer.timeout.connect(self.step_one_day)
+        self._timer.start(1000)
+
+    def step_one_day(self):
+        self.skip_by_time(Time(day=1))
 
 
     def update_prices(self):
-        print("One month has passed")
+        
+        for hid in self._system_catalog:
+            sbase = self._system_catalog.get(hid).starport
+            if sbase is not None:
+                sbase.update_stock()
         return
         for hid in self._system_catalog:
             world = self.get_world(hid)
@@ -298,67 +310,62 @@ class Clicker(QGraphicsScene,ActionManager):
         return all_passengers
     
     def sample_ship_route(self, loc:HexID, ship:AIShip, sample_good=False ):
+        """
+            Try finding a route to a destination within, ah, six hexes?
 
-        profit = 0
+            Returns a good if it can make a profit, otherwise it'll return a route to somewhere that things appear cheap
+        """
+        profit = -1e9
+        prof_dest = None
         tg_name = ""
-        counter = 0 
-        all_routes = self._trade_cat.all_connections(loc)
-        bad_routes = False 
+
+        loss = 1e9
+        loss_dest = None
+
         
-        while profit==0:
+        for other in sorted(loc.in_range(6, False), key=lambda x:loc-x):
             profit = 0
             tg_name = ""
-            if True : # len(all_routes)==0 or bad_routes:
-                other = self._trade_cat.sample_from_wealth()
-                while self._system_catalog.get(other).starport is None:
-                    other = self._trade_cat.sample_from_wealth()
 
-                route = self._system_catalog.get_route_a_star(loc, other, ship)
-            else:
-
-                sample = self._trade_cat.get( choice(all_routes) )
-                if sample.level > ship.drive_rating:
-                    bad_routes = True 
+            #route = self._system_catalog.get_route_a_star(loc, other, ship)[1:]
+            if self._system_catalog.get(other) is None:
                     continue
-                route = sample.full_route
-
-            route = route[1:]
             
-
-            if not sample_good:
-                return route
-
+            destination_market = self._system_catalog.get(other).starport
+            if destination_market is None:
+                continue
+            
             sp = self._system_catalog.get(loc).starport
 
-            if counter > 5:
-                print("Too many failed attempts?")
-                return route, None
-            if len(route)==0:
-                continue
             if sp is not None:
-                # target destination guaranteed to have a starport 
-                destination_market = self._system_catalog.get(route[-1]).starport
-
                 for test_good in sp.supply:
                     if not sp.available(test_good):
                         continue
+
+                    possible_loss = (destination_market.get_market_price(test_good) - sp.get_market_price(test_good))
+                    if possible_loss < loss:
+                        loss_dest = other  
+                        loss = possible_loss 
                     if sp.get_market_price(test_good)>ship.funds:
                         continue
-
-                    n_buy = min([ int(ship.funds / sp.get_market_price(test_good)), ship.cargo_free(), int(sp.get_modified_supply(test_good)) ])
-                    this_profit = n_buy*(destination_market.get_market_price(test_good) - sp.get_market_price(test_good))
+                    
+                    n_buy = min([ int(ship.funds / sp.get_market_price(test_good)), ship.cargo_free(), int(sp.supply[test_good]) ])
+                    this_profit = n_buy*possible_loss
                     if this_profit>profit:
                         profit = this_profit
                         tg_name =test_good
-
-                if profit>0:
-                    return route, tg_name 
-                else:
-                    counter += 1 # couldn't afford anything, try going somewhere else 
-
+                        prof_dest = other 
             else:
-                print("No spaceport? ")
-                return route, None         
+                
+                return [], None         
+        # no profitable route in six steps!
+        
+        if profit>0:
+            route  = self._system_catalog.get_route_a_star(loc, prof_dest, ship)[1:]
+            return route, tg_name
+        else:
+            route  = self._system_catalog.get_route_a_star(loc, loss_dest, ship)[1:]
+            return route, None
 
     def step_ai_ship(self, ship_id)->bool:
         """
@@ -422,18 +429,13 @@ class Clicker(QGraphicsScene,ActionManager):
 
             if next_step is not None:   
                 self._ship_catalog.move(ship_id, next_step)
+                self.update()
                 this_location = self._system_catalog.get_sub(next_step)
             else:
                 # there is no next step?
                 raise NotImplementedError("Ship had no next step")
                 return 
                 this_location = self._system_catalog.get_sub(next_step)
-            
-            
-            if this_location is None:
-                print("in metaspace")
-            else:
-                print("Just moved to {}".format(this_location.name))
             
             this_ship.clear_next_sid()
             at_system_edge = isinstance(this_location, SystemEdge)
@@ -445,10 +447,13 @@ class Clicker(QGraphicsScene,ActionManager):
             in_metaspace = isinstance(next_step, NonPhysical)
             need_fuel = this_ship.fuel < this_ship.fuel_max
             need_repair = this_ship.hp < this_ship.max_hp
+            need_maintenance = (self.clock.time - this_ship.last_maintenance()) > Time(month=11, day=20)
 
             has_arrived = len(this_ship.route)==0 # what if it wasn't going to a station?? 
 
             this_system = self._system_catalog.get( next_step.downsize() )
+
+            can_afford_maint = this_ship.funds > this_ship.annual_maintenance()
 
             if in_metaspace:
                 target_sid = None
@@ -465,30 +470,26 @@ class Clicker(QGraphicsScene,ActionManager):
                     can_afford_repairs = this_ship.funds > 10000 # need to change
                     minutes += int(2*60*(this_ship.max_hp - this_ship.hp)) # two hours per hp repaired? 
                     # subtract funds, set timer, set health
-                    this_ship.change_funds(-10000)
-                    this_ship.await_repairs(this_ship.max_hp - this_ship.hp) # 
+                    if can_afford_repairs:
+                        this_ship.change_funds(-10000)
+                        this_ship.await_repairs(this_ship.max_hp - this_ship.hp) # 
+                if need_maintenance and can_afford_maint:
+                    minutes += int(7*24*60) # a whole week 
+                    this_ship.maintain(self.clock.time) # charges ship 
 
                 if has_arrived:
                     # sell cargo, choose destination, buy supplies
                     cargo = this_ship.cargo()
                     for tg_name in cargo:
-                        print("Selling {} {} for {}".format(cargo[tg_name], tg_name, this_location.get_market_price(tg_name)*cargo[tg_name]))
-                        this_ship.change_funds( this_location.get_market_price(tg_name)*cargo[tg_name] )
+                        this_location.purchase(this_ship, tg_name, cargo[tg_name])
                     this_ship.empty_cargo() 
 
                     route, good = self.sample_ship_route(next_step.downsize(), this_ship, True)
-                    
                     if good is not None:
-                        n_buy = min([ int(this_ship.funds / this_location.get_market_price(good)), this_ship.cargo_free(), int(this_location.get_modified_supply(good)) ])
-                        print("Buying {} {}".format(n_buy, good))
-                        this_ship.add_cargo(
-                            good, n_buy
-                        )
-                        this_ship.change_funds(
-                            -1*n_buy*this_location.get_market_price(good)
-                        )
-                    else:
-                        print("Things were too expensive... going elsewhere")
+                        n_buy = min([ int(this_ship.funds / this_location.get_market_price(good)), this_ship.cargo_free(), int(this_location.supply[good]) ])
+                        #print("Buying {} {}".format(n_buy, good))
+                        this_location.vend(this_ship, good, n_buy)
+
                     this_ship.set_route(route)
 
                     # ship should spend two days here to load/unload cargo
@@ -525,12 +526,15 @@ class Clicker(QGraphicsScene,ActionManager):
                 can_scoop = this_system.fuel and this_ship.has_fuel_scoop 
                 can_refuel = (this_system.get_notable(SystemNote.MainPort) is not None) and (this_ship.funds > 500)
                 can_repair = (this_ship.funds > 10000) and  (this_system.get_notable(SystemNote.MainPort) is not None)
+                can_maintain = can_afford_maint and (this_system.get_notable(SystemNote.MainPort) is not None)
                 
                 # we're not at a destination, we're in transit. 
                 # so, we need to decied what the goal is 
                 # Generally it's good to refill if you can, and prioritize fuel scooping 
                 give_up = False
-                if need_fuel and can_scoop:
+                if need_maintenance and can_maintain:
+                    goal_sid = this_system.get_notable(SystemNote.MainPort)
+                elif need_fuel and can_scoop:
                     goal_sid = this_system.get_notable(SystemNote.GasGiant)
                 elif need_fuel and can_refuel:
                     goal_sid = this_system.get_notable(SystemNote.MainPort)
@@ -604,12 +608,6 @@ class Clicker(QGraphicsScene,ActionManager):
         """
 
         new_ship = AIShip.generate([], ShipClass.Frigate, ShipCategory.Freight)
-
-        if start_hex is None:
-            loc = self._trade_cat.sample_from_wealth()
-        else:
-            assert isinstance(start_hex, HexID), "Received non-HexID start hex: {}".format(type(start_hex))
-            loc = start_hex
         
         while True:
             loc = self._trade_cat.sample_from_wealth()
@@ -624,15 +622,37 @@ class Clicker(QGraphicsScene,ActionManager):
                 break
         market = self._system_catalog.get(loc).starport
 
+        large_market = False 
         while new_ship.cargo_free()>1:
-            this_good = market.sample_good()
-            amount = int(max([ min([new_ship.cargo_free() , market.get_modified_supply(this_good)]), 1])  )
-            new_ship.add_cargo(this_good, amount)
+            all_goods = market.supply
+            for this_good in all_goods:
 
-        route = self.sample_ship_route(loc, new_ship, False)
+                amount = int(max([ min([new_ship.cargo_free() , market.supply[this_good]]), 1])  )
+                if market.supply[this_good]>4000:
+                    large_market = True 
+                    break 
+                new_ship.add_cargo(this_good, amount)
+            if large_market:
+                break
+        
+        if large_market:
+            print("Generating Cruiser")
+            new_ship = AIShip.generate([], ShipClass.Cruiser, ShipCategory.Freight)
+            while new_ship.cargo_free()>1:
+                this_good = market.sample_good()
+                amount = int(max([ min([new_ship.cargo_free() , market.supply[this_good]]), 1])  )
+                new_ship.add_cargo(this_good, amount)
+
+
+        route, good = self.sample_ship_route(loc, new_ship, False)
+        if route==[]:
+            print("Failed at making a ship...")
+            return 
+        
         #expanded = self._system_catalog.expand_route(route)
         new_ship.set_route(route)
         new_ship.set_next_sid(self._system_catalog.get(loc).inflight)
+        new_ship.maintain(self.clock.time, True)
         sid = self._ship_catalog.register(new_ship, self._system_catalog.get(loc).get_notable(SystemNote.MainPort))
         move = AIShipMoveEvent(
             ship_id=sid
@@ -660,13 +680,14 @@ class Clicker(QGraphicsScene,ActionManager):
                 if "illegal" in good_name.lower():
                     continue
 
-                modified_supply = market.get_modified_supply(good_name)
+                modified_supply = market.supply[good_name]
                 if modified_supply<1:
                     continue
 
                 in_range = system_key.in_range(8, False)
                 in_range = list(filter(lambda x:x in self._system_catalog, in_range))
 
+                goods_shipped = 0
                 for other_key in in_range:
                     other_system = self.get_system(other_key)
                     if other_system is None:
@@ -679,11 +700,11 @@ class Clicker(QGraphicsScene,ActionManager):
                     if result[0] is None:
                         continue
 
-                    new_route, ship_template = result
+                    new_route, ship_template, shippable = result
+                    goods_shipped += shippable
 
                     route = self._system_catalog.get_route_a_star(system_key, other_key, ship_template)
-                    if self._system_catalog.get_route_cost(route, ship_template)>100000.0:
-                        #print("bad route? - {}".format(self._system_catalog.get_route_cost(route, ship_template)))
+                    if self._system_catalog.get_route_cost(route, ship_template)>100000.0 or route==[]:
                         continue
                     
                     new_route.set_level(self._system_catalog.get_route_level(route))
@@ -692,11 +713,9 @@ class Clicker(QGraphicsScene,ActionManager):
                     #self._trade_cat.register(system_key, other_key, new_route)
                     self._trade_cat.register(new_route)
 
-                    modified_supply = market.get_modified_supply(good_name)
-                    if modified_supply<1:
+                    if (modified_supply-goods_shipped)<1:
                         break
                     
-
 
         self.draw_routes()
 
