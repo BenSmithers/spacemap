@@ -3,6 +3,8 @@ import os
 import json 
 import random 
 
+from numpy.random import randint
+import numpy as np 
 from traveller_utils.enums import ShipClass, ShipCategory
 
 
@@ -95,10 +97,19 @@ class ShipWeapon(Fitting):
         super().__init__(kind, hull_class)
 
         self._hardpoints = self._data_entry["hardpoint"]
-        self._qualities = self._data_entry["hardpoint"]
+        self._qualities = self._data_entry["qualities"]
         self._damage = self._data_entry["damage"]
+
+        split = self._damage.split("d")
+
+        self._ndice = int(split[0])
+        self._dtype = int(split[1])
+
+    def roll_damage(self):
+        return np.sum( randint(1, self._dtype+1, self._ndice) )
+
     @property
-    def damage(self):
+    def damage_str(self):
         return self._damage
     @property 
     def qualities(self):
