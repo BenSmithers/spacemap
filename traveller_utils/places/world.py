@@ -138,19 +138,7 @@ class World(PointOfInterest):
         self._services = []
         self._retailers = []
         self._has_gas_giant = False
-        self._persistent_passengers={
-            "high":[],
-            "middle":[],
-            "basic":[],
-            "low":[],
-        }
         self._generated = False
-        self._passengers ={
-            "high":[],
-            "middle":[],
-            "basic":[],
-            "low":[], 
-        }
         self._category =[WorldCategory.Common,]
         self._title = Title.Baron
 
@@ -435,12 +423,6 @@ class World(PointOfInterest):
             "gas_giant":self._has_gas_giant,
             "starport_raw":self._starport_raw,
             "services":[entry.name for entry in self._services],
-            "persistent_pass":{
-                key:[entry.pack() for entry in self._persistent_passengers[key]] for key in self._persistent_passengers.keys()
-            },
-            "passengers":{
-                key:[entry.pack() for entry in self._passengers[key]] for key in self._passengers.keys()
-            }
         }
 
         return packed
@@ -473,12 +455,6 @@ class World(PointOfInterest):
         new._services=[Bases.__getitem__(entry) for entry in packed["services"]]
         new._factions=[Government.unpack(entry) for entry in packed["factions"]]
         new._starport_raw=packed["starport_raw"]
-        new._passengers={
-            key:[Person.unpack(entry) for entry in packed["passengers"][key]] for key in packed["passengers"].keys()
-        }
-        new._persistent_passengers={
-            key:[Person.unpack(entry) for entry in packed["persistent_pass"][key]] for key in packed["persistent_pass"].keys()
-        }
         new.update_category()
 
         return new
@@ -503,30 +479,37 @@ class World(PointOfInterest):
 
     def update_category(self):
         #self._title = wealth_tbl.access(self.wealth)
-
-        self._category = []
-        if self._atmosphere==0 and self._size==0 and self._hydro==0:
+        self._category=[WorldCategory.Common]
+        if self._atmosphere==0 and self._size<=1 and self._hydro==0:
             self._category.append(WorldCategory.Asteroid)
 
-        if self._atmosphere>=4 and self._atmosphere<=9:
+        if self._population_raw>8 and self._tech_level > 3:
+            self._category.append(WorldCategory.Industrial)
+
+        if self._atmosphere<2:
+            self._category.append(WorldCategory.Vacuum)
+
+        if self._atmosphere>=5 and self._atmosphere<=9:
             if self._hydro>3 and self._hydro<9:
                 if self._population_raw>4 and self._population_raw<8:
-                    self._category.append(WorldCategory.Agricultural)
+                    if self._temperature>5 and self._temperature<7:
+                        self._category.append(WorldCategory.Agricultural)
         
-        if self._population_raw==0:
+        if self._population_raw==0 or self._biosphere<5:
             self._category.append(WorldCategory.Barren)
 
-        if self._atmosphere>2 and self._temperature>7:
+        if self._atmosphere>2 and self._temperature>8 and self._hydro<3:
             self._category.append(WorldCategory.Desert)
         
-        if self._atmosphere>9 and self._hydro>0:
+        if self._atmosphere>3 and self._hydro>3 and self._temperature>2 and self._temperature<11:
             self._category.append(WorldCategory.Fluid_Oceans)
 
-        if self._atmosphere==5 or self._atmosphere==6 or self._atmosphere==8:
+        if self._atmosphere>4 and self._atmosphere<8:
             if self._size>=6 and self._size<=8:
                     if self._hydro>4 and self._hydro<8:
                         if self._temperature>6 and self._temperature<9:
-                            self._category.append(WorldCategory.Garden)
+                            if self._biosphere>=5:
+                                self._category.append(WorldCategory.Garden)
         
         if self._population_raw>=9:
             self._category.append(WorldCategory.High_Pop)
@@ -534,12 +517,10 @@ class World(PointOfInterest):
         if self._tech_level>11:
             self._category.append(WorldCategory.High_Tech)
 
-        if self._hydro>1 and self._atmosphere<2 and self._temperature<9:
+        if self._hydro>3 and self._atmosphere>4 and self._temperature<9:
             self._category.append(WorldCategory.Ice_Capped)
 
-        if self._population_raw>8 and self._tech_level > 3:
-            if self._atmosphere<3 or self._atmosphere==4 or self._atmosphere==7 or self._atmosphere==9:
-                self._category.append(WorldCategory.Industrial)
+        
         
         if self._population_raw<4:
             self._category.append(WorldCategory.Low_Pop)
@@ -564,14 +545,13 @@ class World(PointOfInterest):
             if self._atmosphere<6 and self._atmosphere>1:
                 self._category.append(WorldCategory.Poor)
 
-        if self._hydro>9:
+        if self._hydro>8:
             self._category.append(WorldCategory.Water_World)
         
-
-        if len(self._category)==0:
-            self._category=[WorldCategory.Common]
         if self._government.civil_war:
             self._category.append(WorldCategory.amber_zone)
+
+        self._category = self._category[:3]
     
     @property
     def gravity(self)->float:

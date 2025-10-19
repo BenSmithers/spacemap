@@ -86,9 +86,10 @@ class ShipSWN:
     def last_maintenance(self)->Time:
         return self._last_maintenance
     
-    def maintain(self, now:Time):
+    def maintain(self, now:Time, nocost=False):
         self._last_maintenance = now 
-        self.change_funds( self.annual_maintenance() )
+        if not nocost:
+            self.change_funds( self.annual_maintenance() )
 
     def change_funds(self, delta):
         self._funds = self._funds + float(delta)
@@ -120,7 +121,6 @@ class ShipSWN:
         return self._fuel
 
     def add_fuel(self):
-        print(self.name, "bought fuel")
         if self._fuel_max>self._fuel:
             self._fuel += 1
 
