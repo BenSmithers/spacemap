@@ -466,7 +466,7 @@ class SystemCatalog(Catalog):
                 # true cost to here plus the cost to the neighbor 
                 if next_step not in self._entries: # consider world-less systems as non-existant 
                     continue
-                if (self.get(next_step).starport is None) and (ship_used.fuel_max<2): # consider starport-less systems as non-existant
+                if (self.get(next_step).starport is None) and (ship_used.fuel_max<2): #consider these as unreachable
                     continue
                 next_step_cost = min_cost_to_hex[from_hid] + self._get_cost_between(from_hid, next_step, ship_used)
 
@@ -602,20 +602,44 @@ class TradeCat(Catalog):
 """
 
 """
-class PassengerCatalog(Catalog):
+class PersonCatalog(Catalog):
     token_type = Person
     def __init__(self, draw_function: callable, trade_cat:TradeCat, systems_cat:SystemCatalog):
         # main one is ( pid -> Person )
-        self._locations = {}  # pid -> hid 
-        self._location_types = {}  # pid -> hid/shipid/etc
-        self._persistent_pids = {} # hid -> { <low/mid/high> : [ pids ] }
-        self._
+        
         self._trade_cat = trade_cat
         self._systems_cat = systems_cat
 
         self._keys=["high", "middle", "basic", "low"]
 
+        self._people_at_subhid = {} # SubHID -> list of Person IDs
+        self._people_on_ship = {} # ship ID -> list of Person IDs
+        self._location_id_of_person = {} # person ID -> SubHID or ship ID
+
+
         super().__init__(draw_function)
+
+    def move_person(self, pid:int, dest, dest_type:PLocationType):
+        """
+            Moves a person to a new location, either a SubHID or a ShipID
+        """
+        old_loc = self._location_id_of_person[pid]
+        if isinstance(old_loc, SubHID):
+            self._people_at_subhid[old_loc].remove(pid)
+        else:
+            self._people_on_ship[old_loc].remove(pid)
+
+        if dest_type==PLocationType.SubHID:
+            if dest not in self._people_at_subhid:
+                self._people_at_subhid[dest] = []
+            self._people_at_subhid[dest].append(pid)
+        else:
+            if dest not in self._people_on_ship:
+                self._people_on_ship[dest] = []
+            self._people_on_ship[dest].append(pid)
+
+        self._location_id_of_person[pid] = dest
+
 
     def generate_empty(self):
         return {key:[] for key in self._keys}
@@ -623,11 +647,7 @@ class PassengerCatalog(Catalog):
         return super().get(pid)
     def register(self, person:Person):
         return super().register(person)
-    def get_location(self, pid)->'tuple[SubHID, PLocationType]':
-        if pid in self._locations:
-            return self._locations[pid], self._location_types[pid]
-    def get_permanent_at(self, hid):
-        pass 
+
 
     def sample_passengers(self, hid, steward_mod:int):
         """

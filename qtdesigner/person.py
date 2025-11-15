@@ -27,49 +27,82 @@ class Ui_Form(object):
         self.name_lbl.setObjectName("name_lbl")
         self.formLayout_2.setWidget(0, QtWidgets.QFormLayout.SpanningRole, self.name_lbl)
 
+        """
+        add labels for Person birthday, attributes, profession, skills, hair, eyes, etc
+
+        Text should wrap rather than extend off the side of the dialog
+        """ 
+        self.birthday_lbl = QtWidgets.QLabel(Form)
+        self.birthday_lbl.setObjectName("birthday_lbl")
+        self.birthday_lbl.setText("Birthday: ")
+        self.formLayout_2.setWidget(1, QtWidgets.QFormLayout.LabelRole, self.birthday_lbl)
+        self.birthday_val = QtWidgets.QLabel(Form)
+        self.birthday_val.setObjectName("birthday_val")
+        self.birthday_val.setText("2500-01-01")
+        self.formLayout_2.setWidget(1, QtWidgets.QFormLayout.FieldRole, self.birthday_val)  
+
+        self.attributes_lbl = QtWidgets.QLabel(Form) 
+        self.attributes_lbl.setObjectName("attributes_lbl")
+        self.attributes_lbl.setText("Attributes: ")
+        self.formLayout_2.setWidget(2, QtWidgets.QFormLayout.LabelRole, self.attributes_lbl)
+        self.attributes_val = QtWidgets.QLabel(Form)
+        self.attributes_val.setObjectName("attributes_val")
+        self.attributes_val.setText("STR 10, DEX 10, END 10, INT 10, EDU 10, SOC 10")
+        # enable wrap
+        self.attributes_val.setWordWrap(True)
+        self.formLayout_2.setWidget(2, QtWidgets.QFormLayout.FieldRole, self.attributes_val)
+
+        self.profession_lbl = QtWidgets.QLabel(Form) 
+        self.profession_lbl.setObjectName("profession_lbl")
+        self.profession_lbl.setText("Profession: ")
+        self.formLayout_2.setWidget(3, QtWidgets.QFormLayout.LabelRole, self.profession_lbl)
+        self.profession_val = QtWidgets.QLabel(Form)
+        self.profession_val.setObjectName("profession_val")
+        self.profession_val.setText("Merchant")
+        self.formLayout_2.setWidget(3, QtWidgets.QFormLayout.FieldRole, self.profession_val)    
+
+        self.skills_lbl = QtWidgets.QLabel(Form) 
+        self.skills_lbl.setObjectName("skills_lbl")
+        self.skills_lbl.setText("Skills: ") 
+        self.formLayout_2.setWidget(4, QtWidgets.QFormLayout.LabelRole, self.skills_lbl)
+        self.skills_val = QtWidgets.QLabel(Form)
+        self.skills_val.setObjectName("skills_val")
+        self.skills_val.setText("Pilot 2, Trade 1, ...")
+        self.skills_lbl.setWordWrap(True)
+        self.formLayout_2.setWidget(4, QtWidgets.QFormLayout.FieldRole, self.skills_val)    
+        self.hair_lbl = QtWidgets.QLabel(Form) 
+        self.hair_lbl.setObjectName("hair_lbl")
+        self.hair_lbl.setText("Hair: ")
+        self.formLayout_2.setWidget(5, QtWidgets.QFormLayout.LabelRole, self.hair_lbl)
+        self.hair_val = QtWidgets.QLabel(Form)
+        self.hair_val.setObjectName("hair_val")
+        self.hair_val.setText("Brown, Short, Straight")
+        self.formLayout_2.setWidget(5, QtWidgets.QFormLayout.FieldRole, self.hair_val)    
+        self.eyes_lbl = QtWidgets.QLabel(Form) 
+        self.eyes_lbl.setObjectName("eyes_lbl")
+        self.eyes_lbl.setText("Eyes: ")
+        self.formLayout_2.setWidget(6, QtWidgets.QFormLayout.LabelRole, self.eyes_lbl)
+        self.eyes_val = QtWidgets.QLabel(Form)
+        self.eyes_val.setObjectName("eyes_val")
+        self.eyes_val.setText("Brown")
+        self.formLayout_2.setWidget(6, QtWidgets.QFormLayout.FieldRole, self.eyes_val)
+        
+        self.wants_lbl = QtWidgets.QLabel(Form) 
+        self.wants_lbl.setObjectName("wants_lbl")
+        self.wants_lbl.setText("Wants: ")
+        self.formLayout_2.setWidget(7, QtWidgets.QFormLayout.LabelRole, self.wants_lbl)
+        self.wants_val = QtWidgets.QLabel(Form)
+        self.wants_val.setObjectName("wants_val")
+        self.wants_val.setText("Food, Medicine, Technology")
+        self.formLayout_2.setWidget(7, QtWidgets.QFormLayout.FieldRole, self.wants_val) 
+
         self.label_2 = QtWidgets.QLabel(Form)
         self.label_2.setAlignment(QtCore.Qt.AlignCenter)
         self.label_2.setObjectName("label_2")
-        self.formLayout_2.setWidget(1, QtWidgets.QFormLayout.SpanningRole, self.label_2)
+        self.formLayout_2.setWidget(8, QtWidgets.QFormLayout.SpanningRole, self.label_2)
 
-        self.app_lbl = QtWidgets.QLabel(Form)
-        self.app_lbl.setObjectName("app_lbl")
-        self.formLayout_2.setWidget(2, QtWidgets.QFormLayout.LabelRole, self.app_lbl)
-        self.app_desc = QtWidgets.QLabel(Form)
-        self.app_desc.setObjectName("app_desc")
-        self.formLayout_2.setWidget(2, QtWidgets.QFormLayout.FieldRole, self.app_desc)
 
-        self.Needs_lbl = QtWidgets.QLabel(Form)
-        self.Needs_lbl.setObjectName("Needs_lbl")
-        self.formLayout_2.setWidget(3, QtWidgets.QFormLayout.LabelRole, self.Needs_lbl)
-        self.Needs_desc = QtWidgets.QLabel(Form)
-        self.Needs_desc.setObjectName("Needs_desc")
-        self.formLayout_2.setWidget(3, QtWidgets.QFormLayout.FieldRole, self.Needs_desc)
-
-        
-        self.quirks_lbl = QtWidgets.QLabel(Form)
-        self.quirks_lbl.setObjectName("quirks_lbl")
-        self.formLayout_2.setWidget(4, QtWidgets.QFormLayout.LabelRole, self.quirks_lbl)
-        self.quirks_desc = QtWidgets.QLabel(Form)
-        self.quirks_desc.setObjectName("quirks_desc")
-        self.formLayout_2.setWidget(4, QtWidgets.QFormLayout.FieldRole, self.quirks_desc)
-        
-
-        self.wants_lbl = QtWidgets.QLabel(Form)
-        self.wants_lbl.setObjectName("wants_lbl")
-        self.formLayout_2.setWidget(5, QtWidgets.QFormLayout.LabelRole, self.wants_lbl)
-        self.wants_desc = QtWidgets.QLabel(Form)
-        self.wants_desc.setObjectName("wants_desc")
-        self.formLayout_2.setWidget(5, QtWidgets.QFormLayout.FieldRole, self.wants_desc)
-
-        self.probs_lbl = QtWidgets.QLabel(Form)
-        self.probs_lbl.setObjectName("probs_lbl")
-        self.formLayout_2.setWidget(6, QtWidgets.QFormLayout.LabelRole, self.probs_lbl)
-        self.probs_desc = QtWidgets.QLabel(Form)
-        self.probs_desc.setObjectName("probs_desc")
-        self.formLayout_2.setWidget(6, QtWidgets.QFormLayout.FieldRole, self.probs_desc)
-
-        self.formLayout_2.setWidget(7, QtWidgets.QFormLayout.SpanningRole, self.buttonBox)
+        self.formLayout_2.setWidget(9, QtWidgets.QFormLayout.SpanningRole, self.buttonBox)
         
 
         self.retranslateUi(Form)
@@ -79,9 +112,5 @@ class Ui_Form(object):
         _translate = QtCore.QCoreApplication.translate
         Form.setWindowTitle(_translate("Form", "Form"))
         self.name_lbl.setText(_translate("Form", "Frank Frankovich (he/him)"))
-        self.app_lbl.setText(_translate("Form", "Appearance"))
-        self.quirks_lbl.setText(_translate("Form", "Quirks"))
-        self.Needs_lbl.setText(_translate("Form", "Motivations"))
-        self.wants_lbl.setText(_translate("Form", "Wants"))
-        self.probs_lbl.setText(_translate("Form", "Problems"))
+        
         self.label_2.setText(_translate("Form", ""))

@@ -68,8 +68,9 @@ class main_window(QMainWindow):
 
         
     def planet_selected(self, system:System, loc:HexID):
-        print(loc)
         self._ship_widget.clear()
+        self._ship_widget.update_time(self.scene.clock.time)
+
         while len(self.govs)>0:
             first = self.govs.pop()
             first.deleteLater()
@@ -96,7 +97,9 @@ class main_window(QMainWindow):
             else:
                 location = "At {}".format(sub_location.name)
             self._ship_widget.add_ship(this_ship, location)
+        
         self._ship_widget.update_gui()
+
         if len(these_ships)!=0:
             self.scene.draw_ship_path(this_shipid)
 

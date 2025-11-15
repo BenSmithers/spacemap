@@ -60,6 +60,12 @@ class ShipSWN:
         self._template = ""
         self._name = ""
 
+        self._crew = []
+        self._captain = -1 # person ID of captain
+        self._comms = -1 # person ID of communications officer
+        self._engineer = -1 # person ID of engineer
+        self._gunnery = -1 # person ID of gunnery officer
+
         self._description = ""
         self._system_drive = False 
         self._funds = 3000 # start off with some seed funds
@@ -74,10 +80,24 @@ class ShipSWN:
         self._fuel_max = 1
         self._await_repair = 0
 
+        self._command_max = 4
+        self._command_points = self._command_max
+
         self._last_maintenance = Time()
 
         self._cargo = {}
 
+    @property
+    def command_points(self):
+        return self._command_points
+    def spend_points(self, pts):
+        if pts>self._command_points:
+            self._command_points -= pts 
+            return True
+        else:
+            return False 
+    def reset_command(self):
+        self._command_points = self._command_max
 
     @property
     def can_afford_maintenance(self):
@@ -202,7 +222,17 @@ class ShipSWN:
                 else:
                     raise ValueError("No available hardpoints")
             elif isinstance(new_obj, ShipDefense):
+                if "ablative" in new_obj.name.lower():
+                    self._base_ac += 1 
+                    self._max_hp += 20 
+                    self._hp += 20 
+                elif "augmented" in new_obj.name.lower():
+                    self._base_ac += 2
+                    self._base_speed -= 1 
+
+
                 self._defense.append(new_obj)
+
             elif isinstance(new_obj, Fitting):
                 if new_obj.name.lower() == "system drive":
                     self._system_drive = True
@@ -352,6 +382,44 @@ class ShipSWN:
                 item =ShipDefense(entry["name"], self.shipclass)
             self.add_fitting(item)
 
+    @property
+    def crew(self):
+        return self._crew
+    @property
+    def captain(self):
+        if self._captain==-1:
+            return None
+        else:
+            return self._crew[self._captain]
+    @property 
+    def comms_officer(self):
+        if self._comms==-1:
+            return None
+        else:
+            return self._crew[self._comms]
+    @property
+    def engineer(self): 
+        if self._engineer==-1:
+            return None
+        else:
+            return self._crew[self._engineer]
+    @property
+    def gunnery_officer(self):
+        if self._gunnery==-1:
+            return None
+        else:
+            return self._crew[self._gunnery]    
+
+    def set_captain(self, crew_index):
+        self._captain = crew_index
+    def set_comms_officer(self, crew_index):
+        self._comms = crew_index
+    def set_engineer(self, crew_index):
+        self._engineer = crew_index
+    def set_gunnery_officer(self, crew_index):
+        self._gunnery = crew_index
+    def add_to_crew(self, person_id):
+        self._crew.append(person_id)
 
 def sample_ship(ship_class, ship_category):
     """
@@ -415,86 +483,11 @@ def sample_ship(ship_class, ship_category):
             return random.choice(["carrier","battleship"])
 
 
+def evaluate_ship_battle():
+    """
+        Should iterate ship actions until one side flees or is annihilated. 
+    """
 
-class Ship:
-    def __init__(self, rate=0.183):
-        """
-            rate - number of hexes / day (should be like 1/6)
-        """
-        self._rate = rate
-        self._icon = ""
-        self._description = ""
-        self._destination = None
-        self._location = None
-        self._name = ""
-        self._size = ""
-        self._cargo = {}
-
-    def cargo(self):
-        return self._cargo
-    def add_cargo(self, tg:str, quantity):
-        if tg in self._cargo.keys():
-            self._cargo[tg]+=quantity
-        else:
-            self._cargo[tg] = quantity
-
-
-    def pack(self):
-        packed_cargo = {
-            key.name : int(self._cargo[key]) for key in self._cargo 
-        }
-        return {
-            "cargo":packed_cargo,
-            "rate":self._rate,
-            "icon":self._icon,
-            "desc":self._description,
-            "dest":"" if self._destination is None else self._destination.pack(),
-            "loc":self._location.pack(),
-            "name":self._name,
-            "size":self._size
-        }
-    @classmethod
-    def unpack(cls, pack):
-        what = cls(rate = pack["rate"])
-        what._icon = pack["icon"]
-        what._description = pack["desc"]
-        what._name=pack["name"]
-        what._size=pack["size"]
-        unpacked = {
-            get_entry_by_name(key, TradeGood):pack["cargo"][key] for key in pack["cargo"]
-        }
-        what._cargo = unpacked
-        return what 
-
-    @classmethod
-    def generate(cls, **kwargs):
-        new = cls(**kwargs)
-        if "name" not in kwargs:
-            noun = sample_noun()
-            adj = sample_adjective()
-            new._name = "The SS "
-            new._name+= adj[0].upper() + adj[1:] +" "
-            new._name+= noun[0].upper()+noun[1:]
-
-        
-        new._size = random.choice(_sizes)
-        new._description = "A {} {}".format(new._size, random.choice(_kinds))
-        return new
-
-    @property
-    def name(self):
-        return self._name
-    @property 
-    def description(self):
-        return self._description
-
-    @property
-    def rate(self):
-        return self._rate
-    @property
-    def icon(self):
-        return self._icon
-    
 class AIShip(ShipSWN):
     def __init__(self,shiphull, route=[],**kwargs):
         super().__init__(shiphull)
@@ -510,7 +503,7 @@ class AIShip(ShipSWN):
     def clear_next_sid(self):
         self._next_sid = None
     def pack(self):
-        inter = Ship.pack(self)
+        inter = ShipSWN.pack(self)
         inter["route"] = [entry.pack() for entry in self._route]
         inter["cpt"] = self._captain.pack()
         return inter
@@ -519,12 +512,6 @@ class AIShip(ShipSWN):
         temp = super().unpack(pack)
         temp._captain = Person.unpack(pack["cpt"])
         return temp
-    
-    def set_captain(self, who:Person):
-        self._captain = who
-    @property
-    def captain(self)->Person:
-        return self._captain
 
     def is_done(self):
         return len(self._route)==0
@@ -547,9 +534,10 @@ class AIShip(ShipSWN):
     def generate(cls, route, shipclass, shipcat):
         new = cls.load_from_template(sample_ship(shipclass, shipcat))
         new._route= deepcopy(route)[::-1]
-        new.set_captain(Person.generate())
         new._name = "The {} {}".format(sample_adjective(), sample_noun())
         return new
+
+
     
 
 class MoveShipAction(MapAction):

@@ -5,18 +5,19 @@ from PyQt5.QtCore import pyqtSlot, pyqtSignal
 from PyQt5.QtWidgets import QGraphicsScene, QGraphicsSceneMouseEvent, QMainWindow
 from traveller_utils.actions import ActionManager, unpack_event, MonthlyEvent
 
-from traveller_utils.enums import Title, Bases, ShipCategory, ShipClass, SystemNote, WorldCategory
+from traveller_utils.enums import Title, Bases, ShipCategory, ShipClass, SystemNote, WorldCategory, Profession
 from traveller_utils.tables import wealth_tbl
 from traveller_utils.clock import minutes_in_day
 from traveller_utils.core.coordinates import HexID, DRAWSIZE, screen_to_hex, hex_to_screen, SubHID, NonPhysical
-from traveller_utils.ships.ship import Ship, AIShip, AIShipMoveEvent, sample_ship
+from traveller_utils.ships.ship import  ShipSWN, AIShip, AIShipMoveEvent, sample_ship
 from traveller_utils.ships.starport import StarPort
 from traveller_utils.core.core import Hex, Region, Route
 from traveller_utils.places.world import World
 from traveller_utils.places.poi import PointOfInterest, InFlight, InterRegion, GasGiant, SystemEdge
 from traveller_utils.places.system import generate_system, System
 from traveller_utils.core import utils
-from traveller_utils.core.catalogs import ShipCatalog, SystemCatalog, TradeCat, RegionCatalog
+from traveller_utils.person import Person
+from traveller_utils.core.catalogs import ShipCatalog, SystemCatalog, TradeCat, RegionCatalog, PersonCatalog
 from traveller_utils.trade_goods import get_good
 
 from math import log2, log10
@@ -32,6 +33,8 @@ WORLD_PATH = os.path.join(os.path.dirname(__file__), "..","galaxy.json")
 
 
 class Clicker(QGraphicsScene,ActionManager):
+
+
     def __init__(self, parent, parent_window:QMainWindow, clock:Clock):
         QGraphicsScene.__init__(self, parent=parent, clock=clock)
         ActionManager.__init__(self, clock=clock)
@@ -57,6 +60,7 @@ class Clicker(QGraphicsScene,ActionManager):
         self._ship_catalog = ShipCatalog(self.draw_ships_hex)
         self._system_catalog = SystemCatalog(self.draw_hex)
         self._trade_cat = TradeCat(self.draw_route, self._system_catalog)
+        self._person_cat = PersonCatalog(lambda x:x, self._trade_cat, self._system_catalog)
 
         self._alt_select = None
         self._alt_route_sid = None
@@ -145,8 +149,17 @@ class Clicker(QGraphicsScene,ActionManager):
             self._parent_window._pass_widget.clear_pass()
             self._parent_window.planet_selected(self._systems[self._selected_hid], self._selected_hid )
 
-    def get_ship(self, ship_id)->Ship:
+    @pyqtSlot(SubHID)
+    def get_location(self, sid:SubHID):
+        return self._system_catalog.get_sub(sid)
+
+    @pyqtSlot(int)
+    def get_ship(self, ship_id)->ShipSWN:
         return self._ship_catalog.get(ship_id)
+    
+    @pyqtSlot(int)
+    def get_person(self, pid)->Person:
+        return self._person_cat.get(pid)
 
     def closeEvent(self, event):
         return 
@@ -658,6 +671,11 @@ class Clicker(QGraphicsScene,ActionManager):
             ship_id=sid
         )
         
+
+        captain = Person.generate(key="Random", today=self.clock.time, grade=2, profession=Profession.Administrator)
+        cid = self._person_cat.register(captain)
+        new_ship.set_captain(cid)
+
         time_minutes = 60*np.random.randint(1,240)
 
         next_time = self.clock.time +  Time(minute=time_minutes)

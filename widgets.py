@@ -8,6 +8,7 @@ from traveller_utils.places.system import System
 from traveller_utils.person import Person
 from traveller_utils.core.coordinates import HexID, DRAWSIZE
 from traveller_utils.core import utils 
+from traveller_utils.clock import Time
 from traveller_utils.tables import fares
 from traveller_utils.ships.ship import AIShip
 from traveller_utils.ships.starport import StarPort
@@ -25,6 +26,7 @@ from qtdesigner.system_window import Ui_Dialog as system_dialog
 from qtdesigner.world_narrow_gui import Ui_Form as world_narrow_gui
 from qtdesigner.world_widget_gui import Ui_Form as world_widget_gui
 
+from PyQt5.QtCore import pyqtSlot, pyqtSignal
 from traveller_utils.tables import *
 
 class WorldWidget(QWidget):
@@ -33,6 +35,10 @@ class WorldWidget(QWidget):
         self.ui = world_widget_gui()
         self.ui.setupUi(self)
         self.parent=parent
+        self.configure(world)
+
+    @pyqtSlot(World)
+    def configure(self, world:World):
         self.ui.name_lbl.setText(world._name)
         self.ui.desc_layout.setText(world.world_profile(""))
         self.ui.size_desc.setText("{} g at surface".format(world.gravity))
@@ -47,7 +53,6 @@ class WorldWidget(QWidget):
         self.ui.tech_desc.setText(world.tech_level_str)
         self.ui.tech_desc.setMinimumSize(self.ui.tech_desc.sizeHint())
         self.ui.world_image.setPixmap(self.parent.pmap.access(world.get_image_name(), 0.8*DRAWSIZE))
-        
 
 class SystemDialog(QDialog):
     def __init__(self, parent):
@@ -59,7 +64,8 @@ class SystemDialog(QDialog):
         self.icon_map = utils.IconLib(os.path.join(os.path.dirname(__file__),"images","icons"), ext="svg")
 
         self.widgs = []
-
+    
+    @pyqtSlot(System)
     def configure(self, syst:System):
         if syst.mainworld.liege is None:
             self.ui.system_label.setText("The Seat of the {} {}".format(syst._name, syst.mainworld.title.name))
@@ -163,23 +169,34 @@ class PassengerDialog(QDialog):
         self.ui.setupUi(self)
 
     def clear(self):
-        self.ui.label_2.clear()
+        """clear the dialog box of person-specific info"""
+        
         self.ui.name_lbl.setText("{}") #, passy.pronouns))
-        self.ui.app_desc.setText("{}")
-        self.ui.quirks_desc.setText("{}")
-        self.ui.Needs_desc.setText("{}")
-        self.ui.wants_desc.setText("{}")
-        self.ui.probs_desc.setText("{}")
+        self.ui.label_2.setPixmap(QtGui.QPixmap())
+        self.ui.birthday_val.setText("-")
+        self.ui.attributes_val.setText("-")
+        self.ui.profession_val.setText("-")
+        self.ui.skills_val.setText("-")
+        self.ui.hair_val.setText("")
+        self.ui.eyes_val.setText("")
 
-    def update_gui(self, passy:Person, pixmap):
+    @pyqtSlot(Person, QtGui.QPixmap, Time)
+    def update_gui(self, passy:Person, pixmap, time:Time):
+        """Fill in the dialog box with person-specific info, omit skills with -1 value"""
         self.setWindowTitle(passy.name)
+        self.ui.name_lbl.setText("{} ()".format( passy.name, passy.pronouns))
         self.ui.label_2.setPixmap(pixmap)
-        self.ui.name_lbl.setText("{}".format(passy.name)) #, passy.pronouns))
-        self.ui.app_desc.setText(passy.appearance)
-        self.ui.quirks_desc.setText(passy.quirks)
-        self.ui.Needs_desc.setText(passy.motivations)
-        self.ui.wants_desc.setText(passy.wants)
-        self.ui.probs_desc.setText(passy.problems)
+
+        self.ui.birthday_val.setText(str(passy.birthday) + ", age {}".format(passy.age(time)) )
+        attrs = ", ".join( ["{} {}".format(attr, passy.attributes[attr]) for attr in passy.attributes] )
+        self.ui.attributes_val.setText(attrs)
+        self.ui.profession_val.setText(passy.profession.name.replace("_"," "))
+        skills = ", ".join( ["{} {}".format(skill, passy.skills[skill]) for skill in passy.skills if passy.skills[skill]>=0] )
+        self.ui.skills_val.setText(skills)
+        self.ui.hair_val.setText("{} {}, {}".format(passy.hair_length.name.replace("_"," "), passy.hair_style.name.replace("_"," "), passy.hair_color.name))        
+        self.ui.eyes_val.setText(passy.eye_color.name)  
+        wants = ", ".join( [want.name.replace("_"," ") for want in passy.wants] )
+        self.ui.wants_val.setText(wants)
 
     """
 
@@ -220,7 +237,12 @@ class ManyShipDialog(QDialog):
 
         self._cummulative_text = ""
         self._last_text = ""
+        self._last_specified_time = Time(year=2500)
 
+    def update_time(self, today:Time):
+        self._last_specified_time = today
+        
+    @pyqtSlot(AIShip, str)
     def add_ship(self, ship:AIShip, location_str):
         self._ships.append(ship)
         self._locations.append(location_str)
@@ -268,7 +290,8 @@ class ManyShipDialog(QDialog):
         self.ui.route.setText(self._locations[index])
         pixname = ship.captain.image_name
         pix = self.people_pixes.access(pixname, 100)
-        self.person_widget.update_gui(ship.captain, pix)
+        
+        #self.person_widget.update_gui(ship.captain, pix, self._last_specified_time)
 
         self.ui.speed_lbl.setText(  "Drive Rating "+ str(ship.drive_rating ))
         self.ui.desc.setText(ship.description)
@@ -458,6 +481,12 @@ class TradeWidget(QtWidgets.QWidget):
         if port is None:
             return 
 
+        for key in port._demand:
+            if port._demand[key]<1:
+                continue
+            else:
+                self.demand_entry.appendRow(SellerItem(key, "", int(port._demand[key])))
+
         for key in port.supply:
             net_supply = int(port.supply[key])
             
@@ -469,6 +498,7 @@ class TradeWidget(QtWidgets.QWidget):
 
 
         for key in port.trade_routes:
+            break
             for route in port.trade_routes[key]:     
                 linked_shid = port.linked_shid()
                 tons = route.tons_per_month[linked_shid.downsize()]
