@@ -1,21 +1,21 @@
 
-from enum import Enum
+from enum import Enum, auto
 
 """
 Type of position ID for a person's location
 """
+
 class PLocationType(Enum):
-    Planet = 1
-    Starport = 2
-    Transit = 3
+    SubHID = 0
+    ShipID  = 1
 
 class Attribute(Enum):
     Strength = 0
     Dexterity = 1
-    Constitution = 2
+    Endurance = 2
     Intelligence = 3
-    Wisdom = 4
-    Charisma = 5
+    Education = 4
+    Social = 5
 
 class Skill(Enum):
     Administer = 0
@@ -38,6 +38,65 @@ class Skill(Enum):
     Trade = 17
     Work = 18
 
+
+class Gender(Enum):
+    Male=0
+    Female=1
+    Non_Binary=2
+
+class HairColor(Enum):
+    Black = 0
+    Brown = 1
+    Blonde = 2
+    Red = 3
+    Grey = 4
+    White = 5
+    Other = 6
+class EyeColor(Enum):
+    Brown = 0
+    Blue = 1
+    Green = 2
+    Grey = 3
+    Hazel = 4
+    Amber = 5
+    Other = 6
+
+class HairLength(Enum):
+    Bald = 0
+    Short = 1
+    Medium = 2
+    Long = 3
+    VeryLong = 4
+
+    
+class HairStyle(Enum):
+    Straight = 0
+    Wavy = 1
+    Curly = 2
+    Kinky = 3
+    Braided = 4
+    Tied = 5
+    PartiallyShaved = 6
+    Spiky = 7
+
+class Profession(Enum):
+    """
+        Used to influence the skillset a person has 
+    """
+    Not_Specified = auto()
+    Administrator = auto()
+    Athlete = auto()
+    Doctor = auto()
+    Scout  = auto()
+    Soldier = auto()
+    Pilot = auto()
+    Mechanic = auto()
+    Scientist = auto()
+    Technician = auto()
+    Merchant = auto()
+    Diplomat = auto() 
+    Entertainer = auto()
+
 class SystemNote(Enum):
     Nothing = 0
     MainWorld = 1
@@ -52,9 +111,9 @@ class ShipClass(Enum):
 
 class ShipCategory(Enum):
     Unspecified = 0
-    Ferry = 1
-    Freight = 2
-    Warship = 3
+    Ferry = 1 # move  people 
+    Freight = 2 # move stuff
+    Warship = 3 
     Research = 4
     Yacht = 5
     Colony = 6
