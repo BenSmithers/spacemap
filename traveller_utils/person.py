@@ -5,8 +5,9 @@ import random
 import numpy as np
 
 from traveller_utils.trade_goods import TradeGoods
-from traveller_utils.core.coordinates import HexID
-from traveller_utils.enums import Skill, Attribute, WorldCategory
+from traveller_utils.core.coordinates import HexID, SubHID
+from traveller_utils.enums import Skill, Attribute, WorldCategory, Profession, HairColor, HairLength, HairStyle, EyeColor, Gender
+from traveller_utils.clock import Time
 
 names_fn = os.path.join(os.path.dirname(__file__), "..","resources", "names.json")
 _obj = open(names_fn,'rt')
@@ -17,17 +18,130 @@ names_fn = os.path.join(os.path.dirname(__file__),"..", "resources", "npc_data.j
 _obj = open(names_fn,'rt')
 data = json.load(_obj)
 _obj.close()
+related_skills = {
+        Profession.Administrator.name:[
+            Skill.Administer.name,
+            Skill.Connect.name,
+            Skill.Lead.name,
+            Skill.Notice.name,
+            Skill.Talk.name,  ],
+        Profession.Athlete.name:[
+            Skill.Exert.name,
+            Skill.Punch.name,
+            Skill.Shoot.name,
+            Skill.Sneak.name,
+            Skill.Notice.name ],
+        Profession.Doctor.name:[
+            Skill.Heal.name,
+            Skill.Know.name,
+            Skill.Notice.name,
+            Skill.Stab.name,
+            Skill.Work.name],
+        Profession.Scout.name:[
+            Skill.Sneak.name,
+            Skill.Exert.name,
+            Skill.Notice.name,
+            Skill.Shoot.name,
+            Skill.Survive.name ],
+        Profession.Soldier.name:[
+            Skill.Shoot.name,
+            Skill.Exert.name,
+            Skill.Punch.name,
+            Skill.Stab.name,
+            Skill.Stab.name ],
+        Profession.Pilot.name:[
+            Skill.Pilot.name,
+            Skill.Connect.name,
+            Skill.Lead.name,
+            Skill.Notice.name,
+            Skill.Trade.name ],
+        Profession.Mechanic.name:[
+            Skill.Fix.name,
+            Skill.Notice.name,
+            Skill.Punch.name,
+            Skill.Work.name,
+            Skill.Connect.name ],
+        Profession.Scientist.name:[
+            Skill.Know.name,
+            Skill.Notice.name,
+            Skill.Program.name,
+            Skill.Work.name,
+            Skill.Fix.name],
+        Profession.Technician.name:[
+            Skill.Program.name,
+            Skill.Fix.name,
+            Skill.Know.name,
+            Skill.Notice.name,
+            Skill.Work.name ], 
+        Profession.Merchant.name:[
+            Skill.Trade.name,
+            Skill.Connect.name,
+            Skill.Lead.name,
+            Skill.Talk.name,
+            Skill.Work.name ],
+        Profession.Diplomat.name:[
+            Skill.Talk.name,
+            Skill.Administer.name,
+            Skill.Connect.name,
+            Skill.Lead.name,
+            Skill.Notice.name],
+        Profession.Entertainer.name:[
+            Skill.Perform.name,
+            Skill.Lead.name,
+            Skill.Talk.name,
+            Skill.Notice.name,
+            Skill.Connect.name ]
+
+}
+def get_skills(prof:Profession, grade=0):
+    """
+        Get +2+grade in Primary 
+        
+        Get +1 in 5 related skills
+
+        For each grade above 0, 
+            get another +1 in another two related skills  
+
+        Get another +1 in three+grade random skills
+
+    """
+    skill_dict = {attr.name:-1 for attr in Skill}
+    these_skills = related_skills[prof.name]
+
+    skill_dict[these_skills[0]] = 2 + grade
+
+    for sk in these_skills[1:]:
+        skill_dict[sk] =1
+
+    
+    for extra in range(grade):
+        choices = [sk for sk in these_skills if skill_dict[sk]<2+grade]
+        if len(choices)>0:
+            pick = random.choice(choices)
+            skill_dict[pick] +=1
+
+    for _ in range(3+grade):
+        choices = [sk.name for sk in Skill if skill_dict[sk.name]<2+grade]
+        if len(choices)>0:
+            pick = random.choice(choices)
+            skill_dict[pick] +=1
+
+    return skill_dict
+
 
 def get_keys():
     return name_data.keys()
 
 
-def get_name(key, gender=False):
+def get_name(key, gender:str):
     if key=="Combined":
         fn_key = random.choice(list(name_data.keys()))
         ln_key = random.choice(list(name_data.keys()))
+        if gender=="Non_Binary":
+            fn = random.choice( name_data[fn_key]["male"] + name_data[fn_key]["female"] )  
+        else:
+            fn = random.choice( name_data[fn_key][gender.lower()] )  
 
-        fn = random.choice( name_data[fn_key][gender] )
         ln = random.choice( name_data[ln_key]["surnames"] )
         return fn + " " + ln
     elif key == "Random":
@@ -35,7 +149,11 @@ def get_name(key, gender=False):
     else:
         usekey = key
 
-    fn = random.choice( name_data[usekey][gender] )
+    
+    if gender=="Non_Binary":
+        fn = random.choice( name_data[usekey]["male"] + name_data[usekey]["female"] )  
+    else:
+        fn = random.choice( name_data[usekey][gender.lower()] )
     ln = random.choice( name_data[usekey]["surnames"] )
 
     return fn + " " +ln
@@ -43,15 +161,16 @@ def get_name(key, gender=False):
 class Person:
     def __init__(self):
         self._name = ""
-        self._sex = ""
-        self._appearance = ""
-        self._description = ""
-        self._quirks = ""
-        self._problems = ""
-        self._motivations = ""
-        self._pronouns = ""
 
-        self._wants = ""
+        self._birthday = Time()
+        self._gender = 0 # 0-male, 1-female, 2-nb
+        self._hair_color = HairColor.Brown
+        self._eye_color = EyeColor.Brown
+        self._hair_length = HairLength.Bald
+        self._hair_style = HairStyle.Straight
+
+
+        self._wants = []
 
         self._destination = None
         self._persistent = False
@@ -65,45 +184,99 @@ class Person:
             attr.name:0 for attr in Attribute
         }
 
+        self._profression = Profession.Administrator
+
+    def pack(self):
+        """ Convert to dictionary for saving """
+        data = {
+            "name":self._name,
+            "birthday":self._birthday.pack(),
+            "gender":self._gender.name,
+            "hair_color":self._hair_color.name,
+            "eye_color":self._eye_color.name,
+            "hair_length":self._hair_length.name,
+            "hair_style":self._hair_style.name,
+            "wants":[wg.name for wg in self._wants], 
+            "destination":self._destination.pack() if self._destination is not None else None,
+            "persistent":self._persistent,
+            "image_name":self._image_name,
+            "skills":self._skills,
+            "attrs":self._attrs,
+            "profession":self._profression.name
+        }
+        return data
+    @classmethod
+    def unpack(cls, data):
+        """ Create from saved dictionary """
+        newp = cls()
+        newp._name = data["name"]
+        newp._birthday = Time.unpack(data["birthday"])
+        newp._gender = Gender[data["gender"]]
+        newp._hair_color = HairColor[data["hair_color"]]
+        newp._eye_color = EyeColor[data["eye_color"]]       
+        newp._hair_length = HairLength[data["hair_length"]]
+        newp._hair_style = HairStyle[data["hair_style"]]
+        newp._wants = [TradeGoods[wg] for wg in data["wants"]]
+        newp._destination = SubHID.unpack(data["destination"]) if data["destination"] is not None else None
+        newp._persistent = data["persistent"]
+        newp._image_name = data["image_name"]
+        newp._skills = data["skills"]
+        newp._attrs = data["attrs"]
+        newp._profression = Profession[data["profession"]]
+        return newp
+
     @property
-    def destination(self):
+    def name(self):
+        return self._name
+    
+    @property
+    def pronouns(self):
+        if self._gender==0:
+            return "he/him",
+        elif self._gender==1:
+            return "she/her"
+        else:
+            return "they/them"
+
+    @property
+    def profession(self):
+        return self._profression
+    
+
+    @property
+    def birthday(self):
+        return self._birthday
+    
+
+    def age(self, today:Time):
+        print("today is {}; birthday is {}".format(type(today), type(self._birthday)))
+        tdiff = today - self._birthday
+        return tdiff.year
+    @property
+    def attributes(self):
+        return self._attrs
+    @property
+    def skills(self):
+        return self._skills
+    @property
+    def hair_color(self):
+        return self._hair_color
+    @property
+    def hair_style(self):
+        return self._hair_style
+    @property
+    def eye_color(self):
+        return self._eye_color
+    @property
+    def hair_length(self):
+        return self._hair_length
+
+    @property
+    def destination(self)->SubHID:
         return self._destination
-    def set_destination(self, dest):
+    def set_destination(self, dest:SubHID):
         self._destination = dest
 
-    @classmethod
-    def unpack(cls, packed:dict):
-        new = cls()
-        new._name = packed["name"]
-        new._sex = packed["sex"]
-        new._appearance = packed["appear"]
-        new._description = packed["description"]
-        new._quirks = packed["quirks"]
-        new._problems = packed["problems"]
-        new._motivations = packed["motivations"]
-        new._pronouns = packed["pronoun"]
-        new._wants = packed["wants"]
-        new._persistent = packed["persistent"]
-        new._image_name = packed["image"]
-        new._destination = HexID.unpack(packed["dest"]) if packed["dest"]!="" else None
-        return new
-    
-    def pack(self)->dict:
-        packed ={
-            "name":self._name,
-            "sex":self._sex,
-            "appear":self._appearance,
-            "description":self._description,
-            "quirks":self._quirks,
-            "problems":self._problems,
-            "motivations":self._motivations,
-            "pronoun":self._pronouns,
-            "wants":self._wants,
-            "persistent":self._persistent,
-            "image":self._image_name,
-            "dest":self._destination.pack() if self._destination is not None else ""
-        }
-        return packed
 
     @property
     def persistent(self):
@@ -115,79 +288,48 @@ class Person:
     @property
     def wants(self)->'list[TradeGoods]':
         return self._wants
+    def add_want(self, want:TradeGoods):
+        self._wants.append(want)
+    def clear_wants(self):
+        self._wants = []
 
-    @property
-    def pronouns(self):
-        return self._pronouns
-    @property
-    def name(self):
-        return self._name
-    @property
-    def appearance(self):
-        return self._appearance.replace("\n","")
-    @property
-    def description(self):
-        return self._description.replace("\n","")
-    @property
-    def quirks(self):
-        return self._quirks.replace("\n","")
-    @property
-    def problems(self):
-        return self._problems.replace("\n","")
-    @property
-    def motivations(self):
-        return self._motivations.replace("\n","")
     @property
     def image_name(self):
         return self._image_name
 
     @classmethod
-    def generate(cls, key="Random", *worldcat):
+    def generate(cls, key="Random", today=Time(year=2500), grade=0, profession:Profession=Profession.Not_Specified,*worldcategories:WorldCategory):
         newp = cls()
-        newp._sex =  "male" if random.randint(0,1) else "female"
 
-        pronoun = "he" if newp._sex=="male" else "she"
-        slash = "his" if newp._sex=="male" else "her"
-        newp._pronouns = "{}/{}".format(pronoun,slash)
-        formatted_pn = pronoun[0].upper() + pronoun[1:]
+        """
+        Wants should depend on things not available on home world world categories
+        """
 
-        newp._name = get_name(key, newp._sex)
-        short_name = newp._name.split(" ")[0]
-        newp._appearance=newp._name + " is {} and {}. ".format(random.choice(data["heights"]).lower(), random.choice(data["ages"]).lower())
+        if profession.name == Profession.Not_Specified.name:
+            profession = random.choice( list(Profession)[1:] )
 
-        bald = False
-        if "old" in newp._appearance.lower() or "middle" in newp._appearance.lower():
-            if newp._sex=="male":
-                if random.randint(1,3)==1:
-                    bald = True
-            else:
-                if random.randint(1,20)==1:
-                    bald = True
-        if bald:
-            hair = "{} is bald. ".format(short_name)
+        newp._profression = profession
+        newp._skills = get_skills(profession, grade)
+
+        gender_roll = random.randint(1, 100)
+        if gender_roll<=48:
+            newp._gender = Gender.Male
+        elif gender_roll<=96:
+            newp._gender = Gender.Female
         else:
-            hair = "{} has {} {} hair. ".format(
-                short_name,
-                random.choice(data["hair"]),
-                random.choice(data["hair_color"])
-            )
+            newp._gender = Gender.Non_Binary
+        newp._name = get_name(key, newp._gender.name)
 
-        newp._appearance = newp._appearance + hair
-            
-        desc = formatted_pn + " was formally a {}.\n\n".format(random.choice(data["role"]).lower())
-        desc += formatted_pn + " is {} and known for {} {}.\n\n".format(
-            random.choice(data["background"]).lower(),
-            slash, 
-            random.choice(data["traits"]).lower()
-        )
+        for attr in newp._attrs.keys():
+            newp._attrs[attr] = np.floor((np.random.randint(1,7, 3).sum()-10)/2)
 
-        newp._description = desc
-        newp._quirks= pronoun[0].upper() + pronoun[1:] + " {}. \n\n".format(random.choice(data["quirks"]).lower())
-        newp._problems = pronoun[0].upper() + pronoun[1:].lower() + " has " + random.choice(data["problems"]).lower()
-        newp._motivations =  pronoun[0].upper() + pronoun[1:] + " {}. \n\n".format(random.choice(data["motivations"]).lower())
-        newp._wants =  formatted_pn + " wants {}.\n\n".format(random.choice(data["desires"]).lower())
 
-        if newp._sex == "male":
+        # they should be between 20 and 120 years old
+        newp._birthday = today - Time(minute=np.random.randint(20*365*24*60,120*365*24*60))
+        
+        
+       
+        if newp._gender.name == "Male":
             newp._image_name = "Male_{:02d}".format(np.random.randint(1,19))
         else:
             newp._image_name = "Female_{:02d}".format(np.random.randint(1,13))
