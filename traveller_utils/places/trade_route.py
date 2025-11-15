@@ -19,6 +19,9 @@ class TradeRoute:
         self._level = 1
         self._trade_good_name = good_name
 
+    def __str__(self):
+        return "{} {} {}".format(self._trade_good_name, self._tonnages.keys(), self._tonnages.values())
+
     @property 
     def level(self):
         return self._level

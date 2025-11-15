@@ -24,7 +24,6 @@ class StarPort(ShipSWN, Market):
 
         self._category = starport_class.upper()
 
-        linked_world.name
         self._name = linked_world.name + "'s" + " {} Starbase".format(sample_adjective())
     @property
     def category(self):

@@ -66,6 +66,20 @@ class PointOfInterest:
         self._scoopable = False
         self._name = "A Point of Interest"
 
+    def pack(self)->dict:
+        return {
+            "scoopable":self._scoopable,
+            "name":self._name 
+        }
+    @classmethod
+    def unpack(cls, packed):
+        new = cls()
+        cls._name = packed["name"]
+        cls._scoopable = packed["scoopable"]
+        return new
+    def scoopable(self):
+        return self._scoopable
+
 
 class Situation(PointOfInterest):
     def __init__(self, **kwargs):
@@ -77,6 +91,19 @@ class Situation(PointOfInterest):
         new = cls()
         new._classification, new._occupiers, new._situation = make_point_of_interest()
         return new
+    def pack(self)->dict:
+        prepack = super().pack()
+        prepack["class"] = self._classification
+        prepack["occ"] = self._occupiers
+        prepack["sit"] = self._situation
+        return prepack
+    @classmethod
+    def unpack(cls, packed):
+        new = super().unpack(packed)
+        new._classification = packed["class"]
+        new._occupiers = packed["occ"]
+        new._situation = packed["sit"]
+        return new
 
 class InterRegion(PointOfInterest):
     def __init__(self, parent, **kwargs):
@@ -87,6 +114,14 @@ class InterRegion(PointOfInterest):
     def parent(self)->SubHID:
         return self._parent
 
+    def pack(self):
+        prepack = super().pack()
+        prepack["parent"] = self.parent.pack()
+    @classmethod
+    def unpack(cls, packed):
+        new=super().unpack(packed)
+        new._parent = SubHID.unpack(packed["parent"])
+        return new
 
 
 class InFlight(PointOfInterest):
@@ -113,3 +148,14 @@ class GasGiant(Situation):
         gassy._classification = "Gas giant"
         gassy._scoopable = True 
         return gassy
+    
+    def pack(self):
+        prepack = super().pack()
+        prepack["image"] = self._image_name
+        return prepack
+    @classmethod
+    def unpack(cls, packed):
+        new= super().unpack(packed)
+        new._image_name = packed["image"]
+        return new
+    
