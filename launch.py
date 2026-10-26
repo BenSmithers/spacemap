@@ -18,6 +18,14 @@ from widgets import PassWidget, TradeWidget, PlanetWidget, NotesTab, ManyShipDia
 import os 
 import sys
 
+"""
+Idea for changes... 
+    - main window should send signals to the catalogs requesting data updates
+    - catalogs then grab the data and emit signals with the new objects 
+    - various GUIs then receive those signals and update the GUIs 
+
+"""
+
 # self.parent.scene.get_system(hid)
 class main_window(QMainWindow):
     def __init__(self,parent=None):
@@ -25,11 +33,12 @@ class main_window(QMainWindow):
 
         self.ui = main_gui()
         self.ui.setupUi(self)
+        now = Time(30, 12, randint(0,20), randint(0,11), randint(0,300)+3000)
+
         self._pass_widget =PassWidget(self)
         self._trade_widget = TradeWidget(self)
         self._planet_widget = PlanetWidget(self)
         self._notes_widget = NotesTab(self)
-        now = Time(30, 12, randint(0,20), randint(0,11), randint(0,300)+3000)
         self._ship_widget = ManyShipDialog(self)
         self._calendar_widget = MultiHexCalendar(self, now)
 
@@ -48,8 +57,19 @@ class main_window(QMainWindow):
         self.ui.map_view.setMouseTracking(True)
 
         self.scene.time_update.connect(self._calendar_widget.update_time)
+        self.scene.time_update.connect(self._ship_widget.update_time)
         self._calendar_widget.signals.connect(self.scene.skip_to_time)
+        
 
+        self.scene.systemSelect.connect(self.system_selected)
+        self.scene.hexSelect.connect(self.planet_selected)
+        
+        self.scene.deselect.connect(self.select_none)   
+        self.scene.deselect.connect(self._planet_widget.clear_ui)
+        self.scene.deselect.connect(self._pass_widget.clear_pass)
+        self.scene.deselect.connect(self._trade_widget.clear)
+        self.scene.deselect.connect(self._notes_widget.clear)
+        self.scene.deselect.connect(self._ship_widget.clear)
         self.export_image()
 
         self.govs = []
@@ -69,8 +89,7 @@ class main_window(QMainWindow):
         
     def planet_selected(self, system:System, loc:HexID):
         self._ship_widget.clear()
-        self._ship_widget.update_time(self.scene.clock.time)
-
+        
         while len(self.govs)>0:
             first = self.govs.pop()
             first.deleteLater()
@@ -102,17 +121,7 @@ class main_window(QMainWindow):
 
         if len(these_ships)!=0:
             self.scene.draw_ship_path(this_shipid)
-
-        if False:
             
-            these_ships = [self.scene.get_ship(sid) for sid in self.scene.get_ships_at(loc)]
-            for ship in these_ships:
-                world_routes_filter = list(filter(lambda entry:entry is not None, [self.scene.get_system(hid) for hid in ship.route]))
-                route_names = [entry.name for entry in world_routes_filter]
-                
-                self._ship_widget.add_ship(ship, route_names)
-            self._ship_widget.update_gui()
-
         self.govs.append(GovWidget(self._planet_widget.ui.overview_page))
         self.govs[0].configure(system.mainworld.government)
 

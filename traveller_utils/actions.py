@@ -334,6 +334,7 @@ class ActionManager(object):
 
 
 
+    @pyqtSlot(MapEvent, Time)
     def add_event(self, event, _time):
         if not isinstance(event, MapEvent):
             raise TypeError("Can only register {} type events, not {}".format(MapEvent, type(event)))

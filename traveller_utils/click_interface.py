@@ -33,7 +33,10 @@ WORLD_PATH = os.path.join(os.path.dirname(__file__), "..","galaxy.json")
 
 
 class Clicker(QGraphicsScene,ActionManager):
-
+    deselect = pyqtSignal()
+    hexSelect = pyqtSignal(HexID)
+    systemSelect = pyqtSignal(HexID)
+    shipEmit = pyqtSignal(list)    
 
     def __init__(self, parent, parent_window:QMainWindow, clock:Clock):
         QGraphicsScene.__init__(self, parent=parent, clock=clock)
@@ -135,19 +138,6 @@ class Clicker(QGraphicsScene,ActionManager):
             sbase = self._system_catalog.get(hid).starport
             if sbase is not None:
                 sbase.update_stock()
-        return
-        for hid in self._system_catalog:
-            world = self.get_world(hid)
-            # clear out the passenger lists
-            for p_class in world._passengers:
-                world._passengers[p_class] = []
-            world._generated = False
-            
-            for retail in world._retailers:
-                retail.clear()
-        if self._selected_hid is not None:
-            self._parent_window._pass_widget.clear_pass()
-            self._parent_window.planet_selected(self._systems[self._selected_hid], self._selected_hid )
 
     @pyqtSlot(SubHID)
     def get_location(self, sid:SubHID):
@@ -197,53 +187,8 @@ class Clicker(QGraphicsScene,ActionManager):
         }
     
     def unpack(self, packed:dict):
-        if "time" in packed:
-            self.clock._time = Time.unpack(packed["time"])
-        
-        
-        self._parent_window._calendar_widget.set_time(self.clock._time)
-
-        if "queue" in packed:
-            self._queue = [[Time.unpack(entry[0]), unpack_event(entry[1])] for entry in packed["queue"]]
-            
-        for i in range(30):
-            for j in range(15):
-                shift = int(i/2)
-                loc = HexID(i ,j-shift)
-                if loc.pack() in packed["systems"]:
-                    self._systems[loc] = World.unpack(packed["systems"][loc.pack()])
-          
-        for key in packed["regions"]:
-            id_unpacked = HexID.unpack(key)
-            self._regions[id_unpacked] = Region.unpack(packed["regions"][key])
-            self.draw_region(id_unpacked)
-            
-        for key in self._system_catalog:
-            world = self.get_world(key)
-            if world._liege is not None:
-                world.set_liege(key, self.get_system(world.liege))
-
-            # we gotta be bad
-            vassal_ids = world.vassals
-            world._vassals = []
-
-            for entry in vassal_ids:
-                world.add_vassal(entry, self.get_system(entry))
-        
-        for key in packed["routes"]:
-            keyunpack = HexID.unpack(key)
-            self._routes[keyunpack] = {}
-            for subkey in packed["routes"][key]:
-                subkey_unpack = HexID.unpack(subkey)
-                self._routes[keyunpack][subkey_unpack] = Route.unpack(packed["routes"][key][subkey])
-        self.draw_routes()
-
-        for _ship_id in packed["ships"].keys():
-            ship_id=int(_ship_id)
-            self._ship_catalog.update(AIShip.unpack(packed["ships"][_ship_id]), ship_id)
-            self._ship_catalog.move(ship_id, 0)
-            print("NEED TO GET LOCATION")
-
+        return 
+    
     def draw_alt(self, hexID:HexID):
         if self._alt_select is not None:
             self.removeItem(self._alt_select)
@@ -1038,7 +983,7 @@ class Clicker(QGraphicsScene,ActionManager):
     def mouseDoubleClickEvent(self, event:QGraphicsSceneMouseEvent)->None:
         loc =  screen_to_hex( event.scenePos() )
         if loc in self._system_catalog:
-            self._parent_window.system_selected(self.get_system(loc), loc) 
+            self.systemSelect.emit(loc)
 
     def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         loc =  screen_to_hex( event.scenePos() )
@@ -1046,10 +991,10 @@ class Clicker(QGraphicsScene,ActionManager):
         if loc in self._system_catalog: 
             self._selected_hid = loc 
             self.draw_selection(loc)
-            self._parent_window.planet_selected(self.get_system(loc), loc )
+            self.hexSelect.emit(loc)
         else:
             self._selected_hid = None 
-            self._parent_window.select_none()
+            self.deselect.emit()
             if self._selected_sid is not None:
                 self.removeItem(self._selected_sid)
             self._selected_sid = None

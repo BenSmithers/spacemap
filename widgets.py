@@ -168,6 +168,7 @@ class PassengerDialog(QDialog):
         self.ui = passenger_desc_dialog_gui()
         self.ui.setupUi(self)
 
+    @pyqtSlot()
     def clear(self):
         """clear the dialog box of person-specific info"""
         
@@ -198,26 +199,6 @@ class PassengerDialog(QDialog):
         wants = ", ".join( [want.name.replace("_"," ") for want in passy.wants] )
         self.ui.wants_val.setText(wants)
 
-    """
-
-class ManyShipDialog(QDialog):
-    def __init__(self, parent):
-        super(ManyShipDialog, self).__init__(parent)
-        self.ui = stupid_ship_template()
-        self.ui.setupUi(self)
-        self._pages = []
-
-    def add_ship(self, ship:AIShip, route_names):
-        new_page = ShipDialog(self)
-        new_page.update_gui(ship, route_names)
-        self._pages.append(new_page)
-        self.ui.toolBox.addItem(new_page, ship.name)
-    
-    def clear(self):
-        while self.ui.toolBox.count()>0:
-            self.ui.toolBox.removeItem(0)
-"""
-
 class ManyShipDialog(QDialog):
     def __init__(self, parent):
         super(ManyShipDialog, self).__init__(parent)
@@ -239,6 +220,7 @@ class ManyShipDialog(QDialog):
         self._last_text = ""
         self._last_specified_time = Time(year=2500)
 
+    @pyqtSlot(Time)
     def update_time(self, today:Time):
         self._last_specified_time = today
         
@@ -261,7 +243,7 @@ class ManyShipDialog(QDialog):
 
             self.ui.textBox.setText(self._cummulative_text + " and " + self._last_text)
         
-
+    @pyqtSlot()
     def clear(self):
         self.ui.comboBox.clear()
         self.person_widget.clear()
@@ -369,6 +351,8 @@ class NotesTab(QtWidgets.QWidget):
 
     def set_text(self, text):
         self.ui.textBrowser.setPlainText(text)
+    
+    @pyqtSlot()
     def clear(self):
         self.ui.textBrowser.setPlainText("")
 
@@ -410,6 +394,7 @@ class PassWidget(QtWidgets.QWidget):
             dialog.update_gui(passenger, pix)
             dialog.exec_()
 
+    @pyqtSlot()
     def clear_pass(self):
         self.pass_list_entry.clear()
         self._pass_selected = ""
@@ -464,7 +449,7 @@ class TradeWidget(QtWidgets.QWidget):
 
         self._world= None
 
-
+    @pyqtSlot()
     def clear(self):
         self._world = None
         self.market_price_entry.clear()
@@ -574,6 +559,7 @@ class PlanetWidget(QtWidgets.QWidget):
         else:
             self.ui.vassal_desc.setText("")
 
+    @pyqtSlot()
     def clear_ui(self):
         self._selected = None
         self.ui.size_desc.setText("")
