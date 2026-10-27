@@ -8,6 +8,7 @@ from traveller_utils.trade_goods import TradeGoods
 from traveller_utils.core.coordinates import HexID, SubHID
 from traveller_utils.enums import Skill, Attribute, WorldCategory, Profession, HairColor, HairLength, HairStyle, EyeColor, Gender
 from traveller_utils.clock import Time
+from traveller_utils.traits import get_attributes, get_skills, attribute_map
 
 names_fn = os.path.join(os.path.dirname(__file__), "..","resources", "names.json")
 _obj = open(names_fn,'rt')
@@ -18,116 +19,6 @@ names_fn = os.path.join(os.path.dirname(__file__),"..", "resources", "npc_data.j
 _obj = open(names_fn,'rt')
 data = json.load(_obj)
 _obj.close()
-related_skills = {
-        Profession.Administrator.name:[
-            Skill.Administer.name,
-            Skill.Connect.name,
-            Skill.Lead.name,
-            Skill.Notice.name,
-            Skill.Talk.name,  ],
-        Profession.Athlete.name:[
-            Skill.Exert.name,
-            Skill.Punch.name,
-            Skill.Shoot.name,
-            Skill.Sneak.name,
-            Skill.Notice.name ],
-        Profession.Doctor.name:[
-            Skill.Heal.name,
-            Skill.Know.name,
-            Skill.Notice.name,
-            Skill.Stab.name,
-            Skill.Work.name],
-        Profession.Scout.name:[
-            Skill.Sneak.name,
-            Skill.Exert.name,
-            Skill.Notice.name,
-            Skill.Shoot.name,
-            Skill.Survive.name ],
-        Profession.Soldier.name:[
-            Skill.Shoot.name,
-            Skill.Exert.name,
-            Skill.Punch.name,
-            Skill.Stab.name,
-            Skill.Stab.name ],
-        Profession.Pilot.name:[
-            Skill.Pilot.name,
-            Skill.Connect.name,
-            Skill.Lead.name,
-            Skill.Notice.name,
-            Skill.Trade.name ],
-        Profession.Mechanic.name:[
-            Skill.Fix.name,
-            Skill.Notice.name,
-            Skill.Punch.name,
-            Skill.Work.name,
-            Skill.Connect.name ],
-        Profession.Scientist.name:[
-            Skill.Know.name,
-            Skill.Notice.name,
-            Skill.Program.name,
-            Skill.Work.name,
-            Skill.Fix.name],
-        Profession.Technician.name:[
-            Skill.Program.name,
-            Skill.Fix.name,
-            Skill.Know.name,
-            Skill.Notice.name,
-            Skill.Work.name ], 
-        Profession.Merchant.name:[
-            Skill.Trade.name,
-            Skill.Connect.name,
-            Skill.Lead.name,
-            Skill.Talk.name,
-            Skill.Work.name ],
-        Profession.Diplomat.name:[
-            Skill.Talk.name,
-            Skill.Administer.name,
-            Skill.Connect.name,
-            Skill.Lead.name,
-            Skill.Notice.name],
-        Profession.Entertainer.name:[
-            Skill.Perform.name,
-            Skill.Lead.name,
-            Skill.Talk.name,
-            Skill.Notice.name,
-            Skill.Connect.name ]
-
-}
-def get_skills(prof:Profession, grade=0):
-    """
-        Get +2+grade in Primary 
-        
-        Get +1 in 5 related skills
-
-        For each grade above 0, 
-            get another +1 in another two related skills  
-
-        Get another +1 in three+grade random skills
-
-    """
-    skill_dict = {attr.name:-1 for attr in Skill}
-    these_skills = related_skills[prof.name]
-
-    skill_dict[these_skills[0]] = 2 + grade
-
-    for sk in these_skills[1:]:
-        skill_dict[sk] =1
-
-    
-    for extra in range(grade):
-        choices = [sk for sk in these_skills if skill_dict[sk]<2+grade]
-        if len(choices)>0:
-            pick = random.choice(choices)
-            skill_dict[pick] +=1
-
-    for _ in range(3+grade):
-        choices = [sk.name for sk in Skill if skill_dict[sk.name]<2+grade]
-        if len(choices)>0:
-            pick = random.choice(choices)
-            skill_dict[pick] +=1
-
-    return skill_dict
-
 
 def get_keys():
     return name_data.keys()
@@ -246,7 +137,10 @@ class Person:
     @property
     def birthday(self):
         return self._birthday
-    
+
+    def skill_check(self, skill:Skill):
+        modifier = self._skills[skill.name] + self._attrs[attribute_map[skill.name]]
+        return modifier + np.random.randint(1,7, 2).sum()
 
     def age(self, today:Time):
         print("today is {}; birthday is {}".format(type(today), type(self._birthday)))
@@ -320,12 +214,11 @@ class Person:
             newp._gender = Gender.Non_Binary
         newp._name = get_name(key, newp._gender.name)
 
-        for attr in newp._attrs.keys():
-            newp._attrs[attr] = np.floor((np.random.randint(1,7, 3).sum()-10)/2)
-
+        newp._attrs = get_attributes(profession)
 
         # they should be between 20 and 120 years old
-        newp._birthday = today - Time(minute=np.random.randint(20*365*24*60,120*365*24*60))
+        # for every rank, add 10 years to minumum
+        newp._birthday = today - Time(minute=np.random.randint((20+grade*10)*365*24*60,120*365*24*60))
         
         
        
