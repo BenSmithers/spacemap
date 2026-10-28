@@ -14,7 +14,7 @@ import numpy as np
 from glob import glob
 import os
 
-from scipy.interpolate import interp2d
+from scipy.interpolate import RectBivariateSpline
 from traveller_utils.core.coordinates import DRAWSIZE
 from traveller_utils.randomFactory import random
  
@@ -234,7 +234,7 @@ def perlin(granularity,octave=5)->np.ndarray:
 
     values = np.zeros(shape=(granularity, granularity))
     xs = np.array(range(200))*granularity/200
-    evals = interp2d(xs,xs,_lerp(x1,x2,v))
+    evals = RectBivariateSpline(xs,xs,_lerp(x1,x2,v))
     values = evals(range(granularity),range(granularity))
 
     return values # FIX2: I also had to reverse x1 and x2 here
