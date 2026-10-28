@@ -2,12 +2,11 @@
 Define the World class 
 """
 
-from randomFactory import random
+from traveller_utils.randomFactory import random
 import os
 
 from traveller_utils.tables import *
 from traveller_utils.enums import WorldTag, WorldCategory, Contraband, Bases, Title, LandTitle
-from traveller_utils.core.utils import roll, d100, roll1d
 from traveller_utils.name_gen import create_name
 from traveller_utils.person import Person
 from traveller_utils.core.coordinates import HexID
@@ -42,7 +41,7 @@ class Government:
             for good in Contraband:
                 if entry.lower() in good.name.lower():
                     self._contraband.append(good)
-        self._raw_str = roll()
+        self._raw_str = random.roll()
         self._strength = factions.access(self._raw_str if is_faction else 12)
         self._is_faction = is_faction
         self._score = score
@@ -270,39 +269,38 @@ class World(PointOfInterest):
             0,0, -2,-2,-1,-1, 0,0,1,1,2,6,6,2,-1,2,2
         ]
         if other_world is not None:
-            self._size = roll1d()-2
-            if roll1d()>3:
-                self._size = roll1d() + 4
-            self._atmosphere = roll1d()-7 +self._size
+            self._size = random.roll1d()-2
+            if random.roll1d()>3:
+                self._size = random.roll1d() + 4
+            self._atmosphere = random.roll1d()-7 +self._size
             if self._atmosphere<0:
                 self._atmosphere = 0
-            if roll1d()>3:
-                self._atmosphere=len(atmo_t_mods)-roll1d()
+            if random.roll1d()>3:
+                self._atmosphere=len(atmo_t_mods)-random.roll1d()
 
-            self._temperature = roll1d(atmo_t_mods[self._atmosphere])-2
-            if roll1d()>3:
-                self._temperature = roll1d()+ 8
+            self._temperature = random.roll1d(atmo_t_mods[self._atmosphere])-2
+            if random.roll1d()>3:
+                self._temperature = random.roll1d()+ 8
             
 
         else:
-            self._size = roll(mod=-2)
+            self._size = random.roll(mod=-2)
 
-            self._atmosphere = roll(-7+self._size)
+            self._atmosphere = random.roll(-7+self._size)
             if self._atmosphere<0:
                 self._atmosphere =0
             self._pressure = -1 
 
             
-            self._temperature = roll(atmo_t_mods[self._atmosphere]) 
+            self._temperature = random.roll(atmo_t_mods[self._atmosphere]) 
             
-        self._biosphere = roll()
-        self._population_raw = roll(-2) + modifier
-        
+        self._biosphere = random.roll()
+        self._population_raw = random.roll(-2) + modifier
     
         if self._size<2 or self._atmosphere==0:
             self._hydro = 0
         else:
-            self._hydro = roll() 
+            self._hydro = random.roll() 
             if self._atmosphere < 2 or (self._atmosphere>9 and self._atmosphere < 13):
                 self._hydro -= 4
 
@@ -328,9 +326,9 @@ class World(PointOfInterest):
             self._factions = []
 
         else:
-            self._population = int(round(random.rand(),4)*(10**self._population_raw))
+            self._population = int(round(random.rand(),4)*(10.0**self._population_raw))
             
-            self._government_raw = roll(-7+self._population_raw) + modifier
+            self._government_raw = random.roll(-7+self._population_raw) + modifier
             if self._population_raw>3 and self._government_raw==0:
                 self._government_raw = random.randint(1,3)
             
@@ -339,7 +337,7 @@ class World(PointOfInterest):
             self._government_raw = min([len(govs)-1, self._government_raw])
 
             self._government = Government(govs[self._government_raw], False, self._government_raw)
-            self._law_level = roll(-7+ self._government_raw)
+            self._law_level = random.roll(-7+ self._government_raw)
 
             if isinstance(other_world, World):
                 self._law_level = min([self._law_level, other_world._law_level])
@@ -355,7 +353,7 @@ class World(PointOfInterest):
             else:
                 working_factions = []
                 for i in range(random.randint(1,4)+faction_mod):
-                    score = max([0, min([roll(-7+self._population_raw), len(govs)-1])])
+                    score = max([0, min([random.roll(-7+self._population_raw), len(govs)-1])])
                     working_factions.append(Government(govs[score], True, score))
 
                 total_weight = sum([entry.raw_strength for entry in working_factions]) + 12
@@ -620,7 +618,7 @@ class World(PointOfInterest):
         else:
             return law_levels[self._law_level]
     def approach_check(self):
-        die_roll = roll()
+        die_roll = random.roll()
         if die_roll<self._law_level:
             return True
         else:
@@ -827,7 +825,7 @@ class World(PointOfInterest):
 
         serv += "{} fuel available {}\n".format(fuel, fuel_cost)
         serv+=facility+"\n"
-        serv+="Berthing costs Cr{}.".format(roll1d()*berth_scale)
+        serv+="Berthing costs Cr{}.".format(random.roll1d()*berth_scale)
         serv+="\n\n"
         if Bases.Naval in self.services:
             serv+="Has naval base. Ex-Naval Travellers may meet Contacts or Allies here, and mercenary Travellers can try to pick up work. "

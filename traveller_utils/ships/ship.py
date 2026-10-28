@@ -12,7 +12,7 @@ from copy import deepcopy
 
 from enum import Enum
 
-from randomFactory import random 
+from traveller_utils.randomFactory import random 
 import os 
 import json 
 
@@ -410,13 +410,18 @@ class ShipSWN:
         else:
             return self._crew[self._gunnery]    
 
-    def set_captain(self, crew_index):
+    def set_captain(self, index):
+        if index not in self._crew:
+            self._crew.append(index)
+        self._set_captain(len(self._crew)-1)
+
+    def _set_captain(self, crew_index):        
         self._captain = crew_index
-    def set_comms_officer(self, crew_index):
+    def _set_comms_officer(self, crew_index):
         self._comms = crew_index
-    def set_engineer(self, crew_index):
+    def _set_engineer(self, crew_index):
         self._engineer = crew_index
-    def set_gunnery_officer(self, crew_index):
+    def _set_gunnery_officer(self, crew_index):
         self._gunnery = crew_index
     def add_to_crew(self, person_id):
         self._crew.append(person_id)

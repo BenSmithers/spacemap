@@ -12,10 +12,11 @@ from traveller_utils.core import utils
 from traveller_utils.enums import SystemNote, PLocationType
 from traveller_utils.person import Person
 from traveller_utils.tables import passenger_table
+from traveller_utils.randomFactory import random
 
 import numpy as np 
 from collections import deque
-from randomFactory import random
+
 
 
 class Catalog:

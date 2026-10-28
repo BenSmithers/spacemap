@@ -1,7 +1,7 @@
 from traveller_utils.name_gen import create_name
 from traveller_utils.places.world import World
 from traveller_utils.places.poi import PointOfInterest, GasGiant, InterRegion, InFlight, SystemEdge
-from traveller_utils.core.utils import roll 
+from traveller_utils.randomFactory import random
 from traveller_utils.tables import starports_str
 from traveller_utils.ships import StarPort
 from traveller_utils.enums import Bases, SystemNote
@@ -123,7 +123,7 @@ def generate_system(modifier, location:HexID)->System:
     
     name = create_name("planet")
 
-    n_others = roll()-2 
+    n_others = random.roll()-2 
 
     # create main world
     new_system = System(location, name)
@@ -156,16 +156,16 @@ def generate_system(modifier, location:HexID)->System:
         star_mod=-1
     if new_world._population_raw<=2:
         star_mod=-2
-    starport_roll = roll(mod=star_mod) + modifier
+    starport_roll = random.roll(mod=star_mod) + modifier
     if starport_roll>= len(starports_str):
         starport_roll = len(starports_str)-1
 
     services = []
 
-    naval_roll = roll()
-    scout_roll = roll()
-    research_roll = roll()
-    tas_roll = roll()
+    naval_roll = random.roll()
+    scout_roll = random.roll()
+    research_roll = random.roll()
+    tas_roll = random.roll()
 
     tas_lim = 14
     naval_lim = 14
@@ -216,9 +216,9 @@ def generate_system(modifier, location:HexID)->System:
     # generate other worlds 
 
     # generate gas giant or two 
-    has_gas_giant = roll() < 10
+    has_gas_giant = random.roll() < 10
     if has_gas_giant:
-        n_giants = int(roll()/2)
+        n_giants = int(random.roll()/2)
     else:
         n_giants = 0
 

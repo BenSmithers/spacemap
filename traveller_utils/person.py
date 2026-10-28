@@ -1,7 +1,7 @@
 import os 
 import json
 
-from randomFactory import random
+from traveller_utils.randomFactory import random
 
 from traveller_utils.trade_goods import TradeGoods
 from traveller_utils.core.coordinates import HexID, SubHID

@@ -22,7 +22,7 @@ from traveller_utils.trade_goods import get_good
 
 from math import log2, log10
 import numpy as np
-from randomFactory import random
+from traveller_utils.randomFactory import random
 import os 
 import json
 from traveller_utils.clock import Time, Clock

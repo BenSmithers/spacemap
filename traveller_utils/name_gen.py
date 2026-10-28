@@ -1,7 +1,7 @@
 
 import os
 import pickle 
-from randomFactory import random
+from traveller_utils.randomFactory import random
 
 resources_dir = os.path.join( os.path.dirname(__file__),'..','resources')
 

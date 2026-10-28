@@ -1,5 +1,5 @@
 from traveller_utils.enums import Skill, Attribute, Profession
-from randomFactory import random
+from traveller_utils.randomFactory import random
 import numpy as np
 
 related_attributes={

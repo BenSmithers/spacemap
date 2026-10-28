@@ -1,6 +1,5 @@
 from traveller_utils.places.world import World 
 from traveller_utils.person import Person
-from traveller_utils.core.utils import roll
 from traveller_utils.tables import passenger_table
 from traveller_utils.trade_goods import ALL_GOODS, TradeGoods
 
@@ -65,7 +64,7 @@ class Terminal:
             
             mod += self._linked_world.desireability
             
-            die_roll = roll(mod=mod)
+            die_roll = random.roll(mod=mod)
             if die_roll<0:
                 n_passengers = 0
             if die_roll>len(passenger_table)-1:

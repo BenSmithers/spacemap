@@ -1,7 +1,7 @@
 
 import os 
 import json 
-from randomFactory import random
+from traveller_utils.randomFactory import random
 
 import numpy as np 
 from traveller_utils.enums import ShipClass, ShipCategory

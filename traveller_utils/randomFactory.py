@@ -27,7 +27,10 @@ class RNG:
 
         
     def randint(self, low, high, number=1):
-        return self._generator.integers(low, high, number)
+        if number==1:
+            return self._generator.integers(low, high)
+        else:
+            return self._generator.integers(low, high, number)
     def rand(self):
         return self._generator.random()
     def randn(self, mean, dev):
