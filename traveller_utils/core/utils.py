@@ -10,14 +10,13 @@ from PyQt5 import QtGui
 
 from math import exp, sqrt
 import numpy as np
-import numpy.random as rnd
 
 from glob import glob
 import os
 
 from scipy.interpolate import interp2d
 from traveller_utils.core.coordinates import DRAWSIZE
-
+from traveller_utils.randomFactory import random
  
 def all_subclasses(cls, get_names = False):
     """
@@ -90,22 +89,6 @@ class IconLib:
             return self._pixmaps[name].scaledToWidth(DRAWSIZE)
         else:
             return self._pixmaps[name].scaledToWidth(int(width))
-
-
-def roll1d( mod=0):
-    return np.random.randint(1,7) + mod
-
-
-def roll( mod=0):
-    return np.random.randint(1,7)+np.random.randint(1,7)+mod
-
-
-
-def d100(rng=None):
-    if rng is None:
-        return np.random.randint(1,101)
-    else:
-        return rng.randint(1,101)
 
 class Table:
     """
@@ -229,7 +212,7 @@ def perlin(granularity,octave=5)->np.ndarray:
 
     # permutation table
     p = np.arange(256,dtype=int)
-    np.random.shuffle(p)
+    random.shuffle(p)
     p = np.stack([p,p]).flatten()
     # coordinates of the top-left
     xi = x.astype(int)
@@ -269,9 +252,6 @@ def _gradient(h,x,y):
     vectors = np.array([[0,1],[0,-1],[1,0],[-1,0]])
     g = vectors[h%4]
     return g[:,:,0] * x + g[:,:,1] * y
-
-def gauss(mean, dev):
-    return (rnd.randn()*dev + mean)
 
 def point_is_in(point:QPointF, dimensions):
     """

@@ -12,7 +12,7 @@ from copy import deepcopy
 
 from enum import Enum
 
-import random 
+from randomFactory import random 
 import os 
 import json 
 

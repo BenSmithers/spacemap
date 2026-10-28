@@ -22,9 +22,9 @@ from traveller_utils.trade_goods import get_good
 
 from math import log2, log10
 import numpy as np
+from randomFactory import random
 import os 
 import json
-from random import choice
 from traveller_utils.clock import Time, Clock
 water_color = (92, 157, 214)
 no_water = (38, 38, 38)
@@ -621,7 +621,7 @@ class Clicker(QGraphicsScene,ActionManager):
         cid = self._person_cat.register(captain)
         new_ship.set_captain(cid)
 
-        time_minutes = 60*np.random.randint(1,240)
+        time_minutes = 60*random.randint(1,240)
 
         next_time = self.clock.time +  Time(minute=time_minutes)
         self.add_event(move, next_time)
@@ -790,7 +790,7 @@ class Clicker(QGraphicsScene,ActionManager):
                 this_val = sample[i*5][j*5]
                 shift = int(i/2)
                 loc = HexID(i ,j-shift)
-                if np.random.rand()<this_val:       
+                if random.rand()<this_val:       
                     mod = 0 if this_val<extra_thresh else 2
 
                     new_system = generate_system(mod, loc)
@@ -906,7 +906,7 @@ class Clicker(QGraphicsScene,ActionManager):
             #if title==Title.Emperor:
             #    continue
             for system_id in by_title[title]:
-                roll = np.random.rand()
+                roll = random.rand()
                 if roll<odds[i]:
                     continue
 

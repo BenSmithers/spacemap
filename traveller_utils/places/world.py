@@ -1,8 +1,8 @@
 """
 Define the World class 
 """
-from random import choice
-import numpy as np
+
+from randomFactory import random
 import os
 
 from traveller_utils.tables import *
@@ -36,7 +36,7 @@ class Government:
     def __init__(self, dict_entry:dict, is_faction=False, score=0):
         self._gov_type = dict_entry["type"]
         self._desc = dict_entry["description"]
-        self._what = choice(dict_entry["examples"])
+        self._what = random.choice(dict_entry["examples"])
         self._contraband = []
         for entry in dict_entry["contraband"]:
             for good in Contraband:
@@ -264,7 +264,7 @@ class World(PointOfInterest):
             self._tags.append(parsed)
 
         if len(world_tag)==0:
-            self._tags=[ choice(list(WorldTag)) for i in range(2) ]
+            self._tags=[ random.choice(list(WorldTag)) for i in range(2) ]
         
         atmo_t_mods=[
             0,0, -2,-2,-1,-1, 0,0,1,1,2,6,6,2,-1,2,2
@@ -328,11 +328,11 @@ class World(PointOfInterest):
             self._factions = []
 
         else:
-            self._population = int(round(np.random.rand(),4)*(10**self._population_raw))
+            self._population = int(round(random.rand(),4)*(10**self._population_raw))
             
             self._government_raw = roll(-7+self._population_raw) + modifier
             if self._population_raw>3 and self._government_raw==0:
-                self._government_raw = np.random.randint(1,3)
+                self._government_raw = random.randint(1,3)
             
             if isinstance(other_world, World):
                 self._government_raw = min([self._government_raw-3, other_world._government_raw])
@@ -354,7 +354,7 @@ class World(PointOfInterest):
                 self._factions = []
             else:
                 working_factions = []
-                for i in range(np.random.randint(1,4)+faction_mod):
+                for i in range(random.randint(1,4)+faction_mod):
                     score = max([0, min([roll(-7+self._population_raw), len(govs)-1])])
                     working_factions.append(Government(govs[score], True, score))
 
@@ -362,7 +362,7 @@ class World(PointOfInterest):
                 others = 0
                 for fact in working_factions:
 
-                    members = int((0.75 + 0.25*np.random.rand())*self._population*fact.raw_strength/total_weight)
+                    members = int((0.75 + 0.25*random.rand())*self._population*fact.raw_strength/total_weight)
                     fact.set_members(members)
 
                     if fact.raw_strength > 7 and abs(self._government.score - fact.score)>7 and fact.score>0:
@@ -381,7 +381,7 @@ class World(PointOfInterest):
         if self._population_raw==0:
             self._tech_level=0
         else:
-            self._tech_level = np.random.randint(1,13)+ self._get_tl_mod()
+            self._tech_level = random.randint(1,13)+ self._get_tl_mod()
             self._tech_level = min([15, self._tech_level])
             self._tech_level = max([0, self._tech_level])
 
@@ -585,7 +585,7 @@ class World(PointOfInterest):
             self._pressure = pressures[self._atmosphere]
 
         if self._pressure==-1:
-            self._pressure = np.random.rand()*2
+            self._pressure = random.rand()*2
             self._pressure = float(str(self._pressure)[:4])
         return self._pressure
 
@@ -725,14 +725,14 @@ class World(PointOfInterest):
 
     def get_image_name(self)->str:
         if self._size<2 or self._atmosphere<2:
-            return "RClassC" + str(choice(range(3)) +1)
+            return "RClassC" + str(random.choice(range(3)) +1)
         
         if self._temperature>12:
             return "RClassA1"
         elif self._temperature>11:
             return "RClassB1"
         elif self._temperature<3:
-            return "RClassP"+str(choice([1,2]))
+            return "RClassP"+str(random.choice([1,2]))
         
         
         if self._hydro<2:
@@ -743,10 +743,10 @@ class World(PointOfInterest):
             return "RClassH2"
         elif self._hydro<9:
             if self._temperature<5:
-                return "RClassL"+str(choice([1,2]))
-            return "RClassM"+str(choice(range(5))+1)
+                return "RClassL"+str(random.choice([1,2]))
+            return "RClassM"+str(random.choice(range(5))+1)
         else:
-            return "RClassO" + str(choice([1,2]))
+            return "RClassO" + str(random.choice([1,2]))
 
 
     def _get_tl_mod(self):

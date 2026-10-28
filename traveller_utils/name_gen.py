@@ -1,8 +1,7 @@
 
 import os
 import pickle 
-import random
-import numpy as np
+from randomFactory import random
 
 resources_dir = os.path.join( os.path.dirname(__file__),'..','resources')
 

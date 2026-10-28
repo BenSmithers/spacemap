@@ -1,9 +1,8 @@
 
 import os 
 import json 
-import random 
+from randomFactory import random
 
-from numpy.random import randint
 import numpy as np 
 from traveller_utils.enums import ShipClass, ShipCategory
 from enum import Enum
@@ -34,6 +33,18 @@ _obj = open(hull_file, 'rt')
 sample_ships = json.load(_obj)
 _obj.close()
  
+
+class Contains:
+    """
+        A struct-like object to easily track if a ship has certain fittings
+    """
+    extended_stores = False
+    hydroponic_production = False 
+    mobile_extractor = False
+    extended_medbay = False 
+    teleportation_pads = False 
+    cold_sleep_pods = False 
+    automation_support = False  
 
 class Fitting:
     cost_mult = {
@@ -165,9 +176,9 @@ class ShipWeapon(Fitting):
         if self._ammo>0:
             self._ammo-=1 
             
-            r1 = np.sum( randint(1, self._dtype+1, self._ndice) )
+            r1 = np.sum( random.randint(1, self._dtype+1, self._ndice) )
             if roll_twice:
-                r2 = np.sum( randint(1, self._dtype+1, self._ndice) )
+                r2 = np.sum( random.randint(1, self._dtype+1, self._ndice) )
                 return max([r1, r2])
             else:
                 return r1 

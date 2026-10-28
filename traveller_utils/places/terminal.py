@@ -5,7 +5,7 @@ from traveller_utils.tables import passenger_table
 from traveller_utils.trade_goods import ALL_GOODS, TradeGoods
 
 from math import log10
-import numpy as np 
+from traveller_utils.randomFactory import random
 
 class Terminal:
     """
@@ -69,9 +69,9 @@ class Terminal:
             if die_roll<0:
                 n_passengers = 0
             if die_roll>len(passenger_table)-1:
-                n_passengers = sum(np.random.randint(1,7,10))
+                n_passengers = sum(random.randint(1,7,10))
             else:
-                n_passengers =  sum(np.random.randint(1,7,passenger_table[die_roll]))
+                n_passengers =  sum(random.randint(1,7,passenger_table[die_roll]))
             if len(self._persistent_passengers[key])>0:
                 self._passengers[key] += self._persistent_passengers[key]
             self._passengers[key] += [Person.generate() for i in range(n_passengers - len(self._persistent_passengers[key]))]
@@ -107,7 +107,7 @@ class Terminal:
         total = sum(non_norm)
         weights = [entry/total for entry in non_norm]
 
-        index = np.random.choice(range(len(weights)), p=weights)
+        index = random.choice(range(len(weights)), p=weights)
         return available[index], scale*available[index].sample_amount()
 
 

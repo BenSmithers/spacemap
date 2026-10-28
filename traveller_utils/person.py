@@ -1,8 +1,7 @@
 import os 
 import json
 
-import random
-import numpy as np
+from randomFactory import random
 
 from traveller_utils.trade_goods import TradeGoods
 from traveller_utils.core.coordinates import HexID, SubHID
@@ -140,7 +139,7 @@ class Person:
 
     def skill_check(self, skill:Skill):
         modifier = self._skills[skill.name] + self._attrs[attribute_map[skill.name]]
-        return modifier + np.random.randint(1,7, 2).sum()
+        return random.roll(modifier)
 
     def age(self, today:Time):
         print("today is {}; birthday is {}".format(type(today), type(self._birthday)))
@@ -205,7 +204,7 @@ class Person:
         newp._profression = profession
         newp._skills = get_skills(profession, grade)
 
-        gender_roll = random.randint(1, 100)
+        gender_roll = random.d100()
         if gender_roll<=48:
             newp._gender = Gender.Male
         elif gender_roll<=96:
@@ -218,13 +217,13 @@ class Person:
 
         # they should be between 20 and 120 years old
         # for every rank, add 10 years to minumum
-        newp._birthday = today - Time(minute=np.random.randint((20+grade*10)*365*24*60,120*365*24*60))
+        newp._birthday = today - Time(minute=random.randint((20+grade*10)*365*24*60,120*365*24*60))
         
         
        
         if newp._gender.name == "Male":
-            newp._image_name = "Male_{:02d}".format(np.random.randint(1,19))
+            newp._image_name = "Male_{:02d}".format(random.randint(1,19))
         else:
-            newp._image_name = "Female_{:02d}".format(np.random.randint(1,13))
+            newp._image_name = "Female_{:02d}".format(random.randint(1,13))
 
         return newp

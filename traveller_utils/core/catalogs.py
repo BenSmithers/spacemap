@@ -15,7 +15,7 @@ from traveller_utils.tables import passenger_table
 
 import numpy as np 
 from collections import deque
-from random import choice
+from randomFactory import random
 
 
 class Catalog:
@@ -313,7 +313,7 @@ class SystemCatalog(Catalog):
             self._cummulative_wealths = np.cumsum(self._cummulative_wealths).tolist()
         
 
-        sampled = np.random.rand()*self._cummulative_wealths[-1]
+        sampled = random.rand()*self._cummulative_wealths[-1]
         index = utils.get_loc(sampled, self._cummulative_wealths)[0]
         return all_keys[index]    
     
@@ -337,7 +337,7 @@ class SystemCatalog(Catalog):
         total_weights+=np.min(total_weights)
         total_weights /= np.sum(total_weights)
 
-        dests = [np.random.choice(all_possible,size=1, p = total_weights)[0] for i in range(samples)]
+        dests = [random.choice(all_possible,size=1, p = total_weights)[0] for i in range(samples)]
 
         return dests 
 
@@ -540,7 +540,7 @@ class TradeCat(Catalog):
         self._cummulative_wealths = [ len(self.get_routes(key))+1 for key in all_keys]
         self._cummulative_wealths = np.cumsum(self._cummulative_wealths).tolist()
 
-        sampled = np.random.rand()*self._cummulative_wealths[-1]
+        sampled = random.rand()*self._cummulative_wealths[-1]
         index = utils.get_loc(sampled, self._cummulative_wealths)[0]
         return all_keys[index]
 
@@ -677,9 +677,9 @@ class PersonCatalog(Catalog):
             if die_roll<=0:
                 n_pass = 0
             elif die_roll>len(passenger_table)-1:
-                n_pass = sum(np.random.randint(1,7,10))
+                n_pass = sum(random.randint(1,7,10))
             else:
-                n_pass =  sum(np.random.randint(1,7,passenger_table[die_roll]))
+                n_pass =  sum(random.randint(1,7,passenger_table[die_roll]))
             
             if n_pass>0:
                 empty_dict[key] += persistent_here[key]

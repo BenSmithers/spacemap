@@ -1,5 +1,5 @@
 from traveller_utils.enums import Skill, Attribute, Profession
-import random
+from randomFactory import random
 import numpy as np
 
 related_attributes={
@@ -192,7 +192,7 @@ def get_attributes(prof:Profession):
         3. Assign highest rolled attributes to the relevant ones
         4. assign the rest in whatever order 
     """
-    res = list(sorted([np.floor((np.random.randint(1,7, 3).sum()-10)/2) for attr in Attribute]))
+    res = list(sorted([np.floor((random.randint(1,7, 3).sum()-10)/2) for attr in Attribute]))
     these_attrs = related_attributes[prof.name]
 
     attr_dict = {}

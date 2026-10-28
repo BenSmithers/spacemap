@@ -1,8 +1,7 @@
 from traveller_utils.enums import WorldCategory, TradeGood, get_entry_by_name
 import json, os
+from traveller_utils.randomFactory import random
 import numpy as np
-
-
 
 # total supply mod scales base price like so when purchasing
 purchase_scale = [ 
@@ -107,7 +106,7 @@ class TradeGoods:
         return self._split0*self._split1*3.5
 
     def sample_amount(self):
-        die_roll = np.random.randint(1,7,self._split1)
+        die_roll = random.randint(1,7,self._split1)
         return self._split0*np.sum(die_roll)
 
     def is_available(self, wc:WorldCategory)->bool:
@@ -141,7 +140,7 @@ class TradeGoods:
 
             Uses the "supply" and purchase
         """
-        base = np.sum(np.random.randint(1,7,3)) + self.get_mod(wc_list) +broker
+        base = np.sum(random.randint(1,7,3)) + self.get_mod(wc_list) +broker
         if base < 0:
             scale = 4.0
         elif base < 21:
@@ -158,7 +157,7 @@ class TradeGoods:
             Uses the "demand" and sale
         """
 
-        base = np.sum(np.random.randint(1,7,3)) - self.get_mod(wc_list) +broker
+        base = np.sum(random.randint(1,7,3)) - self.get_mod(wc_list) +broker
 
         if base < 0:
             scale = 0.25
